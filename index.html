@@ -627,20 +627,26 @@
                                     <div class="grid grid-cols-1 md:grid-cols-2">
                                         <div class="border-r border-slate-700">
                                             <div class="header-grey">Ocorrência</div>
-                                            <div class="grid grid-cols-3 bg-slate-800/30">
-                                                <label class="flex flex-col items-center border-r border-slate-700 p-3 cursor-pointer hover:bg-slate-800/50 transition-colors">
-                                                    <span class="text-xs font-bold text-slate-300 mb-2">FALTA</span>
-                                                    <input type="radio" name="oc_tipo" value="FALTA" class="data-input custom-check">
-                                                </label>
-                                                <label class="flex flex-col items-center border-r border-slate-700 p-3 cursor-pointer hover:bg-slate-800/50 transition-colors">
-                                                    <span class="text-xs font-bold text-slate-300 mb-2">SOBRA</span>
-                                                    <input type="radio" name="oc_tipo" value="SOBRA" class="data-input custom-check">
-                                                </label>
-                                                <label class="flex flex-col items-center p-3 cursor-pointer hover:bg-slate-800/50 transition-colors">
-                                                    <span class="text-xs font-bold text-slate-300 mb-2">AVARIA</span>
-                                                    <input type="radio" name="oc_tipo" value="AVARIA" class="data-input custom-check">
-                                                </label>
-                                            </div>
+                                            <div class="grid grid-cols-4 bg-slate-800/30">
+    <label class="flex flex-col items-center border-r border-slate-700 p-3 cursor-pointer hover:bg-slate-800/50 transition-colors">
+        <span class="text-xs font-bold text-slate-300 mb-2">FALTA</span>
+        <input type="radio" name="oc_tipo" value="FALTA" class="data-input custom-check">
+    </label>
+    <label class="flex flex-col items-center border-r border-slate-700 p-3 cursor-pointer hover:bg-slate-800/50 transition-colors">
+        <span class="text-xs font-bold text-slate-300 mb-2">SOBRA</span>
+        <input type="radio" name="oc_tipo" value="SOBRA" class="data-input custom-check">
+    </label>
+    <!-- Adicionado border-r aqui para separar do novo item -->
+    <label class="flex flex-col items-center border-r border-slate-700 p-3 cursor-pointer hover:bg-slate-800/50 transition-colors">
+        <span class="text-xs font-bold text-slate-300 mb-2">AVARIA</span>
+        <input type="radio" name="oc_tipo" value="AVARIA" class="data-input custom-check">
+    </label>
+    <!-- Novo Item Adicionado -->
+    <label class="flex flex-col items-center p-3 cursor-pointer hover:bg-slate-800/50 transition-colors">
+        <span class="text-xs font-bold text-slate-300 mb-2 text-center leading-tight">FALTA<br>INTERNA</span>
+        <input type="radio" name="oc_tipo" value="FALTA_INTERNA" class="data-input custom-check">
+    </label>
+</div>
                                         </div>
                                         <div class="bg-slate-800 flex flex-col">
                                             <div class="header-grey">Observação:</div>
@@ -1007,7 +1013,7 @@
 
         function updateChartsAndStats(data) {
             let total = data.length;
-            let types = { FALTA: 0, SOBRA: 0, AVARIA: 0 };
+            let types = { FALTA: 0, SOBRA: 0, AVARIA: 0, FALTA_INTERNA: 0 };
             let locals = { ARMAZENAGEM: 0, ESTOQUE: 0, CHECKOUT: 0, SEPARAÇÃO: 0 };
             let causadores = {}, identificadores = {};
             data.forEach(d => {
@@ -1027,7 +1033,7 @@
                 return new Chart(ctx, { type, data: { labels, datasets: [{ label: 'Qtd', data, backgroundColor: bg, borderWidth: 0, borderRadius: 4 }] }, options: { indexAxis: type === 'bar' && id.includes('Causador') ? 'y' : 'x', responsive: true, plugins: { legend: { display: type === 'doughnut', position: 'bottom', labels: { color: '#cbd5e1' } } }, scales: type === 'bar' ? { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#cbd5e1' } }, x: { grid: { display: false }, ticks: { color: '#cbd5e1' } } } : {} } });
             };
 
-            chartTypeInstance = updateChart('chartOcType', 'doughnut', ['Falta', 'Sobra', 'Avaria'], [types.FALTA, types.SOBRA, types.AVARIA], ['#ef4444', '#3b82f6', '#f59e0b'], chartTypeInstance);
+            chartTypeInstance = updateChart('chartOcType', 'doughnut', ['Falta', 'Sobra', 'Avaria', 'Falta Interna'], [types.FALTA, types.SOBRA, types.AVARIA, types.FALTA_INTERNA], ['#ef4444', '#3b82f6', '#f59e0b', '#a855f7'], chartTypeInstance);
             chartLocalInstance = updateChart('chartOcLocal', 'bar', ['Armazenagem', 'Estoque', 'Checkout', 'Separação'], [locals.ARMAZENAGEM, locals.ESTOQUE, locals.CHECKOUT, locals.SEPARAÇÃO], '#6366f1', chartLocalInstance);
             
             const sortObj = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -1214,4 +1220,5 @@
 </body>
 
 </html>
+
 
