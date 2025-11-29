@@ -1161,18 +1161,16 @@ setEnvironment(savedEnv);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
 });
-        // --- Lógica de Importação de Arquivo JSON ---
+      // --- Lógica de Importação (Atualização Inteligente / Upsert) ---
 safeBind('file-upload', 'change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Elementos de feedback visual
     const statusDiv = document.getElementById('import-status');
     const statusText = document.getElementById('import-status-text');
     
-    // Mostra status inicial
     statusDiv.classList.remove('hidden');
-    statusText.innerText = "Lendo arquivo...";
+    statusText.innerText = "Analisando arquivo...";
     statusText.className = "text-sm text-yellow-400 font-mono";
 
     const reader = new FileReader();
@@ -1183,62 +1181,70 @@ safeBind('file-upload', 'change', (e) => {
             const data = JSON.parse(jsonContent);
 
             if (!Array.isArray(data)) {
-                throw new Error("O arquivo JSON deve conter uma lista (array) de clientes.");
+                throw new Error("O arquivo JSON deve ser uma lista.");
             }
 
             statusText.innerText = `Processando ${data.length} registros...`;
             
-            // Prepara um lote de gravação (Batch) para ser mais rápido
+            // 1. Cria um mapa de nomes existentes para busca rápida
+            // Transforma: { "id123": {name: "CLIENTE A"} } -> Map { "CLIENTE A" => "id123" }
+            const existingNamesMap = new Map();
+            clientCache.forEach((value, key) => {
+                if(value.name) existingNamesMap.set(value.name.toUpperCase().trim(), key);
+            });
+
             const batch = writeBatch(db);
-            let count = 0;
+            let createdCount = 0;
+            let updatedCount = 0;
 
             data.forEach(client => {
                 if (client.name) {
-                    // Cria uma nova referência de documento na coleção atual (Prod ou Teste)
-                    const newDocRef = doc(clientsCollection);
-                    batch.set(newDocRef, {
-                        name: client.name.toString().toUpperCase().trim(), // Garante caixa alta
-                        checklist: client.checklist || defaultChecklistData // Usa o checklist do JSON ou o padrão
-                    });
-                    count++;
+                    const normalizedName = client.name.toString().toUpperCase().trim();
+                    const existingId = existingNamesMap.get(normalizedName);
+
+                    if (existingId) {
+                        // --- CENÁRIO 1: ATUALIZAR (Cliente já existe) ---
+                        const docRef = doc(clientsCollection, existingId);
+                        batch.update(docRef, {
+                            checklist: client.checklist || defaultChecklistData
+                            // Não atualizamos o nome para manter o ID consistente, apenas o checklist
+                        });
+                        updatedCount++;
+                    } else {
+                        // --- CENÁRIO 2: CRIAR (Cliente novo) ---
+                        const newDocRef = doc(clientsCollection);
+                        batch.set(newDocRef, {
+                            name: normalizedName,
+                            checklist: client.checklist || defaultChecklistData
+                        });
+                        createdCount++;
+                    }
                 }
             });
 
-            if (count === 0) throw new Error("Nenhum cliente válido encontrado no arquivo.");
+            if (createdCount === 0 && updatedCount === 0) throw new Error("Nenhum dado válido.");
 
-            statusText.innerText = "Enviando para o banco de dados...";
+            statusText.innerText = `Salvando: ${createdCount} novos, ${updatedCount} atualizados...`;
             
-            // Envia tudo de uma vez
             await batch.commit();
 
-            // Sucesso
-            window.showToast(`${count} clientes importados com sucesso!`);
-            statusText.innerText = "Concluído!";
+            window.showToast(`Sucesso! ${createdCount} criados, ${updatedCount} atualizados.`);
+            statusText.innerText = "Importação concluída!";
             statusText.className = "text-sm text-emerald-400 font-mono";
             
-            // Limpa o input para permitir selecionar o mesmo arquivo novamente se necessário
             e.target.value = '';
-
-            // Esconde o status após 3 segundos
-            setTimeout(() => {
-                statusDiv.classList.add('hidden');
-            }, 3000);
+            setTimeout(() => statusDiv.classList.add('hidden'), 4000);
 
         } catch (err) {
             console.error(err);
-            window.showToast("Erro na importação: " + err.message, 'error');
-            statusText.innerText = "Erro: " + err.message;
+            window.showToast("Erro: " + err.message, 'error');
+            statusText.innerText = "Falha: " + err.message;
             statusText.className = "text-sm text-red-400 font-mono";
-            e.target.value = ''; // Limpa o input
+            e.target.value = '';
         }
     };
 
-    reader.onerror = () => {
-        window.showToast("Erro ao ler o arquivo.", 'error');
-        statusDiv.classList.add('hidden');
-    };
-
-    // Inicia a leitura do texto
+    reader.onerror = () => { window.showToast("Erro de leitura.", 'error'); };
     reader.readAsText(file);
 });
         
@@ -1362,6 +1368,7 @@ safeBind('file-upload', 'change', (e) => {
 </body>
 
 </html>
+
 
 
 
