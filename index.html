@@ -509,9 +509,9 @@
                             <button id="btn-dash-filter-apply" class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg font-medium transition shadow-sm h-[38px] flex items-center justify-center gap-2">
                                 Filtrar
                             </button>
-                            <button id="" class="w-full md:w-auto border border-slate-600 text-slate-300 hover:bg-slate-700 px-6 py-2 rounded-lg font-medium transition h-[38px]">
-                                Limpar
-                            </button>
+                            <button id="btn-dash-filter-clear" class="w-full md:w-auto border border-slate-600 text-slate-300 hover:bg-slate-700 px-6 py-2 rounded-lg font-medium transition h-[38px]">
+    Limpar
+</button>
                             <button id="btn-dash-export" class="w-full md:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-lg font-medium transition shadow-sm h-[38px] flex items-center justify-center gap-2" title="Baixar relatório em Excel (.xlsx)">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                 Exportar XLSX
@@ -776,12 +776,28 @@
             </div>
 
             <div class="mt-8 border-t border-slate-700 pt-6 text-left">
-                <div class="flex justify-between items-center mb-4">
-                    <h4 class="text-slate-300 text-sm font-bold uppercase tracking-wider">Gerenciar Registros Individuais</h4>
-                    <button id="btn-refresh-admin-list" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded transition">
-                        Carregar Lista Completa
-                    </button>
-                </div>
+                <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+    <h4 class="text-slate-300 text-sm font-bold uppercase tracking-wider whitespace-nowrap">
+        Gerenciar Registros Individuais
+    </h4>
+    
+    <div class="flex w-full md:w-auto gap-2">
+        <div class="relative w-full md:w-64">
+            <input type="text" id="admin-search-input" 
+                placeholder="Buscar NF, Embarque ou Tipo..." 
+                class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors"
+            >
+            <button id="admin-search-clear" class="absolute right-2 top-1.5 text-slate-500 hover:text-white hidden">
+                ✕
+            </button>
+        </div>
+        
+        <button id="btn-refresh-admin-list" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded transition shadow-sm whitespace-nowrap flex items-center gap-1">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Atualizar
+        </button>
+    </div>
+</div>
 
                 <div class="overflow-hidden rounded-lg border border-slate-700 max-h-80 overflow-y-auto bg-slate-900">
                     <table class="min-w-full text-xs text-left">
@@ -1603,46 +1619,102 @@ safeBind('users-upload', 'change', (e) => {
             reader.onerror = () => { window.showToast("Erro de leitura.", 'error'); };
             reader.readAsText(file);
         });
-// --- Lógica de Gestão Individual (Admin) ---
+// --- Lógica de Gestão Individual (Admin) ATUALIZADA ---
 
-// 1. Função para renderizar a tabela
+// 1. Função para renderizar a tabela com filtro
 function renderAdminOccurrenceList() {
     const tbody = document.getElementById('admin-oc-list-tbody');
+    const searchTerm = document.getElementById('admin-search-input').value.toLowerCase().trim();
+    const clearBtn = document.getElementById('admin-search-clear');
+    
+    // Mostra/Esconde o 'X' de limpar
+    if(clearBtn) clearBtn.classList.toggle('hidden', searchTerm === '');
+
     tbody.innerHTML = '';
 
-    // Junta tudo: Pendentes + Concluídas (dashboard)
+    // Junta tudo: Pendentes + Concluídas
     const fullList = [...pendingOccurrencesData, ...allOccurrencesData];
     
-    // Ordena pela data (mais recente primeiro)
-    fullList.sort((a, b) => b.jsDate - a.jsDate);
+    // Filtragem
+    const filteredList = fullList.filter(item => {
+        if (!searchTerm) return true; // Se não tem busca, mostra tudo
+        
+        // Verifica NF, Embarque e Tipo
+        const nf = (item.nf || '').toLowerCase();
+        const emb = (item.embarque || '').toLowerCase();
+        const tipo = (item.tipo || '').toLowerCase();
+        
+        return nf.includes(searchTerm) || emb.includes(searchTerm) || tipo.includes(searchTerm);
+    });
 
-    if (fullList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-slate-500">Nenhum registro encontrado neste ambiente.</td></tr>';
+    // Ordena pela data (mais recente primeiro)
+    filteredList.sort((a, b) => b.jsDate - a.jsDate);
+
+    if (filteredList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500 italic">Nenhum registro encontrado.</td></tr>';
         return;
     }
 
-    fullList.forEach(item => {
+    filteredList.forEach(item => {
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-800 transition-colors";
+        tr.className = "hover:bg-slate-800 transition-colors border-b border-slate-800/50";
         
-        // Define cor do status
         let statusColor = "text-slate-500";
         if(item.status === 'concluido') statusColor = "text-emerald-400 font-bold";
         if(item.status.includes('pendente')) statusColor = "text-amber-400";
 
         tr.innerHTML = `
-            <td class="px-4 py-2 font-mono">${item.jsDate.toLocaleDateString('pt-BR')}</td>
-            <td class="px-4 py-2 font-bold text-white">${item.tipo}</td>
-            <td class="px-4 py-2">${item.embarque || '-'} / ${item.nf || '-'}</td>
-            <td class="px-4 py-2 ${statusColor} uppercase text-[10px]">${item.status}</td>
-            <td class="px-4 py-2 text-right">
-                <button class="text-red-400 hover:text-red-200 bg-red-900/20 hover:bg-red-900/50 p-1.5 rounded transition btn-delete-individual" data-id="${item.id}" title="Excluir permanentemente">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <td class="px-4 py-3 font-mono text-slate-300">${item.jsDate.toLocaleDateString('pt-BR')}</td>
+            <td class="px-4 py-3 font-bold text-white text-xs">${item.tipo}</td>
+            <td class="px-4 py-3 text-slate-300 text-xs">${item.embarque || '-'} / <span class="text-white">${item.nf || '-'}</span></td>
+            <td class="px-4 py-3 ${statusColor} uppercase text-[10px] tracking-wide">${item.status}</td>
+            <td class="px-4 py-3 text-right">
+                <button class="text-red-400 hover:text-red-200 bg-red-900/20 hover:bg-red-900/50 px-2 py-1.5 rounded transition btn-delete-individual flex items-center justify-center ml-auto gap-1 text-[10px] border border-red-900/30" data-id="${item.id}" title="Excluir permanentemente">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Excluir
                 </button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+
+    // Re-bind dos botões de excluir
+    document.querySelectorAll('.btn-delete-individual').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.currentTarget.dataset.id;
+            window.openConfirmModal(
+                "Excluir Registro Definitivamente?", 
+                "Esta ação não pode ser desfeita. O registro sumirá dos gráficos e relatórios.", 
+                async () => {
+                    try {
+                        await deleteDoc(doc(occurrencesCollection, id));
+                        window.showToast("Registro excluído.");
+                        window.closeConfirmModal();
+                        // Não precisa chamar renderAdminOccurrenceList aqui pois o onSnapshot fará isso automaticamente
+                    } catch (err) {
+                        console.error(err);
+                        window.showToast("Erro ao excluir.", "error");
+                    }
+                }
+            );
+        });
+    });
+}
+
+// 2. Event Listeners para a busca
+safeBind('btn-refresh-admin-list', 'click', renderAdminOccurrenceList);
+
+// Filtra enquanto digita
+safeBind('admin-search-input', 'input', renderAdminOccurrenceList);
+
+// Botão X para limpar busca
+safeBind('admin-search-clear', 'click', () => {
+    const input = document.getElementById('admin-search-input');
+    if(input) {
+        input.value = '';
+        renderAdminOccurrenceList();
+    }
+});
 
     // Adiciona eventos aos botões de excluir gerados
     document.querySelectorAll('.btn-delete-individual').forEach(btn => {
