@@ -894,6 +894,7 @@
         const PROD_PATH = `artifacts/${appId}/public/data/clients`;
         const TEST_PATH = `artifacts/${appId}/public/data/clients_test`;
         const PROD_OC_PATH = `artifacts/${appId}/public/data/occurrences`;
+const TEST_OC_PATH = `artifacts/${appId}/public/data/occurrences_test`;
 
         // LÓGICA DE DADOS PADRÃO
         const defaultChecklistData = { alturaPalete: { directa: "1.80m", fracionada: "1.80m" }, multiplosSKU: { directa: "", fracionada: "", directaLimit: "", fracionadaLimit: "" }, multiplosLotes: { directa: "", fracionada: "", directaLimit: "", fracionadaLimit: "" }, multiplosPedidos: { directa: "Não", fracionada: "Não", directaLimit: "", fracionadaLimit: "" }, paletizacaoLastro: { directa: "", fracionada: "" }, paletizacaoTorre: { directa: "", fracionada: "" }, tipoPalete: { directa: "PBR", fracionada: "PBR" }, observacao: { directa: "", fracionada: "" } };
@@ -963,22 +964,65 @@ setEnvironment(savedEnv);
         }
 
         // --- OCCURRENCES MODULE LOGIC ---
-        function loadOccurrencesData() {
-            unsubscribeOccurrences = onSnapshot(occurrencesCollection, (snapshot) => {
-                allOccurrencesData = [];
-                pendingOccurrencesData = [];
-                snapshot.forEach(docSnap => {
-                    const d = docSnap.data();
-                    d.id = docSnap.id;
-                    d.jsDate = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
-                    if (d.status === 'concluido') allOccurrencesData.push(d); else pendingOccurrencesData.push(d);
-                });
-                allOccurrencesData.sort((a, b) => b.jsDate - a.jsDate);
-                pendingOccurrencesData.sort((a, b) => b.jsDate - a.jsDate);
-                updateDashboard();
-                updatePendingList();
+        async function loadOccurrencesData() {
+    // 1. Limpa ouvintes anteriores para não duplicar
+    if(unsubscribeOccurrences) { unsubscribeOccurrences(); unsubscribeOccurrences = null; }
+
+    const isTest = currentEnv === 'test';
+    let prodDataMap = new Map();
+
+    // 2. Se estiver em TESTE, busca uma "fotografia" dos dados de Produção
+    if (isTest) {
+        try {
+            // Busca dados de produção apenas para leitura (snapshot único)
+            const prodSnapshot = await getDocs(collection(db, PROD_OC_PATH));
+            prodSnapshot.forEach(docSnap => {
+                const d = docSnap.data();
+                d.id = docSnap.id;
+                d.jsDate = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
+                d.isProdCopy = true; // Marca interna para sabermos que veio da cópia
+                prodDataMap.set(d.id, d);
             });
+            window.showToast("Cópia de Produção carregada para simulação.");
+        } catch (e) {
+            console.error("Erro ao carregar cópia de produção:", e);
         }
+    }
+
+    // 3. Ouve a coleção ativa (Se for teste, ouve a 'occurrences_test', se prod, 'occurrences')
+    unsubscribeOccurrences = onSnapshot(occurrencesCollection, (snapshot) => {
+        allOccurrencesData = [];
+        pendingOccurrencesData = [];
+        
+        // Mapa para garantir que a versão de Teste (editada) tenha prioridade sobre a cópia de Prod
+        const finalDataMap = new Map(prodDataMap); 
+
+        snapshot.forEach(docSnap => {
+            const d = docSnap.data();
+            d.id = docSnap.id;
+            d.jsDate = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
+            d.isProdCopy = false; // Este é um dado real do ambiente atual
+            
+            // Sobrescreve a cópia de produção se existir (editou no teste -> vale o teste)
+            finalDataMap.set(d.id, d);
+        });
+
+        // Converte o Mapa final de volta para lista
+        const combinedData = Array.from(finalDataMap.values());
+
+        // Separa e Ordena
+        combinedData.forEach(d => {
+            if (d.status === 'concluido') allOccurrencesData.push(d);
+            else pendingOccurrencesData.push(d);
+        });
+
+        allOccurrencesData.sort((a, b) => b.jsDate - a.jsDate);
+        pendingOccurrencesData.sort((a, b) => b.jsDate - a.jsDate);
+
+        updateDashboard();
+        updatePendingList();
+    });
+}
 
         function updatePendingList() {
             const tbody = document.getElementById('pending-list-tbody');
@@ -1329,13 +1373,26 @@ safeBind('file-upload', 'change', (e) => {
         }
 
         function setEnvironment(env) {
-            if(unsubscribeClients) { unsubscribeClients(); unsubscribeClients = null; }
-            currentEnv = env;
-            const path = env === 'prod' ? PROD_PATH : TEST_PATH;
-            clientsCollection = collection(db, path);
-            updateEnvUI(env);
-            startDataListener();
-        }
+    // 1. Limpa os "ouvintes" (listeners) antigos para não misturar dados
+    if(unsubscribeClients) { unsubscribeClients(); unsubscribeClients = null; }
+    if(unsubscribeOccurrences) { unsubscribeOccurrences(); unsubscribeOccurrences = null; }
+
+    currentEnv = env;
+    const isTest = env === 'test';
+
+    // 2. Define os caminhos baseados no ambiente
+    const clientPath = isTest ? TEST_PATH : PROD_PATH;
+    const ocPath = isTest ? TEST_OC_PATH : PROD_OC_PATH;
+
+    // 3. Atualiza as referências das coleções
+    clientsCollection = collection(db, clientPath);
+    occurrencesCollection = collection(db, ocPath);
+
+    // 4. Atualiza a Interface e reinicia a leitura dos dados
+    updateEnvUI(env);
+    startDataListener();     // Recarrega Clientes
+    ();   // Recarrega Ocorrências (Agora no caminho certo!)
+}
 
         function updateEnvUI(env) {
             const isTest = env === 'test';
@@ -1409,13 +1466,14 @@ safeBind('file-upload', 'change', (e) => {
         safeBind('client-modal-cancel','click',()=>document.getElementById('client-modal').classList.add('hidden')); safeBind('client-modal-close-x',()=>document.getElementById('client-modal').classList.add('hidden')); safeBind('view-back-btn','click',window.backToList); safeBind('edit-cancel-btn','click',window.backToList); safeBind('confirm-btn-cancel','click',window.closeConfirmModal); safeBind('confirm-btn-yes','click',()=>{if(pendingConfirmAction)pendingConfirmAction();});
         
         // Admin Tools
-        safeBind('btn-reset-db','click',()=>{ window.openConfirmModal("Resetar DB?", "PERIGO: Reverte todos os dados.", async()=>{ try{ const s=await getDocs(clientsCollection); const b=writeBatch(db); s.forEach(d=>{ const n=d.data().name?.toUpperCase().trim(); b.update(d.ref,{checklist:specificClientRules[n]||defaultChecklistData}); }); await b.commit(); window.showToast("Reset concluído."); }catch(e){window.showToast("Erro reset",'error');} window.closeConfirmModal(); }); });
+        safeBind('btn-reset-db','click',()=>{ window.openConfirmModal("Resetar BD?", "PERIGO: Reverte todos os dados.", async()=>{ try{ const s=await getDocs(clientsCollection); const b=writeBatch(db); s.forEach(d=>{ const n=d.data().name?.toUpperCase().trim(); b.update(d.ref,{checklist:specificClientRules[n]||defaultChecklistData}); }); await b.commit(); window.showToast("Reset concluído."); }catch(e){window.showToast("Erro reset",'error');} window.closeConfirmModal(); }); });
         safeBind('btn-apply-rules','click',()=>{ window.openConfirmModal("Aplicar Regras?", "Atualiza clientes com regras hardcoded.", async()=>{ try{ const s=await getDocs(clientsCollection); const b=writeBatch(db); let c=0; s.forEach(d=>{ const n=d.data().name?.toUpperCase().trim(); if(specificClientRules[n]){ b.update(d.ref,{checklist:specificClientRules[n]}); c++; } }); if(c>0)await b.commit(); window.showToast(`${c} atualizados.`); }catch(e){window.showToast("Erro",'error');} window.closeConfirmModal(); }); });
         
     </script>
 </body>
 
 </html>
+
 
 
 
