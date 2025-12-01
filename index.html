@@ -1619,12 +1619,17 @@ safeBind('users-upload', 'change', (e) => {
             reader.onerror = () => { window.showToast("Erro de leitura.", 'error'); };
             reader.readAsText(file);
         });
-// --- Lógica de Gestão Individual (Admin) ATUALIZADA ---
+// --- Lógica de Gestão Individual (Admin) COMPLETA E CORRIGIDA ---
 
 // 1. Função para renderizar a tabela com filtro
 function renderAdminOccurrenceList() {
     const tbody = document.getElementById('admin-oc-list-tbody');
-    const searchTerm = document.getElementById('admin-search-input').value.toLowerCase().trim();
+    const searchInput = document.getElementById('admin-search-input');
+    
+    // Proteção caso o elemento não exista no HTML ainda
+    if (!tbody || !searchInput) return;
+
+    const searchTerm = searchInput.value.toLowerCase().trim();
     const clearBtn = document.getElementById('admin-search-clear');
     
     // Mostra/Esconde o 'X' de limpar
@@ -1690,7 +1695,6 @@ function renderAdminOccurrenceList() {
                         await deleteDoc(doc(occurrencesCollection, id));
                         window.showToast("Registro excluído.");
                         window.closeConfirmModal();
-                        // Não precisa chamar renderAdminOccurrenceList aqui pois o onSnapshot fará isso automaticamente
                     } catch (err) {
                         console.error(err);
                         window.showToast("Erro ao excluir.", "error");
@@ -1701,13 +1705,9 @@ function renderAdminOccurrenceList() {
     });
 }
 
-// 2. Event Listeners para a busca
+// 2. Event Listeners para a busca e Tabela
 safeBind('btn-refresh-admin-list', 'click', renderAdminOccurrenceList);
-
-// Filtra enquanto digita
 safeBind('admin-search-input', 'input', renderAdminOccurrenceList);
-
-// Botão X para limpar busca
 safeBind('admin-search-clear', 'click', () => {
     const input = document.getElementById('admin-search-input');
     if(input) {
@@ -1716,34 +1716,48 @@ safeBind('admin-search-clear', 'click', () => {
     }
 });
 
-    // Adiciona eventos aos botões de excluir gerados
-    document.querySelectorAll('.btn-delete-individual').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const id = e.currentTarget.dataset.id;
-            window.openConfirmModal(
-                "Excluir Registro?", 
-                "Essa ação removerá este item específico do banco de dados e corrigirá os gráficos do Dashboard.", 
-                async () => {
-                    try {
-                        await deleteDoc(doc(occurrencesCollection, id));
-                        window.showToast("Registro excluído.");
-                        window.closeConfirmModal();
-                        renderAdminOccurrenceList(); // Atualiza a lista após excluir
-                    } catch (err) {
-                        console.error(err);
-                        window.showToast("Erro ao excluir.", "error");
-                    }
-                }
-            );
-        });
-    });
-}
+// 3. Botões da Zona de Perigo (Reset e Regras)
+safeBind('btn-reset-db','click',()=>{ 
+    window.openConfirmModal("Resetar BD?", "PERIGO: Reverte todos os dados.", async()=>{ 
+        try{ 
+            const s=await getDocs(clientsCollection); 
+            const b=writeBatch(db); 
+            s.forEach(d=>{ 
+                const n=d.data().name?.toUpperCase().trim(); 
+                b.update(d.ref,{checklist:specificClientRules[n]||defaultChecklistData}); 
+            }); 
+            await b.commit(); 
+            window.showToast("Reset concluído."); 
+        } catch(e){
+            window.showToast("Erro reset",'error');
+        } 
+        window.closeConfirmModal(); 
+    }); 
+});
 
-// 2. Liga o botão "Carregar Lista" à função
-safeBind('btn-refresh-admin-list', 'click', renderAdminOccurrenceList);
-        safeBind('btn-reset-db','click',()=>{ window.openConfirmModal("Resetar BD?", "PERIGO: Reverte todos os dados.", async()=>{ try{ const s=await getDocs(clientsCollection); const b=writeBatch(db); s.forEach(d=>{ const n=d.data().name?.toUpperCase().trim(); b.update(d.ref,{checklist:specificClientRules[n]||defaultChecklistData}); }); await b.commit(); window.showToast("Reset concluído."); }catch(e){window.showToast("Erro reset",'error');} window.closeConfirmModal(); }); });
-        safeBind('btn-apply-rules','click',()=>{ window.openConfirmModal("Aplicar Regras?", "Atualiza clientes com regras hardcoded.", async()=>{ try{ const s=await getDocs(clientsCollection); const b=writeBatch(db); let c=0; s.forEach(d=>{ const n=d.data().name?.toUpperCase().trim(); if(specificClientRules[n]){ b.update(d.ref,{checklist:specificClientRules[n]}); c++; } }); if(c>0)await b.commit(); window.showToast(`${c} atualizados.`); }catch(e){window.showToast("Erro",'error');} window.closeConfirmModal(); }); });
+safeBind('btn-apply-rules','click',()=>{ 
+    window.openConfirmModal("Aplicar Regras?", "Atualiza clientes com regras hardcoded.", async()=>{ 
+        try{ 
+            const s=await getDocs(clientsCollection); 
+            const b=writeBatch(db); 
+            let c=0; 
+            s.forEach(d=>{ 
+                const n=d.data().name?.toUpperCase().trim(); 
+                if(specificClientRules[n]){ 
+                    b.update(d.ref,{checklist:specificClientRules[n]}); 
+                    c++; 
+                } 
+            }); 
+            if(c>0) await b.commit(); 
+            window.showToast(`${c} atualizados.`); 
+        } catch(e){
+            window.showToast("Erro",'error');
+        } 
+        window.closeConfirmModal(); 
+    }); 
+});al("Aplicar Regras?", "Atualiza clientes com regras hardcoded.", async()=>{ try{ const s=await getDocs(clientsCollection); const b=writeBatch(db); let c=0; s.forEach(d=>{ const n=d.data().name?.toUpperCase().trim(); if(specificClientRules[n]){ b.update(d.ref,{checklist:specificClientRules[n]}); c++; } }); if(c>0)await b.commit(); window.showToast(`${c} atualizados.`); }catch(e){window.showToast("Erro",'error');} window.closeConfirmModal(); }); });
     </script>
 </body>
 
 </html>
+
