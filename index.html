@@ -758,30 +758,41 @@
             </div>
         </div>
 
-        <div id="admin-danger-zone" class="mt-12 pt-8 border-t border-slate-700 hidden">
-            <h3 class="text-red-400 font-bold uppercase text-xs tracking-wider mb-4">Área de Perigo (Admin)</h3>
+        <div id="admin-danger-zone" <div class="mt-8 border-t border-slate-700 pt-6 text-left">
+    <div class="flex flex-col md:flex-row justify-between items-end gap-4 mb-4">
+        <div>
+            <h4 class="text-slate-300 text-sm font-bold uppercase tracking-wider mb-2">Gerenciar Registros</h4>
             
-            <div class="flex flex-wrap justify-center gap-4 mb-8">
-                <button id="btn-reset-db" class="px-6 py-2 bg-red-900/30 text-red-200 border border-red-800 rounded-lg font-medium hover:bg-red-900 transition text-sm flex items-center justify-center gap-2">
-                    Resetar Padrão Carregamento
-                </button>
-                
-                <button id="btn-wipe-occurrences" class="px-6 py-2 bg-red-600 text-white border border-red-500 rounded-lg font-medium hover:bg-red-700 transition text-sm flex items-center justify-center gap-2 shadow-lg shadow-red-900/20">
-                    Zerar Todas as Ocorrências
-                </button>
-
-                <button id="btn-apply-rules" class="px-6 py-2 bg-indigo-900/50 text-indigo-200 border border-indigo-800 rounded-lg font-medium hover:bg-indigo-900 transition text-sm flex items-center justify-center gap-2">
-                    Aplicar Regras Individuais
-                </button>
+            <div class="flex gap-2">
+                <input type="date" id="admin-filter-date-start" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-indigo-500 [color-scheme:dark]" title="Data Início">
+                <input type="date" id="admin-filter-date-end" class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-indigo-500 [color-scheme:dark]" title="Data Fim">
+                <input type="text" id="admin-filter-text" placeholder="Buscar NF, Embarque ou Tipo..." class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-indigo-500 w-40">
             </div>
+        </div>
 
-            <div class="mt-8 border-t border-slate-700 pt-6 text-left">
-                <div class="flex justify-between items-center mb-4">
-                    <h4 class="text-slate-300 text-sm font-bold uppercase tracking-wider">Gerenciar Registros Individuais</h4>
-                    <button id="btn-refresh-admin-list" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded transition">
-                        Carregar Lista Completa
-                    </button>
-                </div>
+        <button id="btn-refresh-admin-list" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded transition font-bold shadow-md flex items-center gap-2">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            Filtrar e Carregar
+        </button>
+    </div>
+
+    <div class="overflow-hidden rounded-lg border border-slate-700 max-h-80 overflow-y-auto bg-slate-900">
+        <table class="min-w-full text-xs text-left">
+            <thead class="bg-slate-950 text-slate-400 font-medium sticky top-0 z-10">
+                <tr>
+                    <th class="px-4 py-2">Data</th>
+                    <th class="px-4 py-2">Tipo</th>
+                    <th class="px-4 py-2">Embarque / NF</th>
+                    <th class="px-4 py-2">Status</th>
+                    <th class="px-4 py-2 text-right">Ação</th>
+                </tr>
+            </thead>
+            <tbody id="admin-oc-list-tbody" class="divide-y divide-slate-800 text-slate-300">
+                <tr><td colspan="5" class="px-4 py-4 text-center text-slate-600 italic">Use os filtros acima e clique em Carregar.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
 
                 <div class="overflow-hidden rounded-lg border border-slate-700 max-h-80 overflow-y-auto bg-slate-900">
                     <table class="min-w-full text-xs text-left">
@@ -801,7 +812,7 @@
                 </div>
             </div>
             
-        </div> </div> </div> ```
+        </div> </div> </div>
     <div id="confirm-modal" class="fixed inset-0 bg-slate-950/80 flex items-center justify-center hidden z-50 backdrop-blur-sm transition-opacity opacity-0"><div class="bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-sm m-4 text-center border border-slate-700 transform scale-95 transition-transform duration-200" id="confirm-modal-panel"><h2 id="confirm-title" class="text-xl font-bold mb-2 text-white">Tem certeza?</h2><p id="confirm-message" class="text-slate-400 mb-6 text-sm"></p><div class="flex justify-center gap-3"><button id="confirm-btn-cancel" class="px-4 py-2 rounded-lg border border-slate-600 text-slate-300 font-medium hover:bg-slate-700 transition w-24">Cancelar</button><button id="confirm-btn-yes" class="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 shadow-sm transition w-24">Confirmar</button></div></div></div>
     <div id="client-modal" class="fixed inset-0 bg-slate-950/80 flex items-center justify-center hidden z-50 backdrop-blur-sm transition-opacity opacity-0"><div class="bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-md m-4 border border-slate-700 transform transition-all scale-95"><div class="flex justify-between items-center mb-6"><h2 class="text-2xl font-bold text-white">Novo Cliente</h2><button type="button" id="client-modal-close-x" class="text-slate-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div><form id="client-form"><div class="mb-6"><label for="client-name" class="block text-sm font-medium text-slate-300 mb-1.5">Nome da Empresa</label><input type="text" id="client-name" class="block w-full bg-slate-900 border border-slate-600 rounded-lg p-2.5 text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" required></div><div class="flex justify-end gap-3 border-t border-slate-700 pt-4"><button type="button" id="client-modal-cancel" class="px-4 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 font-medium transition">Cancelar</button><button type="submit" id="client-modal-save" class="px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-500 shadow-sm transition">Criar Cliente</button></div></form></div></div>
 
@@ -954,17 +965,17 @@
         ];
         const specificClientRules = { "AMAZON": { ...defaultChecklistData, observacao: { directa: "Exige agendamento prévio (CARP).", fracionada: "Exige agendamento prévio (CARP)." } } };
         const cdData = { 
-            "GRU5": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000367", ie: "241099810118 ", linha1: "Cd Prologis 3: Av. Antonio Candido Machado", linha2: "3100 Andar 5, 07776415 - Cajamar - SP" },
-            "XBRA": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000448", ie: "241118709114 ", linha1: "Cd Prologis 2: Av. Dr. Joao Abdalla 260   ", linha2: "Bloco 400, 07776700 - Cajamar - SP" },
+            "GRU5": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000367", ie: "241099810118 ", linha1: "Cd Prologis 3: Av. Antonio Candido Machado", linha2: "3100 Andar 5, 07776415 - Cajamar - SP   " },
+            "XBRA": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000448", ie: "241118709114 ", linha1: "Cd Prologis 2: Av. Dr. Joao Abdalla 260   ", linha2: "Bloco 400, 07776700 - Cajamar - SP      " },
             "XBRB": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000529", ie: "0842859-07   ", linha1: "Rd Br-101 Sul, 3791bl C, Galpão 5, Sl A   ", linha2: "54503010 - Cabo De Santo Agostinho - PE " },
             "XBRT": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000871", ie: "241134643114 ", linha1: "Via De Acesso Norte KM 38, 420, Galpão 07 ", linha2: "Gleba A Bloco 07, 07789100 Cajamar - SP " },
-            "XBRZ": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000286", ie: "241115791117 ", linha1: "Cd Prologis 2: Av. Dr. Joao Abdalla 260   ", linha2: "Bloco 300, 07776700 Cajamar - SP" },
-            "CNF1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000952", ie: "002668590054 ", linha1: "Avenida Juiz Marco Tulio Isaac 7000       ", linha2: "32670250, Betim - MG" },
-            "BSB1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001096", ie: "0774927400365", linha1: "Rd Df, 290, Km 1.2 Lote 13,14,15,16 E 17 -", linha2: " 72501100, Brasilia - DF" },
-            "POA1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001177", ie: "3820025709   ", linha1: "Rua Da Pedreira, 64, Pavilhão 05          ", linha2: "92480000, Nova Santa Rita - RS" },
-            "GIG1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001410", ie: "11821987     ", linha1: "Av Arthur Antonio Sendas, S/N Area 6a     ", linha2: "25585021, Sao Joao De Meriti, RJ" },
+            "XBRZ": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000286", ie: "241115791117 ", linha1: "Cd Prologis 2: Av. Dr. Joao Abdalla 260   ", linha2: "Bloco 300, 07776700 Cajamar - SP        " },
+            "CNF1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000952", ie: "002668590054 ", linha1: "Avenida Juiz Marco Tulio Isaac 7000       ", linha2: "32670250, Betim - MG                    " },
+            "BSB1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001096", ie: "0774927400365", linha1: "Rd Df, 290, Km 1.2 Lote 13,14,15,16 E 17 -", linha2: " 72501100, Brasilia - DF                " },
+            "POA1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001177", ie: "3820025709   ", linha1: "Rua Da Pedreira, 64, Pavilhão 05          ", linha2: "92480000, Nova Santa Rita - RS          " },
+            "GIG1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001410", ie: "11821987     ", linha1: "Av Arthur Antonio Sendas, S/N Area 6a     ", linha2: "25585021, Sao Joao De Meriti, RJ        " },
             "REC1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "11543694000150", ie: "0920380-00   ", linha1: "RD BR 101 SUL, 9415, Galpão B             ", linha2: "54503010 - Cabo De Santo Agostinho - PE " },
-            "FOR2": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001681", ie: "61268801     ", linha1: "Av Quarto Anel Viario, 4343               ", linha2: "61880000, Itaitinga - CE" } 
+            "FOR2": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001681", ie: "61268801     ", linha1: "Av Quarto Anel Viario, 4343               ", linha2: "61880000, Itaitinga - CE                " } 
         };
         const labelDimensions = { "4x6": { pw: 800, ll: 1200, aspect: "aspect-[2/3]" }, "4x4": { pw: 800, ll: 800, aspect: "aspect-square" }, "4x2": { pw: 800, ll: 400, aspect: "aspect-[2/1]" }, "4x3.15": { pw: 800, ll: 640, aspect: "aspect-[10/8]" } };
         const baseApiUrl = 'https://api.labelary.com/v1/printers/8dpmm/labels/';
@@ -1610,22 +1621,44 @@ function renderAdminOccurrenceList() {
     const tbody = document.getElementById('admin-oc-list-tbody');
     tbody.innerHTML = '';
 
-    // Junta tudo: Pendentes + Concluídas (dashboard)
-    const fullList = [...pendingOccurrencesData, ...allOccurrencesData];
-    
-    // Ordena pela data (mais recente primeiro)
+    // 1. Pega valores dos filtros
+    const dateStartVal = document.getElementById('admin-filter-date-start').value;
+    const dateEndVal = document.getElementById('admin-filter-date-end').value;
+    const searchText = document.getElementById('admin-filter-text').value.toLowerCase().trim();
+
+    const dateStart = dateStartVal ? new Date(dateStartVal + 'T00:00:00') : null;
+    const dateEnd = dateEndVal ? new Date(dateEndVal + 'T23:59:59') : null;
+
+    // 2. Junta tudo: Pendentes + Concluídas
+    let fullList = [...pendingOccurrencesData, ...allOccurrencesData];
+
+    // 3. Aplica os Filtros
+    fullList = fullList.filter(item => {
+        // Filtro de Data
+        if (dateStart && item.jsDate < dateStart) return false;
+        if (dateEnd && item.jsDate > dateEnd) return false;
+
+        // Filtro de Texto (Busca em NF, Embarque ou Tipo)
+        if (searchText) {
+            const searchString = `${item.nf || ''} ${item.embarque || ''} ${item.tipo || ''}`.toLowerCase();
+            if (!searchString.includes(searchText)) return false;
+        }
+        return true;
+    });
+
+    // 4. Ordena pela data (mais recente primeiro)
     fullList.sort((a, b) => b.jsDate - a.jsDate);
 
     if (fullList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-slate-500">Nenhum registro encontrado neste ambiente.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-slate-500">Nenhum registro encontrado com esses filtros.</td></tr>';
         return;
     }
 
+    // 5. Renderiza
     fullList.forEach(item => {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-800 transition-colors";
         
-        // Define cor do status
         let statusColor = "text-slate-500";
         if(item.status === 'concluido') statusColor = "text-emerald-400 font-bold";
         if(item.status.includes('pendente')) statusColor = "text-amber-400";
@@ -1643,6 +1676,29 @@ function renderAdminOccurrenceList() {
         `;
         tbody.appendChild(tr);
     });
+
+    // Reativa os botões de excluir na nova lista renderizada
+    document.querySelectorAll('.btn-delete-individual').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.currentTarget.dataset.id;
+            window.openConfirmModal(
+                "Excluir Registro?", 
+                "Essa ação é irreversível.", 
+                async () => {
+                    try {
+                        await deleteDoc(doc(occurrencesCollection, id));
+                        window.showToast("Registro excluído.");
+                        window.closeConfirmModal();
+                        renderAdminOccurrenceList(); // Atualiza a lista mantendo o filtro atual
+                    } catch (err) {
+                        console.error(err);
+                        window.showToast("Erro ao excluir.", "error");
+                    }
+                }
+            );
+        });
+    });
+}
 
     // Adiciona eventos aos botões de excluir gerados
     document.querySelectorAll('.btn-delete-individual').forEach(btn => {
@@ -1675,6 +1731,7 @@ safeBind('btn-refresh-admin-list', 'click', renderAdminOccurrenceList);
 </body>
 
 </html>
+
 
 
 
