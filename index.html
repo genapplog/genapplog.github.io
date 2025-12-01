@@ -1145,12 +1145,6 @@ setEnvironment(savedEnv);
         safeBind('btn-back-oc-form', 'click', () => { document.getElementById('ocorrencias-novo').classList.add('hidden'); document.getElementById('ocorrencias-menu-view').classList.remove('hidden'); });
         safeBind('btn-cancel-occurrence', 'click', () => { document.getElementById('ocorrencias-novo').classList.add('hidden'); document.getElementById('ocorrencias-menu-view').classList.remove('hidden'); });
         safeBind('btn-dash-filter-apply', 'click', applyDashboardFilters);
-
-safeBind('btn-dash-filter-clear', 'click', () => {
-    document.getElementById('dash-filter-start').value = '';
-    document.getElementById('dash-filter-end').value = '';
-    applyDashboardFilters();
-});
         safeBind('btn-dash-filter-clear', () => { document.getElementById('dash-filter-start').value = ''; document.getElementById('dash-filter-end').value = ''; applyDashboardFilters(); });
         safeBind('download-template-btn', 'click', () => {
     // Estrutura exata fornecida
@@ -1391,9 +1385,8 @@ safeBind('file-upload', 'change', (e) => {
     // 4. Atualiza a Interface e reinicia a leitura dos dados
     updateEnvUI(env);
     startDataListener();     // Recarrega Clientes
-    ();   // Recarrega Ocorrências (Agora no caminho certo!)
+    loadOccurrencesData();   // <--- AQUI ESTAVA O ERRO "();"
 }
-
         function updateEnvUI(env) {
             const isTest = env === 'test';
             document.getElementById('env-badge').innerText = isTest ? "Teste" : "Produção";
@@ -1473,6 +1466,7 @@ safeBind('file-upload', 'change', (e) => {
 </body>
 
 </html>
+
 
 
 
