@@ -1253,10 +1253,54 @@ safeBind('file-upload', 'change', (e) => {
 });
         
         safeBind('btn-dash-export', 'click', () => {
-            if (filteredOccurrencesData.length === 0) { window.showToast("Nenhum dado para exportar.", "error"); return; }
-            const exportData = filteredOccurrencesData.map(d => ({ "DATA": (d.jsDate || new Date()).toLocaleDateString('pt-BR'), "MÊS": (d.jsDate || new Date()).toLocaleString('pt-BR', { month: 'long' }), "CAUSADOR": d.infrator || '-', "IDENTIFICADOR": d.ass_colab || '-', "LOCAL": d.local || '-', "TIPO": d.tipo || '-', "EMBARQUE": d.embarque || '-', "NF": d.nf || '-', "ITEM": d.item_desc || '-', "LOTE": d.item_lote || '-', "QTD": d.item_qtd || '0', "OBS": d.obs || '-' }));
-            const ws = XLSX.utils.json_to_sheet(exportData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Ocorrencias"); XLSX.writeFile(wb, `ocorrencias_${new Date().toISOString().slice(0,10)}.xlsx`);
-        });
+    if (filteredOccurrencesData.length === 0) {
+        window.showToast("Nenhum dado para exportar.", "error");
+        return;
+    }
+
+    // Mapeamento dos dados para as colunas solicitadas
+    const exportData = filteredOccurrencesData.map(d => {
+        const dateObj = d.jsDate || new Date();
+        
+        // Monta string de detalhes da embalagem para a coluna "TIPO OCORRENCIA"
+        let detalhesEmb = [];
+        if(d.emb_amassada) detalhesEmb.push("Amassada");
+        if(d.emb_rasgada) detalhesEmb.push("Rasgada");
+        if(d.emb_vazamento) detalhesEmb.push("Vazamento");
+        if(d.emb_outros) detalhesEmb.push(d.emb_outros);
+        const tipoDetalhado = detalhesEmb.length > 0 ? detalhesEmb.join(", ") : "N/A";
+
+        return {
+            "DATA": dateObj.toLocaleDateString('pt-BR'),
+            "MÊS": dateObj.toLocaleString('pt-BR', { month: 'long' }).toUpperCase(),
+            "ANO": dateObj.getFullYear(),
+            "CAUSADOR": d.infrator || '-',
+            "IDENTIFICADOR": d.ass_colab || '-',
+            "LOCAL": d.local || '-',
+            "OCORRENCIA": d.tipo || '-',       // Ex: FALTA, SOBRA, AVARIA
+            "EMBARQUE": d.embarque || '-',
+            "NOTA FISCAL": d.nf || '-',
+            "ITEM CODIGO": d.item_cod || '-',
+            "ITEM DESCRIÇÃO": d.item_desc || '-',
+            "ITEM LOTE": d.item_lote || '-',
+            "ITEM QTD": d.item_qtd || '0',
+            "END ORIGEM": d.item_end || '-',
+            "TIPO OCORRENCIA": tipoDetalhado,  // Detalhes da embalagem
+            "LIDER": d.ass_lider || '-',
+            "INVENTÁRIO": d.ass_inv || '-',
+            "OBSERVAÇÕES": d.obs || '-'
+        };
+    });
+
+    // Gera o arquivo Excel
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Relatorio_Ocorrencias");
+    
+    // Nome do arquivo com data/hora para não sobrescrever
+    const fileName = `relatorio_ocorrencias_${new Date().toISOString().slice(0,19).replace(/:/g,"-")}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+});
 
         safeBind('btn-save-occurrence', 'click', async () => {
             const btn = document.getElementById('btn-save-occurrence'); btn.disabled = true; btn.innerText = "Processando...";
@@ -1372,5 +1416,6 @@ safeBind('file-upload', 'change', (e) => {
 </body>
 
 </html>
+
 
 
