@@ -895,7 +895,7 @@
         };
 
         // --- 2. CONFIGURAÇÕES ---
-        const ADMIN_IDS = ["25hMg4MiXENNs4H50TkWBxMZi5r2", "h2YvJ6pwruMAFCQaEghvuWB2uTY2"];
+        const ADMIN_IDS = ["25hMg4MiXENNs4H50TkWBxMZi5r2", "OpWBrzxcyLRjHBHT0Pl8VEal2BA2"];
        function isUserAdmin() {
     // 1. Verifica lista fixa (hardcoded)
     if (ADMIN_IDS.includes(userId)) return true;
@@ -1396,35 +1396,277 @@ safeBind('users-upload', 'change', (e) => {
     };
     reader.readAsText(file);
 });
-        // ZPL Logic & Bindings
-        safeBind('btn-open-amazon', 'click', () => { document.getElementById('zpl-menu').classList.add('hidden'); document.getElementById('zpl-tool-amazon').classList.remove('hidden'); });
-        safeBind('btn-back-zpl', 'click', () => { document.getElementById('zpl-tool-amazon').classList.add('hidden'); document.getElementById('zpl-menu').classList.remove('hidden'); });
-        safeBind('btn-open-manual', 'click', () => { document.getElementById('zpl-menu').classList.add('hidden'); document.getElementById('zpl-tool-manual').classList.remove('hidden'); });
-        safeBind('btn-back-zpl-manual', 'click', () => { document.getElementById('zpl-tool-manual').classList.add('hidden'); document.getElementById('zpl-menu').classList.remove('hidden'); });
+        // Configurações e Utilitários ZPL
+        const labelDimensions = { 
+            "4x6": { pw: 800, ll: 1200, aspect: "aspect-[2/3]" }, 
+            "4x4": { pw: 800, ll: 800, aspect: "aspect-square" }, 
+            "4x2": { pw: 800, ll: 400, aspect: "aspect-[2/1]" }, 
+            "4x3.15": { pw: 800, ll: 640, aspect: "aspect-[10/8]" } 
+        };
+        const baseApiUrl = 'https://api.labelary.com/v1/printers/8dpmm/labels/';
 
-        function scaleY(val, ll) { const h=1200; if(ll===h)return val; const s=Math.round((val/h)*ll); return s<1?1:s; }
-        function generateZplTemplate(d,c,cl,nf,po,va,vt){ const v=`${va}/${vt}`,l=d.ll; return `^XA^CI28^PW${d.pw}^LL${d.ll}^LH0,0^PO^FWB^FX BORDAS^FO10,${scaleY(10,l)}^GB780,${scaleY(1180,l)},3^FS^FO20,${scaleY(20,l)}^GB40,${scaleY(575,l)},3^FS^FO20,${scaleY(605,l)}^GB40,${scaleY(575,l)},3^FS^FO70,${scaleY(20,l)}^GB220,${scaleY(575,l)},3^FS^FO70,${scaleY(605,l)}^GB220,${scaleY(575,l)},3^FS^FO300,${scaleY(20,l)}^GB40,${scaleY(575,l)},3^FS^FO300,${scaleY(605,l)}^GB40,${scaleY(575,l)},3^FS^FO350,${scaleY(20,l)}^GB180,${scaleY(575,l)},3^FS^FO350,${scaleY(605,l)}^GB180,${scaleY(575,l)},3^FS^FO540,${scaleY(20,l)}^GB40,${scaleY(1160,l)},3^FS^FO590,${scaleY(20,l)}^GB190,${scaleY(1160,l)},3^FS^CFA,30^FO30,${scaleY(810,l)}^FH^FDEndereco de destino:^FS^CFA,20^FO90,${scaleY(990,l)}^FH^FDAmazon CD: ${c}^FS^FO120,${scaleY(690,l)}^FH^FD${cl.nome}^FS^FO150,${scaleY(930,l)}^FH^FDCNPJ: ${cl.cnpj}^FS^FO180,${scaleY(965,l)}^FH^FDIE: ${cl.ie}^FS^FO210,${scaleY(665,l)}^FH^FD${cl.linha1}^FS^FO240,${scaleY(685,l)}^FH^FD${cl.linha2}^FS^CFA,30^FO30,${scaleY(170,l)}^FH^FDEndereco do fornecedor:^FS^CFA,20^FO150,${scaleY(135,l)}^FH^FDESTRADA MUNICIPAL LUIZ LOPES NETO, 21^FS^FO180,${scaleY(305,l)}^FH^FDEXTREMA - MG, 37640-050^FS^CFA,30^FO310,${scaleY(860,l)}^FH^FDPedido de compra:^FS^BY2,3,${scaleY(100,l)}^FO380,${scaleY(740,l)}^BC,${scaleY(110,l)},,,,N^FH^FD${po}^FS^CFA,30^FO310,${scaleY(280,l)}^FH^FDNumero de caixas:^FS^CFA,${scaleY(100,l)}^FO400,${scaleY(120,l)},^A0B,${scaleY(100,l)},${scaleY(100,l)}^FB400,1,0,C,0^FH^FD${v}\\&^FS^CFA,30^FO550,${scaleY(950,l)}^FH^FDNota fiscal:^FS^BY2,3,${scaleY(130,l)}^FO620,${scaleY(80,l)}^BC,${scaleY(120,l)},,,,N^FH^FD${nf}^FS^XZ`; }
-        function generateZplManualTemplate(d){ return `^XA^MMT^PW799^LL640^LS1^FO15,55^GB767,4,4^FS^FO15,115^GB767,4,4^FS^FO15,270^GB767,4,4^FS^FO15,440^GB767,4,4^FS^FO15,520^GB767,4,4^FS^FT15,45^A0N,34,33^FH\\^FDGENOMMA MG ^FS^FT15,80^A0N,17,16^FH\\^FDDocumento^FS^FT100,105^A0N,34,33^FH\\^FD${d.documento}^FS^FT415,80^A0N,17,16^FH\\^FDSolicitante^FS^FT500,105^A0N,34,33^FH\\^FD${d.solicitante}^FS^FT15,155^A0N,17,16^FH\\^FDNota Fiscal^FS^FT280,240^A0N,100,100^FH\\^FD${d.nf}^FS^FT15,305^A0N,17,16^FH\\^FDDestinatario^FS^FT15,355^A0N,34,33^FH\\^FD${d.destinatario}^FS^FT15,400^A0N,23,24^FH\\^FD${d.cidade}^FS^FT15,510^A0N,34,33^FH\\^FD${d.transportadora}^FS^FT15,470^A0N,17,16^FH\\^FDTransportador^FS^FT15,555^A0N,17,16^FH\\^FDVolumes^FS^FT55,595^A0N,34,33^FH\\^FD${d.volAtual} / ${d.volTotal} CAIXA^FS^XZ`; }
+        // Navegação do Menu ZPL
+        safeBind('btn-open-amazon', 'click', () => { 
+            document.getElementById('zpl-menu').classList.add('hidden'); 
+            document.getElementById('zpl-tool-amazon').classList.remove('hidden'); 
+        });
+        safeBind('btn-back-zpl', 'click', () => { 
+            document.getElementById('zpl-tool-amazon').classList.add('hidden'); 
+            document.getElementById('zpl-menu').classList.remove('hidden'); 
+        });
+        safeBind('btn-open-manual', 'click', () => { 
+            document.getElementById('zpl-menu').classList.add('hidden'); 
+            document.getElementById('zpl-tool-manual').classList.remove('hidden'); 
+        });
+        safeBind('btn-back-zpl-manual', 'click', () => { 
+            document.getElementById('zpl-tool-manual').classList.add('hidden'); 
+            document.getElementById('zpl-menu').classList.remove('hidden'); 
+        });
 
+        // Função auxiliar para escalar posições verticais (Y)
+        function scaleY(value, labelLength) { 
+            const baseHeight = 1200; 
+            if (labelLength === baseHeight) return value; 
+            const scaled = Math.round((value / baseHeight) * labelLength); 
+            return scaled < 1 ? 1 : scaled; 
+        }
+
+        // Template ZPL Amazon
+        function generateZplTemplate(dims, cdCode, cdInfo, nfKey, poNumber, currentBox, totalBoxes) { 
+            const volumeStr = `${currentBox}/${totalBoxes}`;
+            const len = dims.ll; // Comprimento da etiqueta para cálculo de escala
+            
+            return `^XA^CI28^PW${dims.pw}^LL${dims.ll}^LH0,0^PO^FWB^FX BORDAS` +
+                   `^FO10,${scaleY(10,len)}^GB780,${scaleY(1180,len)},3^FS` +
+                   `^FO20,${scaleY(20,len)}^GB40,${scaleY(575,len)},3^FS` +
+                   `^FO20,${scaleY(605,len)}^GB40,${scaleY(575,len)},3^FS` +
+                   `^FO70,${scaleY(20,len)}^GB220,${scaleY(575,len)},3^FS` +
+                   `^FO70,${scaleY(605,len)}^GB220,${scaleY(575,len)},3^FS` +
+                   `^FO300,${scaleY(20,len)}^GB40,${scaleY(575,len)},3^FS` +
+                   `^FO300,${scaleY(605,len)}^GB40,${scaleY(575,len)},3^FS` +
+                   `^FO350,${scaleY(20,len)}^GB180,${scaleY(575,len)},3^FS` +
+                   `^FO350,${scaleY(605,len)}^GB180,${scaleY(575,len)},3^FS` +
+                   `^FO540,${scaleY(20,len)}^GB40,${scaleY(1160,len)},3^FS` +
+                   `^FO590,${scaleY(20,len)}^GB190,${scaleY(1160,len)},3^FS` +
+                   `^CFA,30^FO30,${scaleY(810,len)}^FH^FDEndereco de destino:^FS` +
+                   `^CFA,20^FO90,${scaleY(990,len)}^FH^FDAmazon CD: ${cdCode}^FS` +
+                   `^FO120,${scaleY(690,len)}^FH^FD${cdInfo.nome}^FS` +
+                   `^FO150,${scaleY(930,len)}^FH^FDCNPJ: ${cdInfo.cnpj}^FS` +
+                   `^FO180,${scaleY(965,len)}^FH^FDIE: ${cdInfo.ie}^FS` +
+                   `^FO210,${scaleY(665,len)}^FH^FD${cdInfo.linha1}^FS` +
+                   `^FO240,${scaleY(685,len)}^FH^FD${cdInfo.linha2}^FS` +
+                   `^CFA,30^FO30,${scaleY(170,len)}^FH^FDEndereco do fornecedor:^FS` +
+                   `^CFA,20^FO150,${scaleY(135,len)}^FH^FDESTRADA MUNICIPAL LUIZ LOPES NETO, 21^FS` +
+                   `^FO180,${scaleY(305,len)}^FH^FDEXTREMA - MG, 37640-050^FS` +
+                   `^CFA,30^FO310,${scaleY(860,len)}^FH^FDPedido de compra:^FS` +
+                   `^BY2,3,${scaleY(100,len)}^FO380,${scaleY(740,len)}^BC,${scaleY(110,len)},,,,N^FH^FD${poNumber}^FS` +
+                   `^CFA,30^FO310,${scaleY(280,len)}^FH^FDNumero de caixas:^FS` +
+                   `^CFA,${scaleY(100,len)}^FO400,${scaleY(120,len)},^A0B,${scaleY(100,len)},${scaleY(100,len)}^FB400,1,0,C,0^FH^FD${volumeStr}\\&^FS` +
+                   `^CFA,30^FO550,${scaleY(950,len)}^FH^FDNota fiscal:^FS` +
+                   `^BY2,3,${scaleY(130,len)}^FO620,${scaleY(80,len)}^BC,${scaleY(120,len)},,,,N^FH^FD${nfKey}^FS^XZ`; 
+        }
+
+        // Template ZPL Manual
+        function generateZplManualTemplate(data) { 
+            return `^XA^MMT^PW799^LL640^LS1` +
+                   `^FO15,55^GB767,4,4^FS^FO15,115^GB767,4,4^FS^FO15,270^GB767,4,4^FS` +
+                   `^FO15,440^GB767,4,4^FS^FO15,520^GB767,4,4^FS` +
+                   `^FT15,45^A0N,34,33^FH\\^FDGENOMMA MG ^FS` +
+                   `^FT15,80^A0N,17,16^FH\\^FDDocumento^FS` +
+                   `^FT100,105^A0N,34,33^FH\\^FD${data.documento}^FS` +
+                   `^FT415,80^A0N,17,16^FH\\^FDSolicitante^FS` +
+                   `^FT500,105^A0N,34,33^FH\\^FD${data.solicitante}^FS` +
+                   `^FT15,155^A0N,17,16^FH\\^FDNota Fiscal^FS` +
+                   `^FT280,240^A0N,100,100^FH\\^FD${data.nf}^FS` +
+                   `^FT15,305^A0N,17,16^FH\\^FDDestinatario^FS` +
+                   `^FT15,355^A0N,34,33^FH\\^FD${data.destinatario}^FS` +
+                   `^FT15,400^A0N,23,24^FH\\^FD${data.cidade}^FS` +
+                   `^FT15,510^A0N,34,33^FH\\^FD${data.transportadora}^FS` +
+                   `^FT15,470^A0N,17,16^FH\\^FDTransportador^FS` +
+                   `^FT15,555^A0N,17,16^FH\\^FDVolumes^FS` +
+                   `^FT55,595^A0N,34,33^FH\\^FD${data.volAtual} / ${data.volTotal} CAIXA^FS^XZ`; 
+        }
+
+        // --- Geração de Etiqueta AMAZON ---
         safeBind('generateButton', 'click', async () => { 
-            const b=document.getElementById('generateButton'),p=document.getElementById('printButton'),c=document.getElementById('previewContainer'),z=document.getElementById('zplCode'); const t=document.getElementById('selectTamanho').value,d=labelDimensions[t],cd=document.getElementById('selectCdAmazon').value,cl=cdData[cd],nf=document.getElementById('inputChaveNf').value,po=document.getElementById('inputPedido').value,qt=parseInt(document.getElementById('inputQuantidadeTotal').value),ci=parseInt(document.getElementById('inputCaixaInicial').value),cf=parseInt(document.getElementById('inputCaixaFinal').value); 
-            if(!cl){window.showToast("CD inválido",'error');return;} if(isNaN(ci)||isNaN(cf)||isNaN(qt)){window.showToast("Preencha números",'error');return;} let az=""; for(let i=ci;i<=cf;i++)az+=generateZplTemplate(d,cd,cl,nf,po,i,qt); z.value=az; const pz=generateZplTemplate(d,cd,cl,nf,po,ci,qt); b.disabled=true;b.innerText='Gerando...';c.innerHTML='<span class="spinner"></span>'; 
-            try{const r=await fetch(baseApiUrl+t+'/0/',{method:'POST',headers:{'Accept':'image/png','Content-Type':'application/x-www-form-urlencoded'},body:pz}); if(r.ok){const u=URL.createObjectURL(await r.blob()); c.innerHTML=''; const i=document.createElement('img'); i.src=u; i.className='w-full h-full object-contain bg-white rounded-lg'; c.appendChild(i); p.disabled=false;}else{c.innerHTML='<span class="text-red-400 text-xs">Erro API</span>';}}catch{c.innerHTML='<span class="text-red-400 text-xs">Erro Rede</span>';}finally{b.disabled=false;b.innerText='Gerar ZPL e Visualizar';}
+            const btnGenerate = document.getElementById('generateButton');
+            const btnPrint = document.getElementById('printButton');
+            const previewContainer = document.getElementById('previewContainer');
+            const textareaZpl = document.getElementById('zplCode');
+            
+            // Coleta de dados
+            const sizeKey = document.getElementById('selectTamanho').value;
+            const dimensionConfig = labelDimensions[sizeKey];
+            const cdCode = document.getElementById('selectCdAmazon').value;
+            const cdInfo = cdData[cdCode];
+            
+            const nfKey = document.getElementById('inputChaveNf').value;
+            const poNumber = document.getElementById('inputPedido').value;
+            const totalQty = parseInt(document.getElementById('inputQuantidadeTotal').value);
+            const boxStart = parseInt(document.getElementById('inputCaixaInicial').value);
+            const boxEnd = parseInt(document.getElementById('inputCaixaFinal').value);
+
+            // Validações
+            if (!cdInfo) { window.showToast("CD inválido", 'error'); return; }
+            if (isNaN(boxStart) || isNaN(boxEnd) || isNaN(totalQty)) { window.showToast("Preencha números válidos", 'error'); return; }
+
+            // Gera lote completo (para o textarea e impressão)
+            let fullZplBatch = ""; 
+            for (let i = boxStart; i <= boxEnd; i++) {
+                fullZplBatch += generateZplTemplate(dimensionConfig, cdCode, cdInfo, nfKey, poNumber, i, totalQty);
+            }
+            textareaZpl.value = fullZplBatch;
+
+            // Gera ZPL apenas da primeira caixa para preview
+            const previewZpl = generateZplTemplate(dimensionConfig, cdCode, cdInfo, nfKey, poNumber, boxStart, totalQty);
+
+            // Atualiza UI
+            btnGenerate.disabled = true;
+            btnGenerate.innerText = 'Gerando...';
+            previewContainer.innerHTML = '<span class="spinner"></span>';
+
+            // Chamada API Labelary
+            try {
+                const response = await fetch(`${baseApiUrl}${sizeKey}/0/`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'image/png', 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: previewZpl
+                });
+                
+                if (response.ok) {
+                    const imageUrl = URL.createObjectURL(await response.blob());
+                    previewContainer.innerHTML = ''; 
+                    const img = document.createElement('img');
+                    img.src = imageUrl;
+                    img.className = 'w-full h-full object-contain bg-white rounded-lg';
+                    previewContainer.appendChild(img);
+                    btnPrint.disabled = false;
+                } else {
+                    previewContainer.innerHTML = '<span class="text-red-400 text-xs">Erro API Labelary</span>';
+                }
+            } catch (err) {
+                previewContainer.innerHTML = '<span class="text-red-400 text-xs">Erro de Rede</span>';
+            } finally {
+                btnGenerate.disabled = false;
+                btnGenerate.innerText = 'Gerar ZPL e Visualizar';
+            }
         });
 
+        // Impressão PDF Amazon
         safeBind('printButton', 'click', async () => { 
-            const z=document.getElementById('zplCode').value,t=document.getElementById('selectTamanho').value,b=document.getElementById('printButton'); if(!z)return; b.disabled=true; 
-            try{const r=await fetch(baseApiUrl+t+'/',{method:'POST',headers:{'Accept':'application/pdf','Content-Type':'application/x-www-form-urlencoded'},body:z}); if(r.ok)window.open(URL.createObjectURL(await r.blob()),'_blank');}catch{window.showToast("Erro PDF",'error');}finally{b.disabled=false;} 
+            const zplContent = document.getElementById('zplCode').value;
+            const sizeKey = document.getElementById('selectTamanho').value;
+            const btnPrint = document.getElementById('printButton');
+            
+            if (!zplContent) return;
+            
+            btnPrint.disabled = true;
+            try {
+                const response = await fetch(`${baseApiUrl}${sizeKey}/`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/pdf', 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: zplContent
+                });
+                if (response.ok) {
+                    window.open(URL.createObjectURL(await response.blob()), '_blank');
+                }
+            } catch (err) {
+                window.showToast("Erro ao gerar PDF", 'error');
+            } finally {
+                btnPrint.disabled = false;
+            }
         });
 
+        // --- Geração de Etiqueta MANUAL ---
         safeBind('generateButtonManual', 'click', async () => { 
-            const b=document.getElementById('generateButtonManual'),p=document.getElementById('printButtonManual'),c=document.getElementById('previewContainerManual'),z=document.getElementById('zplCodeManual'); const tm="4x3.15",d=labelDimensions[tm],dv=document.getElementById('inputManualDocumento').value,nf=document.getElementById('inputManualNf').value,sl=document.getElementById('inputManualSolicitante').value,dt=document.getElementById('inputManualDestinatario').value,ci=document.getElementById('inputManualCidade').value,tr=document.getElementById('inputManualTransportadora').value,qt=parseInt(document.getElementById('inputManualQtdTotal').value)||0,vi=parseInt(document.getElementById('inputManualCaixaIni').value)||1,vf=parseInt(document.getElementById('inputManualCaixaFim').value)||1; if(qt<=0){window.showToast("Qtd inválida",'error');return;} let ac=""; for(let i=vi;i<=vf;i++)ac+=generateZplManualTemplate({documento:dv,nf:nf,solicitante:sl,destinatario:dt,cidade:ci,transportadora:tr,volAtual:i,volTotal:qt}); z.value=ac; b.disabled=true;b.innerText='Gerando...';c.innerHTML='<span class="spinner"></span>'; 
-            try{const r=await fetch(baseApiUrl+tm+'/0/',{method:'POST',headers:{'Accept':'image/png','Content-Type':'application/x-www-form-urlencoded'},body:generateZplManualTemplate({documento:dv,nf:nf,solicitante:sl,destinatario:dt,cidade:ci,transportadora:tr,volAtual:vi,volTotal:qt})}); if(r.ok){const u=URL.createObjectURL(await r.blob()); c.innerHTML=`<img src="${u}" class="w-full h-full object-contain bg-white rounded-lg">`; p.disabled=false;}else{c.innerHTML='<span class="text-red-400 text-xs">Erro API</span>';}}catch{c.innerHTML='<span class="text-red-400 text-xs">Erro Rede</span>';}finally{b.disabled=false;b.innerText='Gerar ZPL e Visualizar';}
+            const btnGenerate = document.getElementById('generateButtonManual');
+            const btnPrint = document.getElementById('printButtonManual');
+            const previewContainer = document.getElementById('previewContainerManual');
+            const textareaZpl = document.getElementById('zplCodeManual');
+            
+            const sizeKey = "4x3.15"; // Fixo para manual
+            
+            // Dados
+            const docInput = document.getElementById('inputManualDocumento').value;
+            const nfInput = document.getElementById('inputManualNf').value;
+            const solicitanteInput = document.getElementById('inputManualSolicitante').value;
+            const destInput = document.getElementById('inputManualDestinatario').value;
+            const cidadeInput = document.getElementById('inputManualCidade').value;
+            const transpInput = document.getElementById('inputManualTransportadora').value;
+            const qtdTotal = parseInt(document.getElementById('inputManualQtdTotal').value) || 0;
+            const boxStart = parseInt(document.getElementById('inputManualCaixaIni').value) || 1;
+            const boxEnd = parseInt(document.getElementById('inputManualCaixaFim').value) || 1;
+
+            if (qtdTotal <= 0) { window.showToast("Quantidade Total inválida", 'error'); return; }
+
+            // Gera lote completo
+            let fullZplBatch = ""; 
+            for (let i = boxStart; i <= boxEnd; i++) {
+                fullZplBatch += generateZplManualTemplate({
+                    documento: docInput, nf: nfInput, solicitante: solicitanteInput,
+                    destinatario: destInput, cidade: cidadeInput, transportadora: transpInput,
+                    volAtual: i, volTotal: qtdTotal
+                });
+            }
+            textareaZpl.value = fullZplBatch;
+
+            // Preview (apenas 1 etiqueta)
+            const previewZpl = generateZplManualTemplate({
+                documento: docInput, nf: nfInput, solicitante: solicitanteInput,
+                destinatario: destInput, cidade: cidadeInput, transportadora: transpInput,
+                volAtual: boxStart, volTotal: qtdTotal
+            });
+
+            // UI Feedback
+            btnGenerate.disabled = true;
+            btnGenerate.innerText = 'Gerando...';
+            previewContainer.innerHTML = '<span class="spinner"></span>';
+
+            try {
+                const response = await fetch(`${baseApiUrl}${sizeKey}/0/`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'image/png', 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: previewZpl
+                });
+                
+                if (response.ok) {
+                    const imageUrl = URL.createObjectURL(await response.blob());
+                    previewContainer.innerHTML = `<img src="${imageUrl}" class="w-full h-full object-contain bg-white rounded-lg">`;
+                    btnPrint.disabled = false;
+                } else {
+                    previewContainer.innerHTML = '<span class="text-red-400 text-xs">Erro API</span>';
+                }
+            } catch (err) {
+                previewContainer.innerHTML = '<span class="text-red-400 text-xs">Erro Rede</span>';
+            } finally {
+                btnGenerate.disabled = false;
+                btnGenerate.innerText = 'Gerar ZPL e Visualizar';
+            }
         });
 
+        // Impressão PDF Manual
         safeBind('printButtonManual', 'click', async () => { 
-            const z=document.getElementById('zplCodeManual').value,tm="4x3.15",b=document.getElementById('printButtonManual'); if(!z)return; b.disabled=true; 
-            try{const r=await fetch(baseApiUrl+tm+'/',{method:'POST',headers:{'Accept':'application/pdf','Content-Type':'application/x-www-form-urlencoded'},body:z}); if(r.ok)window.open(URL.createObjectURL(await r.blob()),'_blank');}catch{window.showToast("Erro PDF",'error');}finally{b.disabled=false;} 
+            const zplContent = document.getElementById('zplCodeManual').value;
+            const sizeKey = "4x3.15";
+            const btnPrint = document.getElementById('printButtonManual');
+            
+            if (!zplContent) return;
+            
+            btnPrint.disabled = true;
+            try {
+                const response = await fetch(`${baseApiUrl}${sizeKey}/`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/pdf', 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: zplContent
+                });
+                if (response.ok) {
+                    window.open(URL.createObjectURL(await response.blob()), '_blank');
+                }
+            } catch {
+                window.showToast("Erro PDF", 'error');
+            } finally {
+                btnPrint.disabled = false;
+            }
         });
 
         // Bindings Botões Dashboard Ocorrências
@@ -1750,4 +1992,5 @@ safeBind('btn-reset-db','click',()=>{
     </script>
 </body>
 </html>
+
 
