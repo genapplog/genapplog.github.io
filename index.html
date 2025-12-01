@@ -763,7 +763,31 @@
             <button id="btn-reset-db" class="px-6 py-2 bg-red-900/50 text-red-200 border border-red-800 rounded-lg font-medium hover:bg-red-900 transition text-sm flex items-center justify-center mx-auto gap-2">Resetar Banco de Dados</button>
             <button id="btn-apply-rules" class="mt-4 px-6 py-2 bg-indigo-900/50 text-indigo-200 border border-indigo-800 rounded-lg font-medium hover:bg-indigo-900 transition text-sm flex items-center justify-center mx-auto gap-2">Aplicar Regras Individuais</button>
         </div>
+    </div>
+</div>
+                <div class="mt-8 border-t border-slate-700 pt-6 text-left">
+    <div class="flex justify-between items-center mb-4">
+        <h4 class="text-slate-300 text-sm font-bold uppercase tracking-wider">Gerenciar Registros Individuais</h4>
+        <button id="btn-refresh-admin-list" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded transition">
+            Carregar Lista Completa
+        </button>
+    </div>
 
+    <div class="overflow-hidden rounded-lg border border-slate-700 max-h-80 overflow-y-auto bg-slate-900">
+        <table class="min-w-full text-xs text-left">
+            <thead class="bg-slate-950 text-slate-400 font-medium sticky top-0 z-10">
+                <tr>
+                    <th class="px-4 py-2">Data</th>
+                    <th class="px-4 py-2">Tipo</th>
+                    <th class="px-4 py-2">Embarque / NF</th>
+                    <th class="px-4 py-2">Status</th>
+                    <th class="px-4 py-2 text-right">Ação</th>
+                </tr>
+            </thead>
+            <tbody id="admin-oc-list-tbody" class="divide-y divide-slate-800 text-slate-300">
+                <tr><td colspan="5" class="px-4 py-4 text-center text-slate-600 italic">Clique em "Carregar Lista" para gerenciar.</td></tr>
+            </tbody>
+        </table>
     </div>
 </div>
             </div>
@@ -922,16 +946,16 @@
         const specificClientRules = { "AMAZON": { ...defaultChecklistData, observacao: { directa: "Exige agendamento prévio (CARP).", fracionada: "Exige agendamento prévio (CARP)." } } };
         const cdData = { 
             "GRU5": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000367", ie: "241099810118 ", linha1: "Cd Prologis 3: Av. Antonio Candido Machado", linha2: "3100 Andar 5, 07776415 - Cajamar - SP" },
-            "XBRA": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000448", ie: "241118709114 ", linha1: "Cd Prologis 2: Av. Dr. Joao Abdalla 260"   , linha2: "Bloco 400, 07776700 - Cajamar - SP" },
-            "XBRB": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000529", ie: "0842859-07   ", linha1: "Rd Br-101 Sul, 3791bl C, Galpão 5, Sl A"   , linha2: "54503010 - Cabo De Santo Agostinho - PE " },
+            "XBRA": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000448", ie: "241118709114 ", linha1: "Cd Prologis 2: Av. Dr. Joao Abdalla 260   ", linha2: "Bloco 400, 07776700 - Cajamar - SP" },
+            "XBRB": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000529", ie: "0842859-07   ", linha1: "Rd Br-101 Sul, 3791bl C, Galpão 5, Sl A   ", linha2: "54503010 - Cabo De Santo Agostinho - PE " },
             "XBRT": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000871", ie: "241134643114 ", linha1: "Via De Acesso Norte KM 38, 420, Galpão 07 ", linha2: "Gleba A Bloco 07, 07789100 Cajamar - SP " },
-            "XBRZ": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000286", ie: "241115791117 ", linha1: "Cd Prologis 2: Av. Dr. Joao Abdalla 260"   , linha2: "Bloco 300, 07776700 Cajamar - SP" },
-            "CNF1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000952", ie: "002668590054 ", linha1: "Avenida Juiz Marco Tulio Isaac 7000"       , linha2: "32670250, Betim - MG" },
+            "XBRZ": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000286", ie: "241115791117 ", linha1: "Cd Prologis 2: Av. Dr. Joao Abdalla 260   ", linha2: "Bloco 300, 07776700 Cajamar - SP" },
+            "CNF1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000952", ie: "002668590054 ", linha1: "Avenida Juiz Marco Tulio Isaac 7000       ", linha2: "32670250, Betim - MG" },
             "BSB1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001096", ie: "0774927400365", linha1: "Rd Df, 290, Km 1.2 Lote 13,14,15,16 E 17 -", linha2: " 72501100, Brasilia - DF" },
-            "POA1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001177", ie: "3820025709   ", linha1: "Rua Da Pedreira, 64, Pavilhão 05"          , linha2: "92480000, Nova Santa Rita - RS" },
-            "GIG1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001410", ie: "11821987     ", linha1: "Av Arthur Antonio Sendas, S/N Area 6a"     , linha2: "25585021, Sao Joao De Meriti, RJ" },
-            "REC1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "11543694000150", ie: "0920380-00   ", linha1: "RD BR 101 SUL, 9415, Galpão B"             , linha2: "54503010 - Cabo De Santo Agostinho - PE " },
-            "FOR2": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001681", ie: "61268801     ", linha1: "Av Quarto Anel Viario, 4343"               , linha2: "61880000, Itaitinga - CE" } 
+            "POA1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001177", ie: "3820025709   ", linha1: "Rua Da Pedreira, 64, Pavilhão 05          ", linha2: "92480000, Nova Santa Rita - RS" },
+            "GIG1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001410", ie: "11821987     ", linha1: "Av Arthur Antonio Sendas, S/N Area 6a     ", linha2: "25585021, Sao Joao De Meriti, RJ" },
+            "REC1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "11543694000150", ie: "0920380-00   ", linha1: "RD BR 101 SUL, 9415, Galpão B             ", linha2: "54503010 - Cabo De Santo Agostinho - PE " },
+            "FOR2": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001681", ie: "61268801     ", linha1: "Av Quarto Anel Viario, 4343               ", linha2: "61880000, Itaitinga - CE" } 
         };
         const labelDimensions = { "4x6": { pw: 800, ll: 1200, aspect: "aspect-[2/3]" }, "4x4": { pw: 800, ll: 800, aspect: "aspect-square" }, "4x2": { pw: 800, ll: 400, aspect: "aspect-[2/1]" }, "4x3.15": { pw: 800, ll: 640, aspect: "aspect-[10/8]" } };
         const baseApiUrl = 'https://api.labelary.com/v1/printers/8dpmm/labels/';
@@ -1570,7 +1594,72 @@ safeBind('users-upload', 'change', (e) => {
             reader.onerror = () => { window.showToast("Erro de leitura.", 'error'); };
             reader.readAsText(file);
         });
+// --- Lógica de Gestão Individual (Admin) ---
 
+// 1. Função para renderizar a tabela
+function renderAdminOccurrenceList() {
+    const tbody = document.getElementById('admin-oc-list-tbody');
+    tbody.innerHTML = '';
+
+    // Junta tudo: Pendentes + Concluídas (dashboard)
+    const fullList = [...pendingOccurrencesData, ...allOccurrencesData];
+    
+    // Ordena pela data (mais recente primeiro)
+    fullList.sort((a, b) => b.jsDate - a.jsDate);
+
+    if (fullList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-4 text-center text-slate-500">Nenhum registro encontrado neste ambiente.</td></tr>';
+        return;
+    }
+
+    fullList.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800 transition-colors";
+        
+        // Define cor do status
+        let statusColor = "text-slate-500";
+        if(item.status === 'concluido') statusColor = "text-emerald-400 font-bold";
+        if(item.status.includes('pendente')) statusColor = "text-amber-400";
+
+        tr.innerHTML = `
+            <td class="px-4 py-2 font-mono">${item.jsDate.toLocaleDateString('pt-BR')}</td>
+            <td class="px-4 py-2 font-bold text-white">${item.tipo}</td>
+            <td class="px-4 py-2">${item.embarque || '-'} / ${item.nf || '-'}</td>
+            <td class="px-4 py-2 ${statusColor} uppercase text-[10px]">${item.status}</td>
+            <td class="px-4 py-2 text-right">
+                <button class="text-red-400 hover:text-red-200 bg-red-900/20 hover:bg-red-900/50 p-1.5 rounded transition btn-delete-individual" data-id="${item.id}" title="Excluir permanentemente">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // Adiciona eventos aos botões de excluir gerados
+    document.querySelectorAll('.btn-delete-individual').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.currentTarget.dataset.id;
+            window.openConfirmModal(
+                "Excluir Registro?", 
+                "Essa ação removerá este item específico do banco de dados e corrigirá os gráficos do Dashboard.", 
+                async () => {
+                    try {
+                        await deleteDoc(doc(occurrencesCollection, id));
+                        window.showToast("Registro excluído.");
+                        window.closeConfirmModal();
+                        renderAdminOccurrenceList(); // Atualiza a lista após excluir
+                    } catch (err) {
+                        console.error(err);
+                        window.showToast("Erro ao excluir.", "error");
+                    }
+                }
+            );
+        });
+    });
+}
+
+// 2. Liga o botão "Carregar Lista" à função
+safeBind('btn-refresh-admin-list', 'click', renderAdminOccurrenceList);
         safeBind('btn-reset-db','click',()=>{ window.openConfirmModal("Resetar BD?", "PERIGO: Reverte todos os dados.", async()=>{ try{ const s=await getDocs(clientsCollection); const b=writeBatch(db); s.forEach(d=>{ const n=d.data().name?.toUpperCase().trim(); b.update(d.ref,{checklist:specificClientRules[n]||defaultChecklistData}); }); await b.commit(); window.showToast("Reset concluído."); }catch(e){window.showToast("Erro reset",'error');} window.closeConfirmModal(); }); });
         safeBind('btn-apply-rules','click',()=>{ window.openConfirmModal("Aplicar Regras?", "Atualiza clientes com regras hardcoded.", async()=>{ try{ const s=await getDocs(clientsCollection); const b=writeBatch(db); let c=0; s.forEach(d=>{ const n=d.data().name?.toUpperCase().trim(); if(specificClientRules[n]){ b.update(d.ref,{checklist:specificClientRules[n]}); c++; } }); if(c>0)await b.commit(); window.showToast(`${c} atualizados.`); }catch(e){window.showToast("Erro",'error');} window.closeConfirmModal(); }); });
     </script>
