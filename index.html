@@ -694,49 +694,78 @@
                         </div>
                     </div>
                 </div>
-                <div id="configuracoes" class="page-content hidden fade-in max-w-4xl mx-auto">
-                    <header class="mb-8"><h1 class="text-3xl font-bold text-white">Configurações</h1></header>
-                    <div class="bg-slate-800 p-12 rounded-xl shadow-lg border border-slate-700 text-center">
-                        <div class="max-w-2xl mx-auto mb-12 p-6 bg-slate-900/50 rounded-xl border border-slate-700">
-                            <h3 class="text-lg font-bold text-white mb-4 flex items-center justify-center gap-2">Ambiente de Execução</h3>
-                            <div class="flex items-center justify-center gap-4 mb-6"><span class="text-sm font-medium text-emerald-400">Produção</span><div class="relative inline-block w-14 h-8 align-middle select-none transition duration-200 ease-in"><input type="checkbox" name="env-toggle" id="env-toggle" class="toggle-checkbox absolute block w-8 h-8 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-0 border-slate-600"/><label for="env-toggle" class="toggle-label block overflow-hidden h-8 rounded-full bg-slate-700 cursor-pointer border border-slate-600"></label></div><span class="text-sm font-medium text-amber-400">Teste</span></div>
-                            <div id="promote-section" class="hidden border-t border-slate-700 pt-6"><button id="btn-promote-prod" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold shadow-lg transition flex items-center justify-center gap-2 mx-auto w-full md:w-auto">Promover Testes para Produção</button></div>
-                        </div>
-                        <div class="max-w-2xl mx-auto">
-                            <div class="mb-8"><h2 class="text-2xl font-bold text-white mb-2">Importar Base de Dados</h2></div>
-                            <div class="mt-8 border-t border-slate-700 pt-8">
-    <h2 class="text-2xl font-bold text-white mb-2">Gestão de Equipe</h2>
-    <p class="text-slate-400 text-sm mb-4">Importe a lista de usuários e seus cargos (LIDER, INVENTARIO, OPERADOR).</p>
+<div id="configuracoes" class="page-content hidden fade-in max-w-4xl mx-auto">
+    <header class="mb-8"><h1 class="text-3xl font-bold text-white">Configurações</h1></header>
     
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <button id="download-users-template-btn" class="px-4 py-3 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition border border-slate-600">
-            Baixar Modelo JSON
-        </button>
+    <div class="bg-slate-800 p-12 rounded-xl shadow-lg border border-slate-700 text-center">
         
-        <label for="users-upload" class="cursor-pointer px-4 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-500 transition shadow-lg text-center">
-            Importar Equipe
-            <input id="users-upload" type="file" class="hidden" accept=".json">
-        </label>
-    </div>
-    
-    <div id="users-import-status" class="hidden p-4 rounded-lg bg-slate-900 border border-slate-700 text-left">
-        <p class="text-sm text-slate-300 font-mono" id="users-import-status-text"></p>
+        <div class="max-w-2xl mx-auto mb-12 p-6 bg-slate-900/50 rounded-xl border border-slate-700">
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center justify-center gap-2">Ambiente de Execução</h3>
+            <div class="flex items-center justify-center gap-4 mb-6">
+                <span class="text-sm font-medium text-emerald-400">Produção</span>
+                <div class="relative inline-block w-14 h-8 align-middle select-none transition duration-200 ease-in">
+                    <input type="checkbox" name="env-toggle" id="env-toggle" class="toggle-checkbox absolute block w-8 h-8 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-0 border-slate-600"/>
+                    <label for="env-toggle" class="toggle-label block overflow-hidden h-8 rounded-full bg-slate-700 cursor-pointer border border-slate-600"></label>
+                </div>
+                <span class="text-sm font-medium text-amber-400">Teste</span>
+            </div>
+            <div id="promote-section" class="hidden border-t border-slate-700 pt-6">
+                <button id="btn-promote-prod" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold shadow-lg transition flex items-center justify-center gap-2 mx-auto w-full md:w-auto">Promover Testes para Produção</button>
+            </div>
+        </div>
+
+        <div class="max-w-2xl mx-auto mb-12 border-b border-slate-700 pb-12">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-white mb-2">Importar Base de Dados</h2>
+                <p class="text-slate-400 text-sm">Atualize a lista de clientes e checklist de carregamento.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <button id="download-template-btn" class="px-4 py-3 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition border border-slate-600">
+                    Baixar Modelo Carregamento
+                </button>
+                
+                <label for="file-upload" class="cursor-pointer px-4 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 transition shadow-lg flex items-center justify-center">
+                    Importar Carregamento
+                    <input id="file-upload" type="file" class="hidden" accept=".json">
+                </label>
+            </div>
+            
+            <div id="import-status" class="hidden p-4 rounded-lg bg-slate-900 border border-slate-700 text-left">
+                <p class="text-sm text-slate-300 font-mono" id="import-status-text"></p>
+            </div>
+        </div>
+
+        <div class="max-w-2xl mx-auto">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-white mb-2">Gestão de Equipe</h2>
+                <p class="text-slate-400 text-sm">Importe a lista de usuários e seus cargos (LIDER, INVENTARIO, OPERADOR).</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <button id="download-users-template-btn" class="px-4 py-3 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition border border-slate-600">
+                    Baixar Modelo Equipe
+                </button>
+                
+                <label for="users-upload" class="cursor-pointer px-4 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-500 transition shadow-lg flex items-center justify-center">
+                    Importar Equipe
+                    <input id="users-upload" type="file" class="hidden" accept=".json">
+                </label>
+            </div>
+            
+            <div id="users-import-status" class="hidden p-4 rounded-lg bg-slate-900 border border-slate-700 text-left">
+                <p class="text-sm text-slate-300 font-mono" id="users-import-status-text"></p>
+            </div>
+        </div>
+
+        <div id="admin-danger-zone" class="mt-12 pt-8 border-t border-slate-700 hidden">
+            <h3 class="text-red-400 font-bold uppercase text-xs tracking-wider mb-4">Área de Perigo (Admin)</h3>
+            <button id="btn-reset-db" class="px-6 py-2 bg-red-900/50 text-red-200 border border-red-800 rounded-lg font-medium hover:bg-red-900 transition text-sm flex items-center justify-center mx-auto gap-2">Resetar Banco de Dados</button>
+            <button id="btn-apply-rules" class="mt-4 px-6 py-2 bg-indigo-900/50 text-indigo-200 border border-indigo-800 rounded-lg font-medium hover:bg-indigo-900 transition text-sm flex items-center justify-center mx-auto gap-2">Aplicar Regras Individuais</button>
+        </div>
+
     </div>
 </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                                <button id="download-template-btn" class="px-4 py-3 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition border border-slate-600">Baixar Modelo Padrão de Carregamento</button>
-                                <label for="file-upload" class="cursor-pointer px-4 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 transition shadow-lg">Importar Padrão de Carregamento<input id="file-upload" type="file" class="hidden" accept=".json"></label>
-                            </div>
-                            <div id="import-status" class="hidden p-4 rounded-lg bg-slate-900 border border-slate-700 text-left"><p class="text-sm text-slate-300 font-mono" id="import-status-text"></p></div>
-                        </div>
-                        <div id="admin-danger-zone" class="mt-12 pt-8 border-t border-slate-700 hidden">
-                            <h3 class="text-red-400 font-bold uppercase text-xs tracking-wider mb-4">Área de Perigo (Admin)</h3>
-                            <button id="btn-reset-db" class="px-6 py-2 bg-red-900/50 text-red-200 border border-red-800 rounded-lg font-medium hover:bg-red-900 transition text-sm flex items-center justify-center mx-auto gap-2">Resetar Padrão de Carregamento</button>
-                            <button id="btn-apply-rules" class="mt-4 px-6 py-2 bg-indigo-900/50 text-indigo-200 border border-indigo-800 rounded-lg font-medium hover:bg-indigo-900 transition text-sm flex items-center justify-center mx-auto gap-2">Aplicar Regras Individuais</button>
-                        </div>
-                    </div>
-                </div>
-
             </div>
         </div>
     </div>
@@ -825,7 +854,16 @@
         };
 
         // --- 2. CONFIGURAÇÕES ---
-        const ADMIN_IDS = ["25hMg4MiXENNs4H50TkWBxMZi5r2", "h2YvJ6pwruMAFCQaEghvuWB2uTY2"];        
+        const ADMIN_IDS = ["25hMg4MiXENNs4H50TkWBxMZi5r2", "h2YvJ6pwruMAFCQaEghvuWB2uTY2"];
+       function isUserAdmin() {
+    // 1. Verifica lista fixa (hardcoded)
+    if (ADMIN_IDS.includes(userId)) return true;
+    
+    // 2. Verifica perfil carregado do banco
+    if (currentUserProfile && currentUserProfile.role === 'ADMIN') return true;
+    
+    return false;
+}
         const firebaseConfig = {
             apiKey: "AIzaSyABGUTSwBMEuNLmFDsNRHgXOo3NEs8Q21A",
             authDomain: "genapplog.firebaseapp.com",
@@ -930,7 +968,7 @@
                     if (user) {
                         userId = user.uid;
                         document.getElementById('userIdDisplay').innerText = userId;
-                        const isAdmin = ADMIN_IDS.includes(userId);
+                        const isAdmin = isUserAdmin();
                         updateUIForRole(isAdmin);
                         const savedEnv = localStorage.getItem('appLog_env') || 'prod';
                         setEnvironment(savedEnv);
@@ -1183,7 +1221,7 @@
             const list = Array.from(clientCache.values()); const filtered = term ? list.filter(c => c.name.toLowerCase().includes(term)) : list;
             const tbody = document.getElementById('client-list-tbody'); tbody.innerHTML = '';
             if(!filtered.length) { tbody.innerHTML = '<tr><td colspan="2" class="px-6 py-12 text-center text-slate-500">Nenhum cliente encontrado.</td></tr>'; return; }
-            const isAdmin = userId && ADMIN_IDS.includes(userId);
+            const isAdmin = userId && isUserAdmin();
             filtered.forEach(c => {
                 const tr = document.createElement('tr'); tr.className = "hover:bg-slate-800 transition-colors border-b border-slate-700";
                 const actions = isAdmin ? `<div class="flex justify-end items-center gap-4"><button class="text-slate-400 hover:text-white font-medium action-view transition-colors" data-id="${c.id}">Visualizar</button><button class="text-indigo-400 hover:text-indigo-300 font-medium action-edit transition-colors" data-id="${c.id}">Editar</button><button class="text-red-400 hover:text-red-300 font-medium action-delete transition-colors" data-id="${c.id}" data-name="${c.name}">Excluir</button></div>` : `<div class="flex justify-end items-center"><button class="text-slate-400 hover:text-indigo-400 font-medium action-view" data-id="${c.id}">Visualizar</button></div>`;
@@ -1539,6 +1577,7 @@ safeBind('users-upload', 'change', (e) => {
 </body>
 
 </html>
+
 
 
 
