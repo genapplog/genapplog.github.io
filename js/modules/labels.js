@@ -18,13 +18,15 @@ export function initLabelsModule() {
     safeBind('btn-toggle-zpl-amazon', 'click', () => document.getElementById('box-zpl-amazon').classList.toggle('hidden'));
     safeBind('btn-toggle-zpl-manual', 'click', () => document.getElementById('box-zpl-manual').classList.toggle('hidden'));
 
-    // Geração Amazon (Passa TRUE para rotacionar)
+    // Auto-preenchimento
+    safeBind('inputQuantidadeTotal', 'input', (e) => { document.getElementById('inputCaixaFinal').value = e.target.value; });
+    safeBind('inputManualQtdTotal', 'input', (e) => { document.getElementById('inputManualCaixaFim').value = e.target.value; });
+
+    // Ações
     safeBind('generateButton', 'click', async () => handleGenerateAmazon());
-    
-    // Geração Manual (Passa FALSE, não rotaciona)
     safeBind('generateButtonManual', 'click', async () => handleGenerateManual());
     
-    // Impressão
+    // Impressão (Baixar PDF)
     safeBind('printButton', 'click', async () => handlePrintPDF('zplCode', 'selectTamanho', 'printButton'));
     safeBind('printButtonManual', 'click', async () => handlePrintPDF('zplCodeManual', null, 'printButtonManual', '4x3.15'));
 }
@@ -39,7 +41,7 @@ function scaleY(value, labelLength) {
 function generateZplTemplate(dims, cdCode, cdInfo, nfKey, poNumber, currentBox, totalBoxes) {
     const volumeStr = `${currentBox}/${totalBoxes}`;
     const len = dims.ll;
-    return `^XA^CI28^PW${dims.pw}^LL${dims.ll}^LH0,0^PO^FWB^FX BORDAS` +
+    return `^XA^CI28^PW${dims.pw}^LL${dims.ll}^LH0,0^PO^FWB` +
            `^FO10,${scaleY(10,len)}^GB780,${scaleY(1180,len)},3^FS` +
            `^FO20,${scaleY(20,len)}^GB40,${scaleY(575,len)},3^FS^FO20,${scaleY(605,len)}^GB40,${scaleY(575,len)},3^FS` +
            `^FO70,${scaleY(20,len)}^GB220,${scaleY(575,len)},3^FS^FO70,${scaleY(605,len)}^GB220,${scaleY(575,len)},3^FS` +
@@ -89,6 +91,7 @@ async function handleGenerateAmazon() {
     const cdInfo = cdData[cdCode];
     const nfKey = document.getElementById('inputChaveNf').value;
     const poNumber = document.getElementById('inputPedido').value;
+    
     const totalQty = parseInt(document.getElementById('inputQuantidadeTotal').value);
     const boxStart = parseInt(document.getElementById('inputCaixaInicial').value);
     const boxEnd = parseInt(document.getElementById('inputCaixaFinal').value);
@@ -97,13 +100,17 @@ async function handleGenerateAmazon() {
     if (isNaN(boxStart) || isNaN(boxEnd) || isNaN(totalQty)) { showToast("Preencha números válidos", 'error'); return; }
 
     let fullZplBatch = ""; 
-    for (let i = boxStart; i <= boxEnd; i++) fullZplBatch += generateZplTemplate(dimensionConfig, cdCode, cdInfo, nfKey, poNumber, i, totalQty);
+    for (let i = boxStart; i <= boxEnd; i++) {
+        fullZplBatch += generateZplTemplate(dimensionConfig, cdCode, cdInfo, nfKey, poNumber, i, totalQty);
+    }
     zplArea.value = fullZplBatch;
 
     const previewZpl = generateZplTemplate(dimensionConfig, cdCode, cdInfo, nfKey, poNumber, boxStart, totalQty);
     
-    // Passa TRUE para rotacionar
-    fetchPreview(sizeKey, previewZpl, btn, btnPrint, preview, 'Gerar ZPL e Visualizar', true);
+    // Preview sempre pede a index 0 (só uma imagem)
+    fetchPreview(sizeKey, previewZpl, btn, btnPrint, preview, 'Gerar Etiqueta', true);
+    
+    if(boxEnd > boxStart) showToast(`Lote de ${boxEnd - boxStart + 1} etiquetas gerado.`);
 }
 
 async function handleGenerateManual() {
@@ -119,6 +126,7 @@ async function handleGenerateManual() {
     const destInput = document.getElementById('inputManualDestinatario').value;
     const cidadeInput = document.getElementById('inputManualCidade').value;
     const transpInput = document.getElementById('inputManualTransportadora').value;
+    
     const qtdTotal = parseInt(document.getElementById('inputManualQtdTotal').value) || 0;
     const boxStart = parseInt(document.getElementById('inputManualCaixaIni').value) || 1;
     const boxEnd = parseInt(document.getElementById('inputManualCaixaFim').value) || 1;
@@ -132,25 +140,19 @@ async function handleGenerateManual() {
     zplArea.value = fullZplBatch;
 
     const previewZpl = generateZplManualTemplate({ documento: docInput, nf: nfInput, solicitante: solicitanteInput, destinatario: destInput, cidade: cidadeInput, transportadora: transpInput, volAtual: boxStart, volTotal: qtdTotal });
-    
-    // Passa FALSE para NÃO rotacionar
     fetchPreview(sizeKey, previewZpl, btn, btnPrint, preview, 'Gerar Etiqueta', false);
 }
 
 async function fetchPreview(sizeKey, zpl, btn, btnPrint, previewContainer, btnText, rotate = false) {
     btn.disabled = true; btn.innerText = 'Gerando...'; previewContainer.innerHTML = '<span class="spinner"></span>';
     try {
+        // PREVIEW: Mantém o /0/ para pegar apenas 1 imagem
         const response = await fetch(`${baseApiUrl}${sizeKey}/0/`, { method: 'POST', headers: { 'Accept': 'image/png', 'Content-Type': 'application/x-www-form-urlencoded' }, body: zpl });
         if (response.ok) {
             const imageUrl = URL.createObjectURL(await response.blob());
-            
-            // 👇 AJUSTE DE ESCALA E TAMANHO
-            // Usamos 'width: auto; height: auto' para não forçar a imagem a esticar
-            // Usamos 'scale(0.55)' para dar um zoom confortável
             const style = rotate 
                 ? 'transform: rotate(90deg) scale(0.55); transform-origin: center; width: auto; height: auto;' 
                 : 'width: 100%; height: 100%; object-fit: contain;';
-            
             previewContainer.innerHTML = `<img src="${imageUrl}" class="bg-white rounded-lg shadow-sm" style="${style}">`;
             btnPrint.disabled = false;
         } else previewContainer.innerHTML = '<span class="text-red-400 text-xs">Erro API Labelary</span>';
@@ -163,10 +165,22 @@ async function handlePrintPDF(zplId, sizeId, btnId, fixedSize) {
     const sizeKey = fixedSize || document.getElementById(sizeId).value;
     const btn = document.getElementById(btnId);
     if (!zplContent) return;
-    btn.disabled = true;
+    
+    btn.disabled = true; btn.innerText = "Baixando...";
     try {
-        const response = await fetch(`${baseApiUrl}${sizeKey}/0/`, { method: 'POST', headers: { 'Accept': 'application/pdf', 'Content-Type': 'application/x-www-form-urlencoded' }, body: zplContent });
+        // PDF: Removemos o /0/ da URL para que a API gere o PDF com TODAS as etiquetas
+        // E mantemos os headers corretos
+        const response = await fetch(`${baseApiUrl}${sizeKey}/`, { 
+            method: 'POST', 
+            headers: { 
+                'Accept': 'application/pdf',
+                'Content-Type': 'application/x-www-form-urlencoded' 
+            }, 
+            body: zplContent 
+        });
+
         if (response.ok) window.open(URL.createObjectURL(await response.blob()), '_blank');
-    } catch { showToast("Erro ao gerar PDF", 'error'); } 
-    finally { btn.disabled = false; }
+        else showToast("Erro ao gerar PDF completo", 'error');
+    } catch { showToast("Erro na API de Impressão", 'error'); } 
+    finally { btn.disabled = false; btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>Baixar PDF`; }
 }
