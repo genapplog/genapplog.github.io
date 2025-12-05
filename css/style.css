@@ -52,4 +52,5 @@ canvas { filter: drop-shadow(0 0 2px rgba(255,255,255,0.1)); }
 .badge-success { background-color: #10b981; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
 .badge-blue { background-color: #3b82f6; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
 
+
 input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }

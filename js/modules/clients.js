@@ -65,54 +65,75 @@ function setupClientBindings(collectionRef) {
         backToList(); 
     });
 
-    // 👇 IMPRESSÃO CLEAN (Branco e Preto)
+        // 👇 IMPRESSÃO PROFISSIONAL (CHECKLIST)
     safeBind('view-print-btn', 'click', () => {
         const clientName = document.getElementById('view-client-name').innerText;
         const clientData = clientCache.get(currentEditingClientId)?.checklist || defaultChecklistData;
         
         let rowsHTML = '';
-        checklistRowsConfig.forEach(conf => {
+        checklistRowsConfig.forEach((conf, index) => {
             const r = clientData[conf.key] || {};
+            const isEven = index % 2 === 0 ? 'bg-slate-50' : 'bg-white';
             
             const fmt = (val) => {
-                if (!val) return '-';
-                if (val.toLowerCase() === 'sim') return '<strong>SIM</strong>';
-                if (val.toLowerCase() === 'não' || val.toLowerCase() === 'nao') return 'NÃO';
-                return val;
+                if (!val) return '<span class="text-slate-300">-</span>';
+                if (val.toLowerCase() === 'sim') return '<span class="text-emerald-700 font-bold text-xs border border-emerald-200 bg-emerald-50 px-2 py-0.5 rounded">SIM</span>';
+                if (val.toLowerCase() === 'não' || val.toLowerCase() === 'nao') return '<span class="text-red-700 font-bold text-xs border border-red-200 bg-red-50 px-2 py-0.5 rounded">NÃO</span>';
+                return `<span class="text-slate-700 font-medium">${val}</span>`;
             };
-            const limit = (val) => val ? `<br><span style="font-size:9px; color:#666;">Max: ${val}</span>` : '';
+            const limit = (val) => val ? `<div class="text-[9px] text-slate-500 mt-1">Limite: <span class="font-mono text-slate-700">${val}</span></div>` : '';
 
             rowsHTML += `
-                <tr>
-                    <td style="background-color: #f3f4f6; font-weight: bold; width: 30%;">${conf.label}</td>
-                    <td style="width: 35%;">${fmt(r.directa)} ${limit(r.directaLimit)}</td>
-                    <td style="width: 35%;">${fmt(r.fracionada)} ${limit(r.fracionadaLimit)}</td>
+                <tr class="${isEven} border-b border-slate-200">
+                    <td class="py-3 px-4 text-xs font-bold text-slate-700 uppercase tracking-wide border-r border-slate-200 w-1/3">${conf.label}</td>
+                    <td class="py-3 px-4 text-xs border-r border-slate-200 w-1/3 align-top">${fmt(r.directa)} ${limit(r.directaLimit)}</td>
+                    <td class="py-3 px-4 text-xs w-1/3 align-top">${fmt(r.fracionada)} ${limit(r.fracionadaLimit)}</td>
                 </tr>
             `;
         });
 
         const content = `
-            <div style="margin-bottom: 20px; padding: 15px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
-                <strong style="font-size: 16px; display: block; margin-bottom: 4px;">Cliente: ${clientName}</strong>
-                <span style="font-size: 12px; color: #4b5563;">Guia de Requisitos para Expedição de Carga</span>
+            <div class="border-2 border-slate-800 rounded-lg overflow-hidden mb-6">
+                <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
+                    <div>
+                        <h1 class="text-xl font-bold uppercase tracking-wider">Requisitos de Expedição</h1>
+                        <p class="text-xs text-slate-300 mt-1">Guia Operacional de Carregamento</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-black text-white">${clientName}</div>
+                    </div>
+                </div>
             </div>
-            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+
+            <div class="mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tabela de Verificação</div>
+            <table class="w-full border-collapse border border-slate-200 rounded-lg overflow-hidden shadow-sm">
                 <thead>
-                    <tr style="background-color: #e5e7eb;">
-                        <th style="padding: 8px; border: 1px solid #d1d5db; text-align: left;">Ponto de Vistoria</th>
-                        <th style="padding: 8px; border: 1px solid #d1d5db; text-align: left;">Carga Direta</th>
-                        <th style="padding: 8px; border: 1px solid #d1d5db; text-align: left;">Carga Fracionada</th>
+                    <tr class="bg-slate-100 border-b-2 border-slate-300">
+                        <th class="py-3 px-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">Ponto de Vistoria</th>
+                        <th class="py-3 px-4 text-left text-[10px] font-black text-indigo-600 uppercase tracking-wider bg-indigo-50/50">Carga Direta (Ded.)</th>
+                        <th class="py-3 px-4 text-left text-[10px] font-black text-orange-600 uppercase tracking-wider bg-orange-50/50">Carga Fracionada</th>
                     </tr>
                 </thead>
-                <tbody>
-                    ${rowsHTML}
-                </tbody>
+                <tbody>${rowsHTML}</tbody>
             </table>
-            <div style="margin-top: 20px; font-size: 10px; color: #6b7280; text-align: center;">
-                * O não cumprimento destes requisitos pode ocasionar recusa no ato da entrega.
+
+            <div class="mt-8 flex gap-8">
+                <div class="flex-1 border-t border-slate-400 pt-2">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-4">Assinatura Motorista</p>
+                    <div class="h-8"></div>
+                </div>
+                <div class="flex-1 border-t border-slate-400 pt-2">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-4">Visto Expedição / Conferente</p>
+                    <div class="h-8"></div>
+                </div>
+            </div>
+
+            <div class="mt-8 p-3 bg-yellow-50 border border-yellow-200 rounded text-[10px] text-yellow-800 flex items-start gap-2">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <p><strong>Atenção:</strong> O não cumprimento destes requisitos pode ocasionar recusa no ato da entrega e devolução da mercadoria. Verifique cada item antes de liberar o veículo.</p>
             </div>
         `;
-        printDocument(`Ficha: ${clientName}`, content);
+        printDocument(`REQ-${clientName}`, content);
     });
 
     // Tabela
@@ -202,4 +223,5 @@ function backToList() {
     document.getElementById('client-edit-section').classList.add('hidden');
     document.getElementById('client-view-section').classList.add('hidden');
     document.getElementById('client-list-section').classList.remove('hidden');
+
 }

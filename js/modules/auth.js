@@ -1,17 +1,17 @@
 /**
  * ARQUIVO: js/modules/auth.js
- * DESCRIÇÃO: Autenticação Obrigatória (Admin ou Genérica).
+ * DESCRIÇÃO: Autenticação e Copiar ID.
  */
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { ADMIN_IDS } from '../config.js';
-import { showToast, safeBind } from '../utils.js';
+// ADICIONADO: Importar copyToClipboard
+import { showToast, safeBind, copyToClipboard } from '../utils.js';
 
 let currentUser = null;
 let currentUserRole = 'OPERADOR';
 let currentUserName = ''; 
 
-// E-mail da conta genérica (para não auto-preencher nome)
 const GENERIC_EMAIL = "operador@applog.com"; 
 
 export function initAuth(auth, initialToken, callbackEnv) {
@@ -19,12 +19,10 @@ export function initAuth(auth, initialToken, callbackEnv) {
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // Usuário logado: Carrega sistema
-            document.getElementById('login-modal').classList.add('hidden'); // Garante que fecha modal
+            document.getElementById('login-modal').classList.add('hidden');
             handleUserLoaded(user, db, callbackEnv);
         } else {
-            // Ninguém logado: FORÇA O LOGIN
-            showLoginModal(true); // true = modo forçado (sem botão cancelar)
+            showLoginModal(true);
         }
     });
 
@@ -33,25 +31,23 @@ export function initAuth(auth, initialToken, callbackEnv) {
 
 async function handleUserLoaded(user, db, callbackEnv) {
     currentUser = user;
+    
+    // Atualiza o texto visual
     document.getElementById('userIdDisplay').innerText = user.email || 'Usuário';
 
     const isAdminConfig = ADMIN_IDS.includes(user.uid);
     
-    // Lógica de Nome e Cargo
     try {
-        // 1. Verifica se é o Login Genérico
         if (user.email === GENERIC_EMAIL) {
             currentUserRole = 'OPERADOR';
-            currentUserName = ''; // DEIXA VAZIO para obrigar digitação
+            currentUserName = ''; 
         } else {
-            // 2. Se não for genérico, tenta buscar perfil pessoal
             const userSnap = await getDoc(doc(db, 'users', user.uid));
             if (userSnap.exists()) {
                 const data = userSnap.data();
                 currentUserRole = data.role ? data.role.toUpperCase() : 'OPERADOR';
                 currentUserName = data.name || '';
             } else {
-                // Admin sem cadastro no 'users'
                 currentUserRole = isAdminConfig ? 'ADMIN' : 'OPERADOR';
                 currentUserName = isAdminConfig ? 'Administrador' : '';
             }
@@ -60,9 +56,10 @@ async function handleUserLoaded(user, db, callbackEnv) {
 
     if (isAdminConfig) currentUserRole = 'ADMIN';
 
-    // Atualiza UI
     const roleLabel = document.getElementById('user-role-label');
     roleLabel.innerText = user.email === GENERIC_EMAIL ? "Operação (Genérico)" : `Logado (${currentUserRole})`;
+    
+    // Mostra botão de sair
     document.getElementById('btn-logout').classList.remove('hidden');
 
     updateUIForRole(currentUserRole === 'ADMIN');
@@ -78,7 +75,6 @@ function showLoginModal(forced = false) {
     modal.classList.remove('hidden');
     
     if (forced) {
-        // Esconde o botão cancelar se o login for obrigatório
         btnClose.classList.add('hidden');
     } else {
         btnClose.classList.remove('hidden');
@@ -86,16 +82,17 @@ function showLoginModal(forced = false) {
 }
 
 function setupLoginUI(auth) {
-    // Abrir Modal (botão lateral)
-    safeBind('btn-open-login', 'click', () => showLoginModal(false));
+    // Menu Login/Logout
+    safeBind('btn-open-login', 'click', () => {
+        if (currentUser) copyToClipboard(currentUser.uid);
+        else showLoginModal(false);
+    });
 
-    // Fechar Modal
     safeBind('btn-close-login', 'click', (e) => {
         e.preventDefault();
         document.getElementById('login-modal').classList.add('hidden');
     });
 
-    // Fazer Login
     safeBind('login-form', 'submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('login-email').value;
@@ -103,10 +100,8 @@ function setupLoginUI(auth) {
         const btn = document.getElementById('btn-perform-login');
         
         btn.disabled = true; btn.innerText = "Entrando...";
-        
         try {
             await signInWithEmailAndPassword(auth, email, pass);
-            // O onAuthStateChanged cuidará do resto
         } catch (error) {
             console.error(error);
             showToast("E-mail ou senha inválidos.", "error");
@@ -114,12 +109,45 @@ function setupLoginUI(auth) {
         }
     });
 
-    // Fazer Logout
     safeBind('btn-logout', 'click', async () => {
+        try { await signOut(auth); } catch (e) { console.error(e); }
+    });
+
+    // --- NOVA LÓGICA: TROCA DE SENHA ---
+    safeBind('form-change-pass', 'submit', async (e) => {
+        e.preventDefault();
+        const currentPass = document.getElementById('current-pass').value;
+        const newPass = document.getElementById('new-pass').value;
+        const confirmPass = document.getElementById('confirm-new-pass').value;
+        const btn = document.getElementById('btn-save-pass');
+
+        if (newPass.length < 6) return showToast("A nova senha deve ter no mínimo 6 caracteres.", "error");
+        if (newPass !== confirmPass) return showToast("A confirmação da senha não confere.", "error");
+        if (!currentUser) return showToast("Você precisa estar logado.", "error");
+
+        btn.disabled = true; btn.innerText = "Atualizando...";
+
         try {
-            await signOut(auth);
-            // onAuthStateChanged vai disparar e abrir o modal de login forçado
-        } catch (e) { console.error(e); }
+            // 1. Re-autenticar (Segurança do Firebase exige isso para operações sensíveis)
+            const credential = EmailAuthProvider.credential(currentUser.email, currentPass);
+            await reauthenticateWithCredential(currentUser, credential);
+
+            // 2. Atualizar Senha
+            await updatePassword(currentUser, newPass);
+
+            showToast("Senha atualizada com sucesso!");
+            document.getElementById('form-change-pass').reset();
+            
+        } catch (error) {
+            console.error(error);
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+                showToast("Senha atual incorreta.", "error");
+            } else {
+                showToast("Erro ao atualizar senha. Tente novamente.", "error");
+            }
+        } finally {
+            btn.disabled = false; btn.innerText = "Atualizar Senha";
+        }
     });
 }
 
@@ -133,8 +161,8 @@ function updateUIForRole(isAdmin) {
     
     const action = isAdmin ? 'remove' : 'add';
     els.indicator.classList[action]('hidden');
-    els.addBtn.classList[action]('hidden');
-    els.dangerZone.classList[action]('hidden');
+    if(els.addBtn) els.addBtn.classList[action]('hidden');
+    if(els.dangerZone) els.dangerZone.classList[action]('hidden');
     if (els.navConfig) els.navConfig.classList[action]('hidden');
 }
 

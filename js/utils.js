@@ -58,12 +58,9 @@ safeBind('confirm-btn-yes', 'click', () => { if (pendingConfirmAction) pendingCo
 
 window.showToast = showToast;
 window.copyToClipboard = copyToClipboard;
-// ARQUIVO: js/utils.js (Adicione isto ao final)
 
 /**
  * Abre uma janela de impressão com layout A4.
- * @param {string} title - Título da aba/documento
- * @param {string} contentHTML - O conteúdo HTML interno
  */
 export function printDocument(title, contentHTML) {
     const printWindow = window.open('', '_blank');
@@ -83,39 +80,19 @@ export function printDocument(title, contentHTML) {
                     -webkit-print-color-adjust: exact; 
                     print-color-adjust: exact; 
                 }
-                
-                /* Estilo de Tabela Clean */
                 table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
                 th { 
-                    text-align: left; 
-                    padding: 8px 12px; 
-                    border-bottom: 2px solid #cbd5e1; 
-                    text-transform: uppercase; 
-                    font-weight: 700; 
-                    font-size: 10px; 
-                    color: #64748b;
+                    text-align: left; padding: 8px 12px; border-bottom: 2px solid #cbd5e1; 
+                    text-transform: uppercase; font-weight: 700; font-size: 10px; color: #64748b;
                 }
-                td { 
-                    padding: 10px 12px; 
-                    border-bottom: 1px solid #e2e8f0; 
-                    vertical-align: top;
-                }
+                td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
                 tr:last-child td { border-bottom: none; }
-
-                /* Cabeçalho */
                 .doc-header { 
                     display: flex; justify-content: space-between; align-items: flex-start; 
                     border-bottom: 1px solid #1e293b; padding-bottom: 20px; margin-bottom: 30px;
                 }
                 .logo-box { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
                 .meta-box { text-align: right; font-size: 10px; color: #64748b; }
-
-                /* Assinaturas */
-                .signature-block { margin-top: 50px; display: flex; gap: 20px; }
-                .signature-line { 
-                    flex: 1; border-top: 1px solid #94a3b8; padding-top: 8px; 
-                    text-align: center; font-size: 10px; text-transform: uppercase; color: #475569; 
-                }
             </style>
         </head>
         <body>
@@ -130,14 +107,8 @@ export function printDocument(title, contentHTML) {
                     <p>${title}</p>
                 </div>
             </div>
-
-            <div class="content">
-                ${contentHTML}
-            </div>
-
-            <script>
-                setTimeout(() => { window.print(); window.close(); }, 600);
-            </script>
+            <div class="content">${contentHTML}</div>
+            <script>setTimeout(() => { window.print(); window.close(); }, 600);</script>
         </body>
         </html>
     `;
@@ -145,6 +116,7 @@ export function printDocument(title, contentHTML) {
     printWindow.document.write(htmlStructure);
     printWindow.document.close();
 }
+
 export async function requestNotificationPermission() {
     if (!("Notification" in window)) return;
     if (Notification.permission === "default") {
@@ -152,18 +124,24 @@ export async function requestNotificationPermission() {
     }
 }
 
-// Envia a notificação real
+// Envia a notificação real com proteção contra erro de vibração
 export function sendDesktopNotification(title, body) {
     if (Notification.permission === "granted") {
-        // Tenta vibrar se for celular
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        
+        // CORREÇÃO DO ERRO DE VIBRAÇÃO:
+        // Só tenta vibrar se o navegador suportar E se o usuário já tiver interagido com a página
+        if (navigator.vibrate) {
+            // userActivation é a API moderna para checar interação
+            if (navigator.userActivation && navigator.userActivation.hasBeenActive) {
+                try { navigator.vibrate([200, 100, 200]); } catch(e) {}
+            }
+        }
         
         const notification = new Notification("AppLog - " + title, {
             body: body,
             icon: "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📦</text></svg>"
         });
         
-        // Foca na janela ao clicar
         notification.onclick = () => {
             window.focus();
             notification.close();

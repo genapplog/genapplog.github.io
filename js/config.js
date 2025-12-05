@@ -40,17 +40,17 @@ export const checklistRowsConfig = [
 export const specificClientRules = { "AMAZON": { ...defaultChecklistData, observacao: { directa: "Exige agendamento prévio (CARP).", fracionada: "Exige agendamento prévio (CARP)." } } };
 
 export const cdData = { 
-    "GRU5": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000367", ie: "241099810118 ", linha1: "Cd Prologis 3: Av. Antonio Candido Machado", linha2: "3100 Andar 5, 07776415 - Cajamar - SP    " },
-    "XBRA": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000448", ie: "241118709114 ", linha1: "Cd Prologis 2: Av. Dr. Joao Abdalla 260    ", linha2: "Bloco 400, 07776700 - Cajamar - SP       " },
-    "XBRB": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000529", ie: "0842859-07    ", linha1: "Rd Br-101 Sul, 3791bl C, Galpão 5, Sl A    ", linha2: "54503010 - Cabo De Santo Agostinho - PE " },
+    "GRU5": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000367", ie: "241099810118 ", linha1: "Cd Prologis 3: Av. Antonio Candido Machado", linha2: "3100 Andar 5, 07776415 - Cajamar - SP   " },
+    "XBRA": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000448", ie: "241118709114 ", linha1: "Cd Prologis 2: Av. Dr. Joao Abdalla 260   ", linha2: "Bloco 400, 07776700 - Cajamar - SP      " },
+    "XBRB": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000529", ie: "0842859-07   ", linha1: "Rd Br-101 Sul, 3791bl C, Galpão 5, Sl A   ", linha2: "54503010 - Cabo De Santo Agostinho - PE " },
     "XBRT": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000871", ie: "241134643114 ", linha1: "Via De Acesso Norte KM 38, 420, Galpão 07 ", linha2: "Gleba A Bloco 07, 07789100 Cajamar - SP " },
-    "XBRZ": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000286", ie: "241115791117 ", linha1: "Cd Prologis 2: Av. Dr. Joao Abdalla 260    ", linha2: "Bloco 300, 07776700 Cajamar - SP         " },
-    "CNF1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000952", ie: "002668590054 ", linha1: "Avenida Juiz Marco Tulio Isaac 7000        ", linha2: "32670250, Betim - MG                     " },
-    "BSB1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001096", ie: "0774927400365", linha1: "Rd Df, 290, Km 1.2 Lote 13,14,15,16 E 17 -", linha2: " 72501100, Brasilia - DF                 " },
-    "POA1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001177", ie: "3820025709    ", linha1: "Rua Da Pedreira, 64, Pavilhão 05          ", linha2: "92480000, Nova Santa Rita - RS          " },
-    "GIG1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001410", ie: "11821987      ", linha1: "Av Arthur Antonio Sendas, S/N Area 6a      ", linha2: "25585021, Sao Joao De Meriti, RJ         " },
-    "REC1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "11543694000150", ie: "0920380-00    ", linha1: "RD BR 101 SUL, 9415, Galpão B              ", linha2: "54503010 - Cabo De Santo Agostinho - PE " },
-    "FOR2": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001681", ie: "61268801      ", linha1: "Av Quarto Anel Viario, 4343                ", linha2: "61880000, Itaitinga - CE                 " } 
+    "XBRZ": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000286", ie: "241115791117 ", linha1: "Cd Prologis 2: Av. Dr. Joao Abdalla 260   ", linha2: "Bloco 300, 07776700 Cajamar - SP        " },
+    "CNF1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940000952", ie: "002668590054 ", linha1: "Avenida Juiz Marco Tulio Isaac 7000       ", linha2: "32670250, Betim - MG                    " },
+    "BSB1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001096", ie: "0774927400365", linha1: "Rd Df, 290, Km 1.2 Lote 13,14,15,16 E 17 -", linha2: " 72501100, Brasilia - DF                " },
+    "POA1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001177", ie: "3820025709   ", linha1: "Rua Da Pedreira, 64, Pavilhão 05          ", linha2: "92480000, Nova Santa Rita - RS          " },
+    "GIG1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001410", ie: "11821987     ", linha1: "Av Arthur Antonio Sendas, S/N Area 6a     ", linha2: "25585021, Sao Joao De Meriti, RJ        " },
+    "REC1": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "11543694000150", ie: "0920380-00   ", linha1: "RD BR 101 SUL, 9415, Galpão B             ", linha2: "54503010 - Cabo De Santo Agostinho - PE " },
+    "FOR2": { nome: "Amazon Servicos de Varejo do Brasil Ltda", cnpj: "15436940001681", ie: "61268801     ", linha1: "Av Quarto Anel Viario, 4343               ", linha2: "61880000, Itaitinga - CE                " } 
 };
 
 export const labelDimensions = { 
@@ -58,4 +58,5 @@ export const labelDimensions = {
     "4x4": { pw: 800, ll: 800, aspect: "aspect-square" }, 
     "4x2": { pw: 800, ll: 400, aspect: "aspect-[2/1]" }, 
     "4x3.15": { pw: 800, ll: 640, aspect: "aspect-[10/8]" } 
+
 };

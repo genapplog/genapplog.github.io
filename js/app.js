@@ -26,7 +26,9 @@ function setupNavigation() {
             changePage(link.dataset.page);
         });
     });
-    safeBind('app-logo-btn', 'click', () => changePage('dashboard'));
+    safeBind('app-logo-btn', 'click', () => changePage('Inicio'));
+    
+    // Ao abrir o app, carrega a última página visitada ou vai para o Dashboard por padrão
     const lastPage = localStorage.getItem('appLog_lastPage') || 'dashboard';
     changePage(document.getElementById(lastPage) ? lastPage : 'dashboard');
 }
@@ -57,13 +59,13 @@ function setEnvironment(env) {
     if (isTest) {
         document.getElementById('test-mode-strip').classList.remove('hidden');
         document.getElementById('test-mode-bg-indicator').classList.remove('hidden');
-        document.getElementById('promote-section').classList.remove('hidden');
+        document.getElementById('test-tools-section').classList.remove('hidden'); // Alterado ID
         document.getElementById('dash-env-warning').classList.remove('hidden');
         document.getElementById('logo-bg').classList.add('bg-amber-600');
     } else {
         document.getElementById('test-mode-strip').classList.add('hidden');
         document.getElementById('test-mode-bg-indicator').classList.add('hidden');
-        document.getElementById('promote-section').classList.add('hidden');
+        document.getElementById('test-tools-section').classList.add('hidden'); // Alterado ID
         document.getElementById('dash-env-warning').classList.add('hidden');
         document.getElementById('logo-bg').classList.remove('bg-amber-600');
     }
@@ -86,4 +88,5 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('appLog_env', newEnv);
         setEnvironment(newEnv);
     });
+
 });
