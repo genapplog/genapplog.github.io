@@ -125,8 +125,8 @@
                                 </button>
                                 <button id="btn-dash-filter-clear" class="border border-slate-600 text-indigo-400 hover:bg-slate-700 px-3 py-1.5 rounded-lg font-medium transition text-xs">Limpar</button>
                                 
-                                <button id="btn-dash-export" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-medium transition text-xs flex items-center gap-1" title="Exportar RNC">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> RNC
+                                <button id="btn-dash-export" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-medium transition text-xs flex items-center gap-1" title="Exportar RD">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> RD
                                 </button>
 
                                 <button id="btn-dash-export-pallet" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg font-medium transition text-xs flex items-center gap-1" title="Exportar Etiquetas">
@@ -153,7 +153,7 @@
                             <div class="absolute right-0 top-0 p-4 opacity-10"><svg class="w-16 h-16 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
                             <h4 class="text-slate-400 text-xs font-bold uppercase tracking-wider">Último Registro</h4>
                             <p class="text-xl font-bold text-emerald-400 mt-3" id="dash-last-date">-</p>
-                            <span class="text-xs text-slate-500 mt-1">Data do último RNC</span>
+                            <span class="text-xs text-slate-500 mt-1">Data do último RD</span>
                         </div>
                     </div>
 
@@ -636,7 +636,7 @@
                                 </div>
                                 <div class="mt-2 bg-slate-800 p-4 rounded border border-slate-700" id="box-inv"><div class="flex items-center gap-4"><div class="bg-blue-900/20 p-2 rounded text-blue-400"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div class="flex-1"><label class="text-[10px] font-bold text-blue-400 uppercase block mb-1">3. Conclusão Inventário</label><input type="text" id="form-ass-inv" placeholder="Aguardando validação final" disabled class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-slate-500 text-sm"></div></div></div>
                             </div>
-                            <div class="bg-slate-950 p-4 flex flex-col md:flex-row justify-between items-center border-t border-slate-800 gap-4"><span id="form-action-desc" class="text-xs text-slate-400 italic">Preencha os dados iniciais para gerar o rascunho.</span><div class="flex gap-3"><button id="btn-cancel-occurrence" class="px-5 py-2 rounded-lg border border-slate-700 text-indigo-400 hover:bg-slate-800 font-medium transition text-sm">Cancelar</button><button id="btn-reject-occurrence" class="hidden px-5 py-2 rounded-lg bg-amber-900/20 border border-amber-800 text-amber-200 font-medium hover:bg-amber-900/50 transition text-sm">Solicitar Correção</button><button id="btn-delete-permanent" class="hidden px-5 py-2 rounded-lg bg-red-900/20 border border-red-800 text-red-200 font-medium hover:bg-red-900/50 transition text-sm">Excluir RNC</button><button id="btn-save-occurrence" class="px-6 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-500 shadow-lg shadow-indigo-900/20 transition text-sm flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Salvar e Avançar</button></div></div>
+                            <div class="bg-slate-950 p-4 flex flex-col md:flex-row justify-between items-center border-t border-slate-800 gap-4"><span id="form-action-desc" class="text-xs text-slate-400 italic">Preencha os dados iniciais para gerar o rascunho.</span><div class="flex gap-3"><button id="btn-cancel-occurrence" class="px-5 py-2 rounded-lg border border-slate-700 text-indigo-400 hover:bg-slate-800 font-medium transition text-sm">Cancelar</button><button id="btn-reject-occurrence" class="hidden px-5 py-2 rounded-lg bg-amber-900/20 border border-amber-800 text-amber-200 font-medium hover:bg-amber-900/50 transition text-sm">Solicitar Correção</button><button id="btn-delete-permanent" class="hidden px-5 py-2 rounded-lg bg-red-900/20 border border-red-800 text-red-200 font-medium hover:bg-red-900/50 transition text-sm">Excluir RD</button><button id="btn-save-occurrence" class="px-6 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-500 shadow-lg shadow-indigo-900/20 transition text-sm flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Salvar e Avançar</button></div></div>
                         </div>
                     </div>
                 </div>
@@ -658,19 +658,19 @@
                             </div>
                         </div>
                         
-                        <div class="max-w-2xl mx-auto mb-12 border-b border-slate-700 pb-12">
+                        <div id="cfg-section-clients" class="max-w-2xl mx-auto mb-12 border-b border-slate-700 pb-12">
                             <div class="mb-8"><h2 class="text-2xl font-bold text-white mb-2">Gestão Checklist</h2><p class="text-slate-400 text-sm">Atualize a lista de clientes e checklist de carregamento.</p></div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8"><button id="download-template-btn" class="px-4 py-3 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition border border-slate-600">Baixar Modelo Carregamento</button><label for="file-upload" class="cursor-pointer px-4 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 transition shadow-lg flex items-center justify-center">Importar Carregamento<input id="file-upload" type="file" class="hidden" accept=".json"></label></div>
                             <div id="import-status" class="hidden p-4 rounded-lg bg-slate-900 border border-slate-700 text-left"><p class="text-sm text-indigo-400 font-mono" id="import-status-text"></p></div>
                         </div>
                         
-                        <div class="max-w-2xl mx-auto mb-12 border-b border-slate-700 pb-12">
+                        <div id="cfg-section-team" class="max-w-2xl mx-auto mb-12 border-b border-slate-700 pb-12">
                             <div class="mb-8"><h2 class="text-2xl font-bold text-white mb-2">Gestão de Equipe</h2><p class="text-slate-400 text-sm">Atualize a lista de usuários e seus cargos.</p></div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8"><button id="download-users-template-btn" class="px-4 py-3 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition border border-slate-600">Baixar Modelo Equipe</button><label for="users-upload" class="cursor-pointer px-4 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-500 transition shadow-lg flex items-center justify-center">Importar Equipe<input id="users-upload" type="file" class="hidden" accept=".json"></label></div>
                             <div id="users-import-status" class="hidden p-4 rounded-lg bg-slate-900 border border-slate-700 text-left"><p class="text-sm text-indigo-400 font-mono" id="users-import-status-text"></p></div>
                         </div>
                         
-                        <div class="max-w-2xl mx-auto mb-12 border-b border-slate-700 pb-12">
+                        <div id="cfg-section-products" class="max-w-2xl mx-auto mb-12 border-b border-slate-700 pb-12">
                             <div class="mb-8">
                                 <h2 class="text-2xl font-bold text-white mb-2">Base de Produtos</h2>
                                 <p class="text-slate-400 text-sm">Atualize a lista ou gerencie itens individuais.</p>
@@ -704,8 +704,8 @@
                             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
                                 <div class="flex flex-col gap-3">
                                     <div class="flex justify-between items-end border-b border-amber-900/30 pb-2">
-                                        <h5 class="text-amber-400 text-xs font-bold uppercase">Divergências (RNC)</h5>
-                                        <input type="text" id="admin-search-rnc" placeholder="Filtrar RNC..." class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:border-amber-500 outline-none w-40 transition-all focus:w-52">
+                                        <h5 class="text-amber-400 text-xs font-bold uppercase">Divergências (RD)</h5>
+                                        <input type="text" id="admin-search-rd" placeholder="Filtrar RD..." class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:border-amber-500 outline-none w-40 transition-all focus:w-52">
                                     </div>
                                     <div class="overflow-hidden rounded-lg border border-slate-700 max-h-80 overflow-y-auto bg-slate-900">
                                         <table class="min-w-full text-xs text-left">

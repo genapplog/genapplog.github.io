@@ -308,7 +308,7 @@ function exportToXlsx() {
         return true; 
     });
 
-    if (data.length === 0) { showToast("Nenhum dado RNC no período.", "info"); return; }
+    if (data.length === 0) { showToast("Nenhum dado RD no período.", "info"); return; }
     
     if (isDefaultFilter) showToast("Exportando últimos 30 dias (Padrão)", "info");
 
@@ -326,7 +326,7 @@ function exportToXlsx() {
         };
     });
     
-    generateXlsx(exportData, "Relatorio_RNC");
+    generateXlsx(exportData, "Relatorio_RD");
 }
 
 function exportPalletReqToXlsx() {
@@ -494,7 +494,7 @@ export function printRncReport(id) {
         </div>
     `;
    // Monta o nome do arquivo apenas com os dados que existem
-    let titleParts = ['RNC'];
+    let titleParts = ['RD'];
 
     if (item.embarque) titleParts.push(item.embarque);
     if (item.nf) titleParts.push(item.nf);

@@ -1,11 +1,10 @@
 /**
  * ARQUIVO: js/modules/auth.js
- * DESCRIÇÃO: Autenticação e Copiar ID.
+ * DESCRIÇÃO: Autenticação, Controle de Acesso (RBAC) e Copiar ID.
  */
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { ADMIN_IDS } from '../config.js';
-// ADICIONADO: Importar copyToClipboard
 import { showToast, safeBind, copyToClipboard } from '../utils.js';
 
 let currentUser = null;
@@ -62,7 +61,8 @@ async function handleUserLoaded(user, db, callbackEnv) {
     // Mostra botão de sair
     document.getElementById('btn-logout').classList.remove('hidden');
 
-    updateUIForRole(currentUserRole === 'ADMIN');
+    // ATUALIZADO: Passa o ROLE (string) para a função de UI tratar a granularidade
+    updateUIForRole(currentUserRole);
     
     const savedEnv = localStorage.getItem('appLog_env') || 'prod';
     if (callbackEnv) callbackEnv(savedEnv);
@@ -113,7 +113,7 @@ function setupLoginUI(auth) {
         try { await signOut(auth); } catch (e) { console.error(e); }
     });
 
-    // --- NOVA LÓGICA: TROCA DE SENHA ---
+    // --- LÓGICA: TROCA DE SENHA ---
     safeBind('form-change-pass', 'submit', async (e) => {
         e.preventDefault();
         const currentPass = document.getElementById('current-pass').value;
@@ -151,19 +151,42 @@ function setupLoginUI(auth) {
     });
 }
 
-function updateUIForRole(isAdmin) {
-    const els = { 
+// ATUALIZADO: Função que gerencia a visibilidade baseada no Cargo
+function updateUIForRole(role) {
+    const isAdmin = role === 'ADMIN';
+    // Quem pode ver a aba Configurações? (Admin, Lider, Inventário)
+    // Motivo: Todos esses precisam poder trocar o ambiente (Teste/Produção)
+    const canAccessConfig = ['ADMIN', 'LIDER', 'INVENTARIO'].includes(role);
+
+    // 1. Elementos exclusivos de ADMIN (Botão adicionar cliente, Zonas de perigo, Seções de gestão)
+    const adminEls = { 
         indicator: document.getElementById('admin-indicator'), 
         addBtn: document.getElementById('add-client-btn'), 
-        dangerZone: document.getElementById('admin-danger-zone'), 
-        navConfig: document.getElementById('nav-link-config') 
+        dangerZone: document.getElementById('admin-danger-zone'),
+        // Seções internas da tela de Configuração (Adicionadas via ID no HTML)
+        cfgClients: document.getElementById('cfg-section-clients'),
+        cfgTeam: document.getElementById('cfg-section-team'),
+        cfgProds: document.getElementById('cfg-section-products')
     };
     
-    const action = isAdmin ? 'remove' : 'add';
-    els.indicator.classList[action]('hidden');
-    if(els.addBtn) els.addBtn.classList[action]('hidden');
-    if(els.dangerZone) els.dangerZone.classList[action]('hidden');
-    if (els.navConfig) els.navConfig.classList[action]('hidden');
+    // Se for Admin, remove a classe 'hidden'. Se não for, adiciona 'hidden'.
+    const adminAction = isAdmin ? 'remove' : 'add';
+    
+    if (adminEls.indicator) adminEls.indicator.classList[adminAction]('hidden');
+    if (adminEls.addBtn) adminEls.addBtn.classList[adminAction]('hidden');
+    if (adminEls.dangerZone) adminEls.dangerZone.classList[adminAction]('hidden');
+    
+    // Esconde/Mostra os blocos de gestão dentro da aba Configurações
+    if (adminEls.cfgClients) adminEls.cfgClients.classList[adminAction]('hidden');
+    if (adminEls.cfgTeam) adminEls.cfgTeam.classList[adminAction]('hidden');
+    if (adminEls.cfgProds) adminEls.cfgProds.classList[adminAction]('hidden');
+
+    // 2. Elementos de Gestão (Acesso à aba Configurações no menu lateral)
+    const navConfig = document.getElementById('nav-link-config');
+    if (navConfig) {
+        if (canAccessConfig) navConfig.classList.remove('hidden');
+        else navConfig.classList.add('hidden');
+    }
 }
 
 export function getCurrentUser() { return currentUser; }
