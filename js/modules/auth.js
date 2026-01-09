@@ -60,7 +60,7 @@ async function handleUserLoaded(user, db, callbackEnv) {
     if (isAdminConfig && !currentUserRole.includes('ADMIN')) currentUserRole.push('ADMIN');
 
     const roleLabel = document.getElementById('user-role-label');
-    // Exibe os perfis separados por vírgula
+    // .join(', ') exibe os perfis separados por vírgula visualmente
     roleLabel.innerText = user.email === GENERIC_EMAIL ? "Operação (Genérico)" : `Logado (${currentUserRole.join(', ')})`;
     
     // Mostra botão de sair
@@ -181,10 +181,9 @@ function setupLoginUI(auth) {
 // ATUALIZADO: Função que gerencia a visibilidade baseada no Cargo
 // ATUALIZADO: Função que gerencia a visibilidade baseada no Cargo
 function updateUIForRole(roles) {
-    // Verifica se "ADMIN" está na lista de perfis do usuário
     const isAdmin = roles.includes('ADMIN');
-    
-    // Verifica se tem ALGUM dos perfis permitidos (interseção de arrays)
+    // Quem pode ver a aba Configurações? (Admin, Lider, Inventário)
+    // Verifica se ALGUM perfil do usuário está na lista permitida
     const canAccessConfig = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
 
     // 1. Elementos exclusivos de ADMIN (Perigo Real e Gestão Sensível)
@@ -213,11 +212,12 @@ function updateUIForRole(roles) {
         else navConfig.classList.add('hidden');
     }
 
-    // 3. Controle de Acesso: Minha Conta (Operador não vê)
+    // 3. Controle de Acesso: Minha Conta (Operador puro não vê)
     const navProfile = document.querySelector('a[data-page="perfil"]');
     if (navProfile) {
-        if (role === 'OPERADOR') navProfile.classList.add('hidden');
-        else navProfile.classList.remove('hidden');
+        // Se tiver permissão especial, mostra. Se for só operador, esconde.
+        if (canAccessConfig) navProfile.classList.remove('hidden');
+        else navProfile.classList.add('hidden');
     }
 
     // 4. NOVA LÓGICA: Botão de Adicionar Cliente

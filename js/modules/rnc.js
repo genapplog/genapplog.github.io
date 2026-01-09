@@ -68,7 +68,6 @@ export async function initRncModule(db, isTest) {
 
     // LISTENER DE CHAMADOS (Lado do Líder)
     const myCurrentRole = getUserRole(); 
-    // Verifica se a lista de perfis contém ADMIN ou LIDER
     if (myCurrentRole.includes('ADMIN') || myCurrentRole.includes('LIDER')) {
         const notificationsRef = collection(db, `artifacts/${globalDb.app.options.appId}/public/data/notifications`);
         const recentTime = new Date(Date.now() - 2 * 60 * 1000); 
@@ -227,7 +226,7 @@ function setupRncBindings() {
 // =================================================================
 
 function checkAndNotify(data) {
-    const myRole = getUserRole(); // Agora é uma lista (Array)
+    const myRole = getUserRole(); 
     const myName = getCurrentUserName();
     
     if (data.status === 'pendente_lider' && (myRole.includes('LIDER') || myRole.includes('ADMIN'))) { 
@@ -384,7 +383,7 @@ function updatePendingList() {
     if (tbodyPallet) {
         tbodyPallet.innerHTML = '';
         const myRole = getUserRole();
-        const canFinish = myRole === 'INVENTARIO' || myRole === 'ADMIN';
+        const canFinish = myRole.includes('INVENTARIO') || myRole.includes('ADMIN');
 
         if (palletItems.length === 0) { 
             tbodyPallet.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500 italic">Nenhuma solicitação pendente.</td></tr>'; 
@@ -481,10 +480,9 @@ async function submitLeaderAuth() {
         }
 
         const userDoc = snapshot.docs[0].data();
-        // Garante array
+        // Garante leitura de array
         const roles = Array.isArray(userDoc.role) ? userDoc.role : [userDoc.role];
 
-        // Verifica se tem LIDER ou ADMIN na lista
         if (!roles.includes('LIDER') && !roles.includes('ADMIN')) {
             showToast("Este usuário não tem permissão de Liderança.", "error");
             btn.disabled = false; btn.innerText = originalText;
@@ -588,7 +586,6 @@ function updateFormStateUI() {
     } else if (status === 'pendente_lider') {
         statusBar.innerText = "Etapa 2: Aprovação do Líder"; statusBar.className = "bg-amber-900/40 text-amber-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-center border-b border-amber-500/20"; dataInputs.forEach(input => input.disabled = true);
         
-        // Verifica se tem permissão (usando includes)
         if (myRole.includes('LIDER') || myRole.includes('ADMIN')) { 
             inputLider.disabled = false; inputLider.value = myName; btnSave.innerText = "Aprovar e Enviar"; btnReject.classList.remove('hidden'); btnDelete.classList.remove('hidden'); btnDelete.innerText = "Excluir RD"; 
         } else { 
@@ -598,7 +595,6 @@ function updateFormStateUI() {
     } else if (status === 'pendente_inventario') {
         statusBar.innerText = "Etapa 3: Validação do Inventário"; statusBar.className = "bg-blue-900/40 text-blue-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-center border-b border-blue-500/20"; dataInputs.forEach(input => input.disabled = false);
         
-        // Verifica se tem permissão (usando includes)
         if (myRole.includes('INVENTARIO') || myRole.includes('ADMIN')) { 
             inputInfrator.disabled = false; inputInfrator.classList.remove('opacity-50'); inputInv.disabled = false; inputInv.value = myName; btnSave.innerText = "Validar e Finalizar"; btnReject.classList.remove('hidden'); btnDelete.classList.remove('hidden'); btnDelete.innerText = "Excluir RD"; 
         } else { 

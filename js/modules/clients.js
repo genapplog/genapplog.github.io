@@ -133,9 +133,9 @@ function filterAndRenderClients() {
     if (!filtered.length) {
         newBody.innerHTML = '<tr><td colspan="2" class="px-6 py-12 text-center text-slate-500">Nenhum cliente encontrado.</td></tr>';
     } else {
-        const roles = getUserRole(); // Agora retorna Array
-        const canEdit = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
-        const canDelete = roles.includes('ADMIN');
+        const role = getUserRole(); // Agora é Array
+        const canEdit = role.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
+        const canDelete = role.includes('ADMIN');
 
         filtered.forEach(c => {
             const tr = document.createElement('tr');
