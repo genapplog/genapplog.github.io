@@ -44,9 +44,18 @@ async function handleUserLoaded(user, db, callbackEnv) {
             const userSnap = await getDoc(doc(db, 'users', user.uid));
             if (userSnap.exists()) {
                 const data = userSnap.data();
-                // Garante que seja sempre um array. Se vier string antiga, converte.
-                currentUserRole = Array.isArray(data.role) ? data.role : [data.role || 'OPERADOR'];
+                
+                // 1. Normalização Robusta: Garante Array, Maiúsculas e Sem Acentos
+                let rawRole = data.role || 'OPERADOR';
+                const roleArray = Array.isArray(rawRole) ? rawRole : [rawRole];
+                
+                // Converte "Inventário" -> "INVENTARIO", "admin" -> "ADMIN"
+                currentUserRole = roleArray.map(r => 
+                    String(r).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                );
+
                 currentUserName = data.name || '';
+                
                 // Carrega o PIN se existir
                 const pinField = document.getElementById('profile-pin');
                 if (pinField) pinField.value = data.pin || '';
