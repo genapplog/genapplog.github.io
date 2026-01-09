@@ -8,7 +8,8 @@ import { ADMIN_IDS } from '../config.js';
 import { showToast, safeBind, copyToClipboard } from '../utils.js';
 
 let currentUser = null;
-let currentUserRole = 'OPERADOR';
+// CORREÇÃO: Inicializa SEMPRE como array para evitar erros de .includes() ou .some()
+let currentUserRole = ['OPERADOR']; 
 let currentUserName = ''; 
 
 const GENERIC_EMAIL = "operador@applog.com"; 
@@ -19,7 +20,8 @@ export function initAuth(auth, initialToken, callbackEnv) {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             document.getElementById('login-modal').classList.add('hidden');
-            handleUserLoaded(user, db, callbackEnv);
+            // Chama a função de carga de usuário
+            await handleUserLoaded(user, db, callbackEnv);
         } else {
             showLoginModal(true);
         }
@@ -32,50 +34,68 @@ async function handleUserLoaded(user, db, callbackEnv) {
     currentUser = user;
     
     // Atualiza o texto visual
-    document.getElementById('userIdDisplay').innerText = user.email || 'Usuário';
+    const displayEl = document.getElementById('userIdDisplay');
+    if(displayEl) displayEl.innerText = user.email || 'Usuário';
 
     const isAdminConfig = ADMIN_IDS.includes(user.uid);
     
     try {
         if (user.email === GENERIC_EMAIL) {
-            currentUserRole = 'OPERADOR';
+            currentUserRole = ['OPERADOR'];
             currentUserName = ''; 
         } else {
+            // Tenta ler do banco
             const userSnap = await getDoc(doc(db, 'users', user.uid));
+            
             if (userSnap.exists()) {
                 const data = userSnap.data();
                 
-                // 1. Normalização Robusta: Garante Array, Maiúsculas e Sem Acentos
+                // --- LÓGICA DE NORMALIZAÇÃO ---
                 let rawRole = data.role || 'OPERADOR';
+                
+                // Garante que é Array (ex: "Lider" vira ["Lider"])
                 const roleArray = Array.isArray(rawRole) ? rawRole : [rawRole];
                 
-                // Converte "Inventário" -> "INVENTARIO", "admin" -> "ADMIN"
+                // Converte para Maiúsculo e Remove Acentos (ex: "Inventário" -> "INVENTARIO")
                 currentUserRole = roleArray.map(r => 
                     String(r).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                 );
 
                 currentUserName = data.name || '';
                 
-                // Carrega o PIN se existir
+                // Carrega PIN
                 const pinField = document.getElementById('profile-pin');
                 if (pinField) pinField.value = data.pin || '';
             } else {
+                // Usuário não existe no banco, usa fallback do config
                 currentUserRole = isAdminConfig ? ['ADMIN'] : ['OPERADOR'];
                 currentUserName = isAdminConfig ? 'Administrador' : '';
             }
         }
-    } catch (e) { console.log(e); }
+    } catch (e) { 
+        console.error("ALERTA: Falha ao ler perfil (Possível bloqueio AppCheck):", e);
+        // Em caso de erro (AppCheck bloqueando), usa o config local como fallback
+        currentUserRole = isAdminConfig ? ['ADMIN'] : ['OPERADOR'];
+        if(isAdminConfig) showToast("Acesso Admin (Modo Offline/Config)", "warning");
+    }
 
-    if (isAdminConfig && !currentUserRole.includes('ADMIN')) currentUserRole.push('ADMIN');
+    // GARANTIA FINAL: Se estiver no config.js como Admin, adiciona o papel ADMIN na marra
+    if (isAdminConfig && !currentUserRole.includes('ADMIN')) {
+        currentUserRole.push('ADMIN');
+    }
 
+    // Atualiza Interface Visual
     const roleLabel = document.getElementById('user-role-label');
-    // .join(', ') exibe os perfis separados por vírgula visualmente
-    roleLabel.innerText = user.email === GENERIC_EMAIL ? "Operação (Genérico)" : `Logado (${currentUserRole.join(', ')})`;
+    if(roleLabel) {
+        roleLabel.innerText = user.email === GENERIC_EMAIL 
+            ? "Operação (Genérico)" 
+            : `Logado (${currentUserRole.join(', ')})`;
+    }
     
-    // Mostra botão de sair
-    document.getElementById('btn-logout').classList.remove('hidden');
+    const btnLogout = document.getElementById('btn-logout');
+    if(btnLogout) btnLogout.classList.remove('hidden');
 
-    // ATUALIZADO: Passa o ROLE (string) para a função de UI tratar a granularidade
+    // Aplica permissões na tela
     updateUIForRole(currentUserRole);
     
     const savedEnv = localStorage.getItem('appLog_env') || 'prod';
@@ -86,17 +106,15 @@ function showLoginModal(forced = false) {
     const modal = document.getElementById('login-modal');
     const btnClose = document.getElementById('btn-close-login');
     
-    modal.classList.remove('hidden');
+    if(modal) modal.classList.remove('hidden');
     
-    if (forced) {
-        btnClose.classList.add('hidden');
-    } else {
-        btnClose.classList.remove('hidden');
+    if (btnClose) {
+        if (forced) btnClose.classList.add('hidden');
+        else btnClose.classList.remove('hidden');
     }
 }
 
 function setupLoginUI(auth) {
-    // Menu Login/Logout
     safeBind('btn-open-login', 'click', () => {
         if (currentUser) copyToClipboard(currentUser.uid);
         else showLoginModal(false);
@@ -113,13 +131,13 @@ function setupLoginUI(auth) {
         const pass = document.getElementById('login-pass').value;
         const btn = document.getElementById('btn-perform-login');
         
-        btn.disabled = true; btn.innerText = "Entrando...";
+        if(btn) { btn.disabled = true; btn.innerText = "Entrando..."; }
         try {
             await signInWithEmailAndPassword(auth, email, pass);
         } catch (error) {
             console.error(error);
             showToast("E-mail ou senha inválidos.", "error");
-            btn.disabled = false; btn.innerText = "Entrar";
+            if(btn) { btn.disabled = false; btn.innerText = "Entrar"; }
         }
     });
 
@@ -127,7 +145,6 @@ function setupLoginUI(auth) {
         try { await signOut(auth); } catch (e) { console.error(e); }
     });
 
-    // --- LÓGICA: TROCA DE SENHA ---
     safeBind('form-change-pass', 'submit', async (e) => {
         e.preventDefault();
         const currentPass = document.getElementById('current-pass').value;
@@ -139,31 +156,22 @@ function setupLoginUI(auth) {
         if (newPass !== confirmPass) return showToast("A confirmação da senha não confere.", "error");
         if (!currentUser) return showToast("Você precisa estar logado.", "error");
 
-        btn.disabled = true; btn.innerText = "Atualizando...";
+        if(btn) { btn.disabled = true; btn.innerText = "Atualizando..."; }
 
         try {
-            // 1. Re-autenticar (Segurança do Firebase exige isso para operações sensíveis)
             const credential = EmailAuthProvider.credential(currentUser.email, currentPass);
             await reauthenticateWithCredential(currentUser, credential);
-
-            // 2. Atualizar Senha
             await updatePassword(currentUser, newPass);
-
             showToast("Senha atualizada com sucesso!");
             document.getElementById('form-change-pass').reset();
-            
         } catch (error) {
             console.error(error);
-            if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-                showToast("Senha atual incorreta.", "error");
-            } else {
-                showToast("Erro ao atualizar senha. Tente novamente.", "error");
-            }
+            showToast("Erro ao atualizar senha.", "error");
         } finally {
-            btn.disabled = false; btn.innerText = "Atualizar Senha";
+            if(btn) { btn.disabled = false; btn.innerText = "Atualizar Senha"; }
         }
     });
-    // --- LÓGICA: SALVAR PIN (VISTO ELETRÔNICO) ---
+
     safeBind('btn-save-pin', 'click', async () => {
         if (!currentUser) return;
         const pinVal = document.getElementById('profile-pin').value.trim();
@@ -171,32 +179,28 @@ function setupLoginUI(auth) {
 
         if (pinVal.length < 4) return showToast("O PIN deve ter no mínimo 4 dígitos.", "error");
 
-        btn.disabled = true; btn.innerText = "...";
+        if(btn) { btn.disabled = true; btn.innerText = "..."; }
         try {
             const db = getFirestore();
-            // Salva o PIN no documento do usuário (merge: true para não apagar o resto)
             await setDoc(doc(db, 'users', currentUser.uid), { pin: pinVal }, { merge: true });
-            showToast("PIN de assinatura salvo!");
+            showToast("PIN salvo!");
         } catch (e) {
             console.error(e);
             showToast("Erro ao salvar PIN.", "error");
         } finally {
-            btn.disabled = false; btn.innerText = "Salvar PIN";
+            if(btn) { btn.disabled = false; btn.innerText = "Salvar PIN"; }
         }
     });
 }
 
-// ATUALIZADO: Função que gerencia a visibilidade baseada no Cargo
-// ATUALIZADO: Função que gerencia a visibilidade baseada no Cargo
-// ATUALIZADO: Função que gerencia a visibilidade baseada no Cargo
+// CORREÇÃO: Função preparada para receber Array
 function updateUIForRole(roles) {
-    const isAdmin = roles.includes('ADMIN');
-    // Quem pode ver a aba Configurações? (Admin, Lider, Inventário)
-    // Verifica se ALGUM perfil do usuário está na lista permitida
-    const canAccessConfig = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
+    // Se roles for nulo ou indefinido, usa array vazio
+    const safeRoles = Array.isArray(roles) ? roles : [];
+    
+    const isAdmin = safeRoles.includes('ADMIN');
+    const canAccessConfig = safeRoles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
 
-    // 1. Elementos exclusivos de ADMIN (Perigo Real e Gestão Sensível)
-    // NOTE QUE O 'addBtn' NÃO ESTÁ MAIS AQUI
     const adminEls = {
         indicator: document.getElementById('admin-indicator'), 
         dangerZone: document.getElementById('admin-danger-zone'),
@@ -207,37 +211,28 @@ function updateUIForRole(roles) {
     
     const adminAction = isAdmin ? 'remove' : 'add';
     
-    // Aplica a visibilidade para os itens exclusivos de Admin
     if (adminEls.indicator) adminEls.indicator.classList[adminAction]('hidden');
     if (adminEls.dangerZone) adminEls.dangerZone.classList[adminAction]('hidden');
     if (adminEls.cfgClients) adminEls.cfgClients.classList[adminAction]('hidden');
     if (adminEls.cfgTeam) adminEls.cfgTeam.classList[adminAction]('hidden');
     if (adminEls.cfgProds) adminEls.cfgProds.classList[adminAction]('hidden');
 
-    // 2. Elementos de Gestão (Aba Configurações no menu)
     const navConfig = document.getElementById('nav-link-config');
     if (navConfig) {
         if (canAccessConfig) navConfig.classList.remove('hidden');
         else navConfig.classList.add('hidden');
     }
 
-    // 3. Controle de Acesso: Minha Conta (Operador puro não vê)
     const navProfile = document.querySelector('a[data-page="perfil"]');
     if (navProfile) {
-        // Se tiver permissão especial, mostra. Se for só operador, esconde.
         if (canAccessConfig) navProfile.classList.remove('hidden');
         else navProfile.classList.add('hidden');
     }
 
-    // 4. NOVA LÓGICA: Botão de Adicionar Cliente
-    // Liberado para Admin, Líder e Inventário
     const btnAddClient = document.getElementById('add-client-btn');
     if (btnAddClient) {
-        if (roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r))) {
-            btnAddClient.classList.remove('hidden');
-        } else {
-            btnAddClient.classList.add('hidden');
-        }
+        if (canAccessConfig) btnAddClient.classList.remove('hidden');
+        else btnAddClient.classList.add('hidden');
     }
 }
 

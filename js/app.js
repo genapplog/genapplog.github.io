@@ -29,7 +29,7 @@ try {
     // ATENÇÃO: Se você ainda não tem a chave, o site vai funcionar, mas avisará no console.
     // Quando criar a chave no Firebase, substitua 'SUA-CHAVE-RECAPTCHA-AQUI' por ela.
     const appCheck = initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider('6LewvygsAAAAAFh2REyS-NyO3FI9KG6J0SjfrIoz'), 
+        provider: new ReCaptchaV3Provider('6LevoEUsAAAAALWQ13Kk35ZJaQawoT8v1I8yRCcf'), 
         isTokenAutoRefreshEnabled: true
     });
 } catch (e) {
