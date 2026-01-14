@@ -1,7 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// NOVO: Importação do App Check (Segurança)
-import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 import { 
     initializeFirestore, 
     persistentLocalCache, 
@@ -20,21 +18,6 @@ import { initDashboard, startTVMode } from './modules/dashboard.js';
 
 const app = initializeApp(firebaseConfig);
 
-// =================================================================
-// 🛡️ SEGURANÇA: APP CHECK
-// =================================================================
-// Isso garante que apenas o seu site oficial acesse o banco de dados.
-// Você precisa pegar a "Chave do Site" (Site Key) no Console do Firebase > App Check.
-try {
-    // ATENÇÃO: Se você ainda não tem a chave, o site vai funcionar, mas avisará no console.
-    // Quando criar a chave no Firebase, substitua 'SUA-CHAVE-RECAPTCHA-AQUI' por ela.
-    const appCheck = initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider('6LevoEUsAAAAALWQ13Kk35ZJaQawoT8v1I8yRCcf'), 
-        isTokenAutoRefreshEnabled: true
-    });
-} catch (e) {
-    console.warn("App Check: Chave não configurada ou rodando em localhost sem token.");
-}
 
 const auth = getAuth(app);
 

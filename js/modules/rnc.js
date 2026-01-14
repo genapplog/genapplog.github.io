@@ -5,7 +5,7 @@
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { onSnapshot, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { safeBind, showToast, openConfirmModal, closeConfirmModal, sendDesktopNotification, requestNotificationPermission } from '../utils.js';
-import { PATHS, SECURITY_CONFIG } from '../config.js';
+import { PATHS } from '../config.js';
 import { getUserRole, getCurrentUserName } from './auth.js';
 import { initDashboard, updateDashboardView } from './dashboard.js';
 import { updateAdminList, registerLog } from './admin.js';
@@ -67,7 +67,8 @@ export async function initRncModule(db, isTest) {
     });
 
     // LISTENER DE CHAMADOS (Lado do Líder)
-    const myCurrentRole = getUserRole(); 
+    const myCurrentRole = getUserRole(); // Retorna Array agora
+    // ✅ CORREÇÃO: Verifica se o array CONTÉM o papel
     if (myCurrentRole.includes('ADMIN') || myCurrentRole.includes('LIDER')) {
         const notificationsRef = collection(db, `artifacts/${globalDb.app.options.appId}/public/data/notifications`);
         const recentTime = new Date(Date.now() - 2 * 60 * 1000); 
@@ -131,14 +132,10 @@ function setupRncBindings() {
     safeBind('btn-delete-permanent', 'click', () => handleDelete());
 
     // --- 3. SCANNERS E INPUTS INTELIGENTES ---
-    
-    // Leitor de Requisição de Palete
     safeBind('req-smart-scanner', 'change', async (e) => { const b = e.target.value.trim(); if (b) { await handleReqSmartScan(b); e.target.value = ''; } });
-    
-    // Leitor do Formulário RNC
     safeBind('smart-scanner-input', 'change', async (e) => { const b = e.target.value.trim(); if (b) { await handleSmartScan(b); e.target.value = ''; } });
 
-    // Busca Manual no campo CÓDIGO (Ao sair do campo)
+    // Busca Manual no campo CÓDIGO
     safeBind('form-item-cod', 'blur', async (e) => {
         const code = e.target.value.trim();
         const descField = document.getElementById('form-item-desc');
@@ -226,9 +223,10 @@ function setupRncBindings() {
 // =================================================================
 
 function checkAndNotify(data) {
-    const myRole = getUserRole(); 
+    const myRole = getUserRole(); // Array
     const myName = getCurrentUserName();
     
+    // ✅ CORREÇÃO: .includes()
     if (data.status === 'pendente_lider' && (myRole.includes('LIDER') || myRole.includes('ADMIN'))) { 
         if (data.ass_colab !== myName) sendDesktopNotification("Nova Pendência", `RNC de ${data.tipo} aguardando aprovação.`); 
     }
@@ -371,6 +369,8 @@ function updatePendingList() {
                 const btn = document.createElement('button');
                 btn.className = "text-indigo-400 hover:text-white text-xs font-bold uppercase tracking-wide bg-indigo-900/30 px-3 py-1.5 rounded border border-indigo-500/30 hover:bg-indigo-600 hover:border-indigo-500 transition-all btn-open-occurrence";
                 btn.dataset.id = item.id;
+                
+                // Texto do botão dinâmico
                 btn.textContent = item.status === 'pendente_lider' ? 'Assinar (Líder)' : item.status === 'pendente_inventario' ? 'Revisar e Finalizar' : 'Ver Detalhes';
                 tdAction.appendChild(btn);
 
@@ -382,7 +382,8 @@ function updatePendingList() {
 
     if (tbodyPallet) {
         tbodyPallet.innerHTML = '';
-        const myRole = getUserRole();
+        const myRole = getUserRole(); // Array
+        // ✅ CORREÇÃO: .includes()
         const canFinish = myRole.includes('INVENTARIO') || myRole.includes('ADMIN');
 
         if (palletItems.length === 0) { 
@@ -443,14 +444,21 @@ async function handleSave() {
     if (currentFormStatus === 'draft') {
         const tipo = document.querySelector('input[name="oc_tipo"]:checked')?.value;
         const assColab = document.getElementById('form-ass-colab').value;
+        const myRole = getUserRole();
+        const myName = getCurrentUserName();
         
-        if (!assColab.trim()) return showToast("Assine como Colaborador antes de chamar o Líder.", "error");
+        if (!assColab.trim()) return showToast("Assine como Colaborador.", "error");
         if (!tipo) return showToast("Selecione o Tipo da ocorrência.", "error");
+
+        // Se quem está logado já for Líder ou Admin, valida automaticamente
+        if (myRole.includes('LIDER') || myRole.includes('ADMIN')) {
+            document.getElementById('form-ass-lider').value = myName;
+            return processSaveData();
+        }
 
         const pinField = document.getElementById('auth-leader-pin');
         const modal = document.getElementById('leader-auth-modal');
-
-        if (!pinField || !modal) return showToast("Erro de Interface: Recarregue a página.", "error");
+        if (!pinField || !modal) return showToast("Erro de Interface.", "error");
 
         pinField.value = '';  
         modal.classList.remove('hidden'); 
@@ -480,10 +488,12 @@ async function submitLeaderAuth() {
         }
 
         const userDoc = snapshot.docs[0].data();
-        // Garante leitura de array
-        const roles = Array.isArray(userDoc.role) ? userDoc.role : [userDoc.role];
+        // Fallback: Se o user não tiver role no array, trata string antiga
+        let rawRole = userDoc.role || 'OPERADOR';
+        if (Array.isArray(rawRole)) rawRole = rawRole[0]; // Pega o primeiro se for array no banco
+        const role = String(rawRole).toUpperCase();
 
-        if (!roles.includes('LIDER') && !roles.includes('ADMIN')) {
+        if (!role.includes('LIDER') && role !== 'ADMIN') {
             showToast("Este usuário não tem permissão de Liderança.", "error");
             btn.disabled = false; btn.innerText = originalText;
             return;
@@ -572,9 +582,17 @@ async function processSaveData() {
 }
 
 function updateFormStateUI() {
-    const status = currentFormStatus; const dataInputs = document.querySelectorAll('.data-input'); const inputColab = document.getElementById('form-ass-colab'), inputLider = document.getElementById('form-ass-lider'), inputInv = document.getElementById('form-ass-inv'), inputInfrator = document.getElementById('form-infrator'); const btnSave = document.getElementById('btn-save-occurrence'), btnReject = document.getElementById('btn-reject-occurrence'), btnDelete = document.getElementById('btn-delete-permanent'); const statusBar = document.getElementById('form-status-bar'); const myRole = getUserRole(); const myName = getCurrentUserName();
+    const status = currentFormStatus; 
+    const dataInputs = document.querySelectorAll('.data-input'); 
+    const inputColab = document.getElementById('form-ass-colab'), inputLider = document.getElementById('form-ass-lider'), inputInv = document.getElementById('form-ass-inv'), inputInfrator = document.getElementById('form-infrator'); 
+    const btnSave = document.getElementById('btn-save-occurrence'), btnReject = document.getElementById('btn-reject-occurrence'), btnDelete = document.getElementById('btn-delete-permanent'); 
+    const statusBar = document.getElementById('form-status-bar'); 
+    const myRole = getUserRole(); // Array
+    const myName = getCurrentUserName();
+
     if(!inputColab) return;
     inputColab.disabled = true; inputLider.disabled = true; inputInv.disabled = true; dataInputs.forEach(input => input.disabled = false); btnReject.classList.add('hidden'); btnDelete.classList.add('hidden'); btnSave.classList.remove('hidden');
+    
     if (status === 'draft') {
         statusBar.innerText = "Etapa 1: Abertura e Validação Imediata"; statusBar.className = "bg-indigo-900/40 text-indigo-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-center border-b border-indigo-500/20";
         inputInfrator.disabled = true; inputInfrator.placeholder = "Reservado ao Inventário"; inputInfrator.classList.add('opacity-50'); 
@@ -586,15 +604,16 @@ function updateFormStateUI() {
     } else if (status === 'pendente_lider') {
         statusBar.innerText = "Etapa 2: Aprovação do Líder"; statusBar.className = "bg-amber-900/40 text-amber-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-center border-b border-amber-500/20"; dataInputs.forEach(input => input.disabled = true);
         
+        // ✅ CORREÇÃO: .includes()
         if (myRole.includes('LIDER') || myRole.includes('ADMIN')) { 
             inputLider.disabled = false; inputLider.value = myName; btnSave.innerText = "Aprovar e Enviar"; btnReject.classList.remove('hidden'); btnDelete.classList.remove('hidden'); btnDelete.innerText = "Excluir RD"; 
         } else { 
             inputLider.value = ""; inputLider.placeholder = "Aguardando Líder..."; btnSave.classList.add('hidden'); showToast("Aguardando aprovação da liderança.", "info"); 
         }
-
     } else if (status === 'pendente_inventario') {
         statusBar.innerText = "Etapa 3: Validação do Inventário"; statusBar.className = "bg-blue-900/40 text-blue-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-center border-b border-blue-500/20"; dataInputs.forEach(input => input.disabled = false);
         
+        // ✅ CORREÇÃO: .includes()
         if (myRole.includes('INVENTARIO') || myRole.includes('ADMIN')) { 
             inputInfrator.disabled = false; inputInfrator.classList.remove('opacity-50'); inputInv.disabled = false; inputInv.value = myName; btnSave.innerText = "Validar e Finalizar"; btnReject.classList.remove('hidden'); btnDelete.classList.remove('hidden'); btnDelete.innerText = "Excluir RD"; 
         } else { 
