@@ -19,14 +19,14 @@ import { initDashboard, startTVMode } from './modules/dashboard.js';
 
 const app = initializeApp(firebaseConfig);
 
-// Inicialização do App Check (Segurança)
+// Inicialização do App Check (Chave de Produção)
 try {
     initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider('6LewvygsAAAAAFh2REyS-NyO3FI9KG6J0SjfrIoz'),
+        provider: new ReCaptchaV3Provider('6LcIwEosAAAAAO2Ph6II8msIeZnBa9wr6JV3Kut7'),
         isTokenAutoRefreshEnabled: true
     });
 } catch (e) {
-    console.warn("Aviso App Check:", e);
+    console.warn("App Check:", e);
 }
 
 const auth = getAuth(app);
