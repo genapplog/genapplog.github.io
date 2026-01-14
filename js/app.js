@@ -1,5 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 import { 
     initializeFirestore, 
     persistentLocalCache, 
@@ -18,6 +20,15 @@ import { initDashboard, startTVMode } from './modules/dashboard.js';
 
 const app = initializeApp(firebaseConfig);
 
+// Inicialização do App Check (Segurança)
+try {
+    initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider('6LewvygsAAAAAFh2REyS-NyO3FI9KG6J0SjfrIoz'),
+        isTokenAutoRefreshEnabled: true
+    });
+} catch (e) {
+    console.warn("Aviso App Check:", e);
+}
 
 const auth = getAuth(app);
 

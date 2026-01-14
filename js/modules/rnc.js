@@ -444,21 +444,14 @@ async function handleSave() {
     if (currentFormStatus === 'draft') {
         const tipo = document.querySelector('input[name="oc_tipo"]:checked')?.value;
         const assColab = document.getElementById('form-ass-colab').value;
-        const myRole = getUserRole();
-        const myName = getCurrentUserName();
         
-        if (!assColab.trim()) return showToast("Assine como Colaborador.", "error");
+        if (!assColab.trim()) return showToast("Assine como Colaborador antes de chamar o Líder.", "error");
         if (!tipo) return showToast("Selecione o Tipo da ocorrência.", "error");
-
-        // Se quem está logado já for Líder ou Admin, valida automaticamente
-        if (myRole.includes('LIDER') || myRole.includes('ADMIN')) {
-            document.getElementById('form-ass-lider').value = myName;
-            return processSaveData();
-        }
 
         const pinField = document.getElementById('auth-leader-pin');
         const modal = document.getElementById('leader-auth-modal');
-        if (!pinField || !modal) return showToast("Erro de Interface.", "error");
+
+        if (!pinField || !modal) return showToast("Erro de Interface: Recarregue a página.", "error");
 
         pinField.value = '';  
         modal.classList.remove('hidden'); 

@@ -4,6 +4,7 @@
  */
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { ADMIN_IDS } from '../config.js';
 import { showToast, safeBind, copyToClipboard } from '../utils.js';
 
 let currentUser = null;
@@ -29,47 +30,52 @@ export function initAuth(auth, initialToken, callbackEnv) {
 
 async function handleUserLoaded(user, db, callbackEnv) {
     currentUser = user;
-    
-    // Atualiza o texto visual (exibe e-mail ou 'Usuário')
     const displayEl = document.getElementById('userIdDisplay');
     if(displayEl) displayEl.innerText = user.email || 'Usuário';
 
+    const isAdminConfig = ADMIN_IDS.includes(user.uid);
+    
     try {
         if (user.email === GENERIC_EMAIL) {
             currentUserRole = ['OPERADOR'];
-            currentUserName = 'Operador Genérico'; 
+            currentUserName = ''; 
         } else {
+            // Tenta ler do banco
             const userSnap = await getDoc(doc(db, 'users', user.uid));
+            
             if (userSnap.exists()) {
                 const data = userSnap.data();
                 
-                // 1. Pega o dado bruto e garante que seja Array
+                // Normalização robusta de Perfil
                 let rawRole = data.role || 'OPERADOR';
                 const roleArray = Array.isArray(rawRole) ? rawRole : [rawRole];
                 
-                // 2. Normaliza para MAIÚSCULO e remove acentos
                 currentUserRole = roleArray.map(r => 
                     String(r).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                 );
 
                 currentUserName = data.name || '';
                 
-                // Carrega o PIN se existir
                 const pinField = document.getElementById('profile-pin');
                 if (pinField) pinField.value = data.pin || '';
             } else {
-                // Usuário logado no Firebase Auth mas sem documento no Firestore
-                console.warn("Usuário sem perfil no banco de dados.");
-                currentUserRole = ['VISITANTE'];
-                currentUserName = 'Visitante';
+                // Usuário não existe no banco, mas logou
+                currentUserRole = isAdminConfig ? ['ADMIN'] : ['OPERADOR'];
+                currentUserName = isAdminConfig ? 'Administrador' : '';
             }
         }
     } catch (e) { 
-        console.error("Erro ao carregar perfil:", e);
-        currentUserRole = ['OPERADOR']; // Fallback seguro
+        // ✅ PROTEÇÃO CONTRA ERRO DE APP CHECK
+        console.warn("Aviso: Não foi possível carregar perfil do banco (AppCheck ou Offline). Usando perfil local.", e);
+        currentUserRole = isAdminConfig ? ['ADMIN'] : ['OPERADOR']; 
     }
 
-    // Atualiza o Label visual (ex: "Logado (INVENTARIO, LIDER)")
+    // Garante Admin do config.js
+    if (isAdminConfig && !currentUserRole.includes('ADMIN')) {
+        currentUserRole.push('ADMIN');
+    }
+
+    // Atualiza UI
     const roleLabel = document.getElementById('user-role-label');
     if(roleLabel) {
         roleLabel.innerText = user.email === GENERIC_EMAIL 
@@ -77,11 +83,9 @@ async function handleUserLoaded(user, db, callbackEnv) {
             : `Logado (${currentUserRole.join(', ')})`;
     }
     
-    // Mostra botão de sair
     const btnLogout = document.getElementById('btn-logout');
     if(btnLogout) btnLogout.classList.remove('hidden');
 
-    // Atualiza a Interface baseada na lista de perfis
     updateUIForRole(currentUserRole);
     
     const savedEnv = localStorage.getItem('appLog_env') || 'prod';

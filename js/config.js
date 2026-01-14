@@ -8,6 +8,8 @@ export const firebaseConfig = {
     appId: "1:787938700532:web:442b667367341fb4ac02a1"
 };
 
+export const ADMIN_IDS = ["lssiHZQUGEMF9E2OPnv3iqIyjRW2"];
+
 export const PATHS = {
     prod: { clients: `artifacts/${firebaseConfig.appId}/public/data/clients`, occurrences: `artifacts/${firebaseConfig.appId}/public/data/occurrences` },
     test: { clients: `artifacts/${firebaseConfig.appId}/public/data/clients_test`, occurrences: `artifacts/${firebaseConfig.appId}/public/data/occurrences_test` }
@@ -57,4 +59,17 @@ export const labelDimensions = {
     "4x2": { pw: 800, ll: 400, aspect: "aspect-[2/1]" }, 
     "4x3.15": { pw: 800, ll: 640, aspect: "aspect-[10/8]" } 
 
+};
+
+// Configuração de Segurança para Validação Presencial
+// Em produção, isso poderia vir do banco de dados de cada usuário.
+export const SECURITY_CONFIG = {
+    // Lista de Líderes e seus PINs individuais
+    LEADERS_DB: [
+        { name: "Líder Geral", pin: "2025" },
+        { name: "João Silva", pin: "1111" },
+        { name: "Maria Oliveira", pin: "2222" },
+        { name: "Carlos Souza", pin: "3333" },
+        // Adicione quantos quiser...
+    ]
 };
