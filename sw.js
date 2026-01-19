@@ -1,19 +1,20 @@
 /**
  * ARQUIVO: sw.js
  * DESCRIÇÃO: Service Worker Enterprise (Offline-First)
+ * AJUSTE: Inclusão do Chart.js no cache vital e bump de versão.
  */
 
-const CACHE_NAME = 'applog-v2-enterprise';
-const DYNAMIC_CACHE = 'applog-dynamic-v2';
+const CACHE_NAME = 'applog-v3-enterprise'; // Subi a versão para v3
+const DYNAMIC_CACHE = 'applog-dynamic-v3';
 
-// Arquivos vitais que devem ser baixados imediatamente na instalação
-// Como você usa Vite, os nomes dos JS/CSS mudam no build, então focamos no básico.
+// Arquivos vitais que devem ser baixados imediatamente na instalação.
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/img/icon-512.png'
-  // O Vite injetará os CSS/JS dinamicamente, e nós os pegaremos no runtime.
+  '/img/icon-512.png',
+  // ✅ CORREÇÃO: Adicionamos o Chart.js aqui para garantir que os gráficos funcionem offline
+  'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js'
 ];
 
 // --- 1. INSTALAÇÃO (Cache Inicial) ---
@@ -23,7 +24,7 @@ self.addEventListener('install', (event) => {
   
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Caching Shell Assets');
+      console.log('[SW] Caching Shell Assets & Chart.js');
       return cache.addAll(STATIC_ASSETS);
     })
   );
@@ -56,7 +57,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin.includes('firestore.googleapis.com') || 
       url.origin.includes('identitytoolkit.googleapis.com') ||
       url.href.includes('google.com/recaptcha')) {
-    return; // Segue fluxo normal da rede (o Firestore tem seu próprio persistence)
+    return; // Segue fluxo normal da rede
   }
 
   // B) ESTRATÉGIA: Stale-While-Revalidate (Para JS, CSS, Fontes, Imagens)
@@ -74,6 +75,7 @@ self.addEventListener('fetch', (event) => {
             return networkResponse;
           });
         });
+        // Retorna o cache se existir, senão espera a rede
         return cachedResponse || fetchPromise;
       })
     );

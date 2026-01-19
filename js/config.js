@@ -1,18 +1,28 @@
 // ARQUIVO: js/config.js
+
+// Carrega as variáveis do arquivo .env correspondente ao modo (dev ou build)
 export const firebaseConfig = {
-    apiKey: "AIzaSyABGUTSwBMEuNLmFDsNRHgXOo3NEs8Q21A",
-    authDomain: "genapplog.firebaseapp.com",
-    projectId: "genapplog",
-    storageBucket: "genapplog.firebasestorage.app",
-    messagingSenderId: "787938700532",
-    appId: "1:787938700532:web:442b667367341fb4ac02a1"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_APP_ID
 };
 
 export const ADMIN_IDS = ["lssiHZQUGEMF9E2OPnv3iqIyjRW2"];
 
+// Define se estamos em ambiente de desenvolvimento (localhost)
+export const IS_DEV = import.meta.env.DEV;
+
+// Define os caminhos automaticamente.
+// Se estiver em DEV e usando o MESMO projeto de prod, adiciona '_test' para segurança.
+// Se estiver usando um projeto totalmente separado, o caminho fica limpo.
+const suffix = (IS_DEV && firebaseConfig.projectId === "genapplog") ? '_test' : '';
+
 export const PATHS = {
-    prod: { clients: `artifacts/${firebaseConfig.appId}/public/data/clients`, occurrences: `artifacts/${firebaseConfig.appId}/public/data/occurrences` },
-    test: { clients: `artifacts/${firebaseConfig.appId}/public/data/clients_test`, occurrences: `artifacts/${firebaseConfig.appId}/public/data/occurrences_test` }
+    clients: `artifacts/${firebaseConfig.appId}/public/data/clients${suffix}`,
+    occurrences: `artifacts/${firebaseConfig.appId}/public/data/occurrences${suffix}`
 };
 
 export const defaultChecklistData = { 

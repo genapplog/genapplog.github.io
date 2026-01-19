@@ -2,7 +2,8 @@
  * ARQUIVO: js/modules/labels.js
  * DESCRIÇÃO: Gerador de ZPL e Integração com API Labelary.
  */
-import { safeBind, showToast } from '../utils.js';
+// ✅ CORREÇÃO: Importamos sanitizeForZpl
+import { safeBind, showToast, sanitizeForZpl } from '../utils.js';
 import { labelDimensions, cdData } from '../config.js';
 
 const baseApiUrl = 'https://api.labelary.com/v1/printers/8dpmm/labels/';
@@ -53,6 +54,16 @@ function scaleY(value, labelLength) {
 function generateZplTemplate(dims, cdCode, cdInfo, nfKey, poNumber, currentBox, totalBoxes) {
     const volumeStr = `${currentBox}/${totalBoxes}`;
     const len = dims.ll;
+    
+    // ✅ CORREÇÃO: Sanitização dos dados variáveis
+    const safeInfo = {
+        nome: sanitizeForZpl(cdInfo.nome),
+        linha1: sanitizeForZpl(cdInfo.linha1),
+        linha2: sanitizeForZpl(cdInfo.linha2),
+        po: sanitizeForZpl(poNumber),
+        nf: sanitizeForZpl(nfKey)
+    };
+
     return `^XA^CI28^PW${dims.pw}^LL${dims.ll}^LH0,0^PO^FWB` +
            `^FO10,${scaleY(10,len)}^GB780,${scaleY(1180,len)},3^FS` +
            `^FO20,${scaleY(20,len)}^GB40,${scaleY(575,len)},3^FS^FO20,${scaleY(605,len)}^GB40,${scaleY(575,len)},3^FS` +
@@ -63,35 +74,48 @@ function generateZplTemplate(dims, cdCode, cdInfo, nfKey, poNumber, currentBox, 
            `^FO590,${scaleY(20,len)}^GB190,${scaleY(1160,len)},3^FS` +
            `^CFA,30^FO30,${scaleY(810,len)}^FH^FDEndereco de destino:^FS` +
            `^CFA,20^FO90,${scaleY(990,len)}^FH^FDAmazon CD: ${cdCode}^FS` +
-           `^FO120,${scaleY(690,len)}^FH^FD${cdInfo.nome}^FS` +
+           `^FO120,${scaleY(690,len)}^FH^FD${safeInfo.nome}^FS` +
            `^FO150,${scaleY(930,len)}^FH^FDCNPJ: ${cdInfo.cnpj}^FS` +
            `^FO180,${scaleY(965,len)}^FH^FDIE: ${cdInfo.ie}^FS` +
-           `^FO210,${scaleY(665,len)}^FH^FD${cdInfo.linha1}^FS` +
-           `^FO240,${scaleY(685,len)}^FH^FD${cdInfo.linha2}^FS` +
+           `^FO210,${scaleY(665,len)}^FH^FD${safeInfo.linha1}^FS` +
+           `^FO240,${scaleY(685,len)}^FH^FD${safeInfo.linha2}^FS` +
            `^CFA,30^FO30,${scaleY(170,len)}^FH^FDEndereco do fornecedor:^FS` +
            `^CFA,20^FO150,${scaleY(135,len)}^FH^FDESTRADA MUNICIPAL LUIZ LOPES NETO, 21^FS` +
            `^FO180,${scaleY(305,len)}^FH^FDEXTREMA - MG, 37640-050^FS` +
            `^CFA,30^FO310,${scaleY(860,len)}^FH^FDPedido de COMPRA:^FS` +
-           `^BY2,3,${scaleY(100,len)}^FO380,${scaleY(740,len)}^BC,${scaleY(110,len)},,,,N^FH^FD${poNumber}^FS` +
+           `^BY2,3,${scaleY(100,len)}^FO380,${scaleY(740,len)}^BC,${scaleY(110,len)},,,,N^FH^FD${safeInfo.po}^FS` +
            `^CFA,30^FO310,${scaleY(280,len)}^FH^FDNumero de caixas:^FS` +
            `^CFA,${scaleY(100,len)}^FO400,${scaleY(120,len)},^A0B,${scaleY(100,len)},${scaleY(70,len)}^FB400,1,0,C,0^FH^FD${volumeStr}\\&^FS` +
            `^CFA,30^FO550,${scaleY(950,len)}^FH^FDNota fiscal:^FS` +
-           `^BY2,3,${scaleY(130,len)}^FO620,${scaleY(80,len)}^BC,${scaleY(120,len)},,,,N^FH^FD${nfKey}^FS^XZ`; 
+           `^BY2,3,${scaleY(130,len)}^FO620,${scaleY(80,len)}^BC,${scaleY(120,len)},,,,N^FH^FD${safeInfo.nf}^FS^XZ`; 
 }
 
 function generateZplManualTemplate(data) { 
+    // ✅ CORREÇÃO: Sanitização dos dados manuais (Essencial!)
+    const safeData = {
+        documento: sanitizeForZpl(data.documento),
+        nf: sanitizeForZpl(data.nf),
+        solicitante: sanitizeForZpl(data.solicitante),
+        destinatario: sanitizeForZpl(data.destinatario),
+        cidade: sanitizeForZpl(data.cidade),
+        transportadora: sanitizeForZpl(data.transportadora),
+        volAtual: data.volAtual,
+        volTotal: data.volTotal
+    };
+
     return `^XA^MMT^PW799^LL640^LS1` +
            `^FO15,55^GB767,4,4^FS^FO15,115^GB767,4,4^FS^FO15,270^GB767,4,4^FS^FO15,440^GB767,4,4^FS^FO15,520^GB767,4,4^FS` +
            `^FT15,45^A0N,34,33^FH\\^FDGENOMMA MG ^FS^FT15,80^A0N,17,16^FH\\^FDDocumento^FS` +
-           `^FT100,105^A0N,34,33^FH\\^FD${data.documento}^FS^FT415,80^A0N,17,16^FH\\^FDSolicitante^FS` +
-           `^FT500,105^A0N,34,33^FH\\^FD${data.solicitante}^FS^FT15,155^A0N,17,16^FH\\^FDNota Fiscal^FS` +
-           `^FT280,240^A0N,100,100^FH\\^FD${data.nf}^FS^FT15,305^A0N,17,16^FH\\^FDDestinatario^FS` +
-           `^FT15,355^A0N,34,33^FH\\^FD${data.destinatario}^FS^FT15,400^A0N,23,24^FH\\^FD${data.cidade}^FS` +
-           `^FT15,510^A0N,34,33^FH\\^FD${data.transportadora}^FS^FT15,470^A0N,17,16^FH\\^FDTransportador^FS` +
-           `^FT15,555^A0N,17,16^FH\\^FDVolumes^FS^FT55,595^A0N,34,33^FH\\^FD${data.volAtual} / ${data.volTotal} CAIXA^FS^XZ`; 
+           `^FT100,105^A0N,34,33^FH\\^FD${safeData.documento}^FS^FT415,80^A0N,17,16^FH\\^FDSolicitante^FS` +
+           `^FT500,105^A0N,34,33^FH\\^FD${safeData.solicitante}^FS^FT15,155^A0N,17,16^FH\\^FDNota Fiscal^FS` +
+           `^FT280,240^A0N,100,100^FH\\^FD${safeData.nf}^FS^FT15,305^A0N,17,16^FH\\^FDDestinatario^FS` +
+           `^FT15,355^A0N,34,33^FH\\^FD${safeData.destinatario}^FS^FT15,400^A0N,23,24^FH\\^FD${safeData.cidade}^FS` +
+           `^FT15,510^A0N,34,33^FH\\^FD${safeData.transportadora}^FS^FT15,470^A0N,17,16^FH\\^FDTransportador^FS` +
+           `^FT15,555^A0N,17,16^FH\\^FDVolumes^FS^FT55,595^A0N,34,33^FH\\^FD${safeData.volAtual} / ${safeData.volTotal} CAIXA^FS^XZ`; 
 }
 
 async function handleGenerateAmazon() {
+    // ... (o resto da função permanece igual)
     const btn = document.getElementById('generateButton');
     const btnPrint = document.getElementById('printButton');
     const preview = document.getElementById('previewContainer');
@@ -154,39 +178,25 @@ async function handleGenerateManual() {
     fetchPreview(sizeKey, previewZpl, btn, btnPrint, preview, 'Gerar Etiqueta', false);
 }
 
+// ... (As funções fetchPreview e handlePrintPDF permanecem iguais)
 async function fetchPreview(sizeKey, zpl, btn, btnPrint, previewContainer, btnText, rotate = false) {
     btn.disabled = true; btn.innerText = 'Gerando...'; 
-    previewContainer.innerHTML = ''; // Limpa
-    const spinner = document.createElement('span');
-    spinner.className = 'spinner';
-    previewContainer.appendChild(spinner);
-
+    previewContainer.innerHTML = ''; 
+    const spinner = document.createElement('span'); spinner.className = 'spinner'; previewContainer.appendChild(spinner);
     try {
         const response = await fetch(`${baseApiUrl}${sizeKey}/0/`, { method: 'POST', headers: { 'Accept': 'image/png', 'Content-Type': 'application/x-www-form-urlencoded' }, body: zpl });
         if (response.ok) {
             const imageUrl = URL.createObjectURL(await response.blob());
-            previewContainer.innerHTML = ''; // Limpa spinner
-            const img = document.createElement('img');
-            img.src = imageUrl;
-            img.className = "bg-white rounded-lg shadow-sm";
-            img.style.cssText = rotate 
-                ? 'transform: rotate(90deg) scale(0.55); transform-origin: center; width: auto; height: auto;' 
-                : 'width: 100%; height: 100%; object-fit: contain;';
+            previewContainer.innerHTML = '';
+            const img = document.createElement('img'); img.src = imageUrl; img.className = "bg-white rounded-lg shadow-sm";
+            img.style.cssText = rotate ? 'transform: rotate(90deg) scale(0.55); transform-origin: center; width: auto; height: auto;' : 'width: 100%; height: 100%; object-fit: contain;';
             previewContainer.appendChild(img);
             btnPrint.disabled = false;
         } else {
-            previewContainer.innerHTML = '';
-            const errSpan = document.createElement('span');
-            errSpan.className = 'text-red-400 text-xs';
-            errSpan.textContent = 'Erro API Labelary';
-            previewContainer.appendChild(errSpan);
+            previewContainer.innerHTML = ''; const errSpan = document.createElement('span'); errSpan.className = 'text-red-400 text-xs'; errSpan.textContent = 'Erro API Labelary'; previewContainer.appendChild(errSpan);
         }
     } catch { 
-        previewContainer.innerHTML = '';
-        const errSpan = document.createElement('span');
-        errSpan.className = 'text-red-400 text-xs';
-        errSpan.textContent = 'Erro de Rede';
-        previewContainer.appendChild(errSpan);
+        previewContainer.innerHTML = ''; const errSpan = document.createElement('span'); errSpan.className = 'text-red-400 text-xs'; errSpan.textContent = 'Erro de Rede'; previewContainer.appendChild(errSpan);
     }
     finally { btn.disabled = false; btn.innerText = btnText; }
 }
@@ -199,20 +209,11 @@ async function handlePrintPDF(zplId, sizeId, btnId, fixedSize) {
     
     btn.disabled = true; btn.innerText = "Baixando...";
     try {
-        const response = await fetch(`${baseApiUrl}${sizeKey}/`, { 
-            method: 'POST', 
-            headers: { 
-                'Accept': 'application/pdf',
-                'Content-Type': 'application/x-www-form-urlencoded' 
-            }, 
-            body: zplContent 
-        });
-
+        const response = await fetch(`${baseApiUrl}${sizeKey}/`, { method: 'POST', headers: { 'Accept': 'application/pdf', 'Content-Type': 'application/x-www-form-urlencoded' }, body: zplContent });
         if (response.ok) window.open(URL.createObjectURL(await response.blob()), '_blank');
         else showToast("Erro ao gerar PDF completo", 'error');
     } catch { showToast("Erro na API de Impressão", 'error'); } 
     finally { 
-        btn.disabled = false; 
-        btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>Baixar PDF`; 
+        btn.disabled = false; btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>Baixar PDF`; 
     }
 }

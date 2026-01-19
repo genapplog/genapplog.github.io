@@ -1,5 +1,11 @@
 /* ARQUIVO: css/style.css */
-/* Diretivas @tailwind removidas pois estamos usando CDN no HTML */
+
+/* ✅ PASSO 1: Diretivas do Tailwind (Obrigatório para funcionar localmente) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- A PARTIR DAQUI SÃO SEUS ESTILOS PERSONALIZADOS --- */
 
 body { font-family: 'Inter', sans-serif; }
 

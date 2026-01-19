@@ -3,8 +3,7 @@
  * DESCRIÇÃO: Gestão de Clientes e Checklists.
  */
 import { onSnapshot, query, addDoc, deleteDoc, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// Importamos a nova função renderSkeleton
-import { safeBind, showToast, openConfirmModal, closeConfirmModal, formatValue, printDocument, renderSkeleton } from '../utils.js';
+import { safeBind, showToast, openConfirmModal, closeConfirmModal, formatValue, printDocument, renderSkeleton, escapeHtml } from '../utils.js';
 import { defaultChecklistData, checklistRowsConfig } from '../config.js';
 import { getUserRole } from './auth.js';
 import { registerLog } from './admin.js';
@@ -205,13 +204,23 @@ function renderChecklistRows(tbody, data, isEditable) {
     checklistRowsConfig.forEach(conf => {
         const r = d[conf.key] || {};
         const tr = document.createElement('tr');
+        
+        // Proteção XSS aplicada nos valores
+        const valDirecta = escapeHtml(r.directa || '');
+        const valFracionada = escapeHtml(r.fracionada || '');
+        const limitDirecta = escapeHtml(r.directaLimit || '');
+        const limitFracionada = escapeHtml(r.fracionadaLimit || '');
+
         if (!isEditable) {
-            tr.innerHTML = `<td class="px-6 py-4 text-sm font-medium text-slate-300 bg-slate-800 border-r border-slate-700">${conf.label}</td><td class="px-6 py-4 text-sm text-slate-400 bg-blue-900/10 border-r border-slate-700">${formatValue(r.directa, r.directaLimit)}</td><td class="px-6 py-4 text-sm text-slate-400 bg-orange-900/10">${formatValue(r.fracionada, r.fracionadaLimit)}</td>`;
+            tr.innerHTML = `<td class="px-6 py-4 text-sm font-medium text-slate-300 bg-slate-800 border-r border-slate-700">${conf.label}</td><td class="px-6 py-4 text-sm text-slate-400 bg-blue-900/10 border-r border-slate-700">${formatValue(valDirecta, limitDirecta)}</td><td class="px-6 py-4 text-sm text-slate-400 bg-orange-900/10">${formatValue(valFracionada, limitFracionada)}</td>`;
         } else {
-            const iD = conf.key === 'observacao' ? `<textarea data-k="${conf.key}" data-f="directa" class="w-full bg-slate-900 border border-slate-600 text-white rounded p-2 text-sm" rows="2">${r.directa || ''}</textarea>` : `<input type="text" data-k="${conf.key}" data-f="directa" class="w-full bg-slate-900 border border-slate-600 text-white rounded p-2 text-sm" value="${r.directa || ''}">`;
-            const iF = conf.key === 'observacao' ? `<textarea data-k="${conf.key}" data-f="fracionada" class="w-full bg-slate-900 border border-slate-600 text-white rounded p-2 text-sm" rows="2">${r.fracionada || ''}</textarea>` : `<input type="text" data-k="${conf.key}" data-f="fracionada" class="w-full bg-slate-900 border border-slate-600 text-white rounded p-2 text-sm" value="${r.fracionada || ''}">`;
-            const lD = ['multiplosSKU', 'multiplosLotes', 'multiplosPedidos'].includes(conf.key) ? `<input type="text" data-k="${conf.key}" data-f="directaLimit" class="w-full border-slate-700 bg-slate-800 text-slate-300 rounded p-1 text-xs mt-2" placeholder="Limite" value="${r.directaLimit || ''}">` : '';
-            const lF = ['multiplosSKU', 'multiplosLotes', 'multiplosPedidos'].includes(conf.key) ? `<input type="text" data-k="${conf.key}" data-f="fracionadaLimit" class="w-full border-slate-700 bg-slate-800 text-slate-300 rounded p-1 text-xs mt-2" placeholder="Limite" value="${r.fracionadaLimit || ''}">` : '';
+            // ... (código de edição mantém-se quase igual, mas garantindo que os values no input sejam seguros)
+            const iD = conf.key === 'observacao' ? `<textarea data-k="${conf.key}" data-f="directa" class="w-full bg-slate-900 border border-slate-600 text-white rounded p-2 text-sm" rows="2">${valDirecta}</textarea>` : `<input type="text" data-k="${conf.key}" data-f="directa" class="w-full bg-slate-900 border border-slate-600 text-white rounded p-2 text-sm" value="${valDirecta}">`;
+            const iF = conf.key === 'observacao' ? `<textarea data-k="${conf.key}" data-f="fracionada" class="w-full bg-slate-900 border border-slate-600 text-white rounded p-2 text-sm" rows="2">${valFracionada}</textarea>` : `<input type="text" data-k="${conf.key}" data-f="fracionada" class="w-full bg-slate-900 border border-slate-600 text-white rounded p-2 text-sm" value="${valFracionada}">`;
+            
+            const lD = ['multiplosSKU', 'multiplosLotes', 'multiplosPedidos'].includes(conf.key) ? `<input type="text" data-k="${conf.key}" data-f="directaLimit" class="w-full border-slate-700 bg-slate-800 text-slate-300 rounded p-1 text-xs mt-2" placeholder="Limite" value="${limitDirecta}">` : '';
+            const lF = ['multiplosSKU', 'multiplosLotes', 'multiplosPedidos'].includes(conf.key) ? `<input type="text" data-k="${conf.key}" data-f="fracionadaLimit" class="w-full border-slate-700 bg-slate-800 text-slate-300 rounded p-1 text-xs mt-2" placeholder="Limite" value="${limitFracionada}">` : '';
+            
             tr.innerHTML = `<td class="px-4 py-4 text-sm font-medium text-slate-300 w-1/3">${conf.label}</td><td class="px-4 py-4 bg-blue-900/10 w-1/3">${iD}${lD}</td><td class="px-4 py-4 bg-orange-900/10 w-1/3">${iF}${lF}</td>`;
         }
         tbody.appendChild(tr);

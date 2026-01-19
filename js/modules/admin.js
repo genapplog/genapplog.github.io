@@ -2,8 +2,8 @@
  * ARQUIVO: js/modules/admin.js
  */
 import { writeBatch, doc, getDocs, deleteDoc, collection, query, where, getDoc, addDoc, onSnapshot, orderBy, limit, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// Importamos renderSkeleton
 import { safeBind, showToast, openConfirmModal, closeConfirmModal, renderSkeleton } from '../utils.js';
+// Importamos PATHS diretamente (agora ele já traz o caminho certo do ambiente atual)
 import { defaultChecklistData, specificClientRules, PATHS } from '../config.js';
 import { printRncReport } from './dashboard.js';
 import { getCurrentUserName, getUserRole } from './auth.js';
@@ -32,31 +32,10 @@ export function initAdminModule(db, clientsCollection) {
         });
     });
 
+    // ATUALIZAÇÃO: Funcionalidade desativada pois agora usamos projetos isolados
     safeBind('btn-sync-prod-to-test', 'click', () => {
-        openConfirmModal("Sobrescrever Testes?", "Isso copiará dados de Produção para Testes.", async () => {
-            try {
-                showToast("Clonando...", "info");
-                const copyCollection = async (pathProd, pathTest) => {
-                    const refProd = collection(db, pathProd);
-                    const refTest = collection(db, pathTest);
-                    const snapProd = await getDocs(refProd);
-                    const snapTest = await getDocs(refTest);
-                    const batch = writeBatch(db);
-                    snapTest.forEach(doc => batch.delete(doc.ref)); 
-                    snapProd.forEach(doc => {
-                        const newRef = doc(refTest, doc.id);
-                        batch.set(newRef, doc.data());
-                    });
-                    await batch.commit();
-                };
-                await copyCollection(PATHS.prod.clients, PATHS.test.clients);
-                await copyCollection(PATHS.prod.occurrences, PATHS.test.occurrences);
-                showToast("Teste atualizado!");
-                registerLog('CLONE_ENV', 'Ambiente Teste', 'Clonou produção');
-                setTimeout(() => window.location.reload(), 1500);
-            } catch (e) { showToast("Erro clone.", 'error'); }
-            closeConfirmModal();
-        });
+        showToast("Indisponível: Ambientes isolados via .env", "info");
+        /* Lógica antiga removida para evitar erros */
     });
 
     safeBind('download-template-btn', 'click', () => downloadJSON([{ "name": "CLIENTE EXEMPLO", "checklist": defaultChecklistData }], "modelo_clientes.json"));
@@ -75,12 +54,28 @@ export function initAdminModule(db, clientsCollection) {
         return count;
     }, 'import-status'));
 
-    safeBind('download-users-template-btn', 'click', () => downloadJSON([{ "id": "UID_FIREBASE", "name": "Nome", "role": "OPERADOR" }], "modelo_equipe.json"));
+    // O template agora sugere múltiplos cargos separados por vírgula
+    safeBind('download-users-template-btn', 'click', () => downloadJSON([{ "id": "UID_FIREBASE", "name": "Nome", "role": "OPERADOR, LIDER" }], "modelo_equipe.json"));
     safeBind('users-upload', 'change', (e) => handleImport(e, db, 'users', async (data, batch) => {
         let count = 0;
         data.forEach(u => {
             if(u.id && u.name) {
-                batch.set(doc(db, 'users', u.id.trim()), { name: u.name.trim(), role: u.role?.toUpperCase() || 'LEITOR', updatedAt: new Date() });
+                // LÓGICA DE MÚLTIPLOS PAPEIS
+                let roles = ['LEITOR']; // Padrão
+                
+                if (Array.isArray(u.role)) {
+                    // Se já vier como lista no JSON: ["LIDER", "INVENTARIO"]
+                    roles = u.role.map(r => r.toString().toUpperCase().trim());
+                } else if (u.role && typeof u.role === 'string') {
+                    // Se vier como texto separado por vírgula: "LIDER, INVENTARIO"
+                    roles = u.role.split(',').map(r => r.toUpperCase().trim()).filter(r => r !== "");
+                }
+
+                batch.set(doc(db, 'users', u.id.trim()), { 
+                    name: u.name.trim(), 
+                    role: roles, // Salva como Array no Firestore
+                    updatedAt: new Date() 
+                });
                 count++;
             }
         });
@@ -135,7 +130,6 @@ export async function registerLog(action, target, details) {
 
 function loadInitialAuditLogs(db) {
     const tbody = document.getElementById('audit-list-tbody');
-    // APLICAÇÃO DO ESQUELETO: 4 colunas (Data, Usuário, Ação, Detalhes)
     if (tbody) renderSkeleton(tbody, 4, 5);
 
     const q = query(collection(db, 'audit_logs'), orderBy('createdAt', 'desc'), limit(10));
@@ -155,7 +149,6 @@ async function filterAuditLogs(db) {
     const startDate = new Date(startVal + 'T00:00:00');
     const endDate = new Date(endVal + 'T23:59:59');
 
-    // APLICAÇÃO DO ESQUELETO AO FILTRAR
     if (tbody) renderSkeleton(tbody, 4, 5);
 
     try {
@@ -305,7 +298,9 @@ function renderAdminTable() {
         });
     }
 
-    const currentPath = localStorage.getItem('appLog_env') === 'test' ? PATHS.test.occurrences : PATHS.prod.occurrences;
+    // CORREÇÃO: Usamos o caminho direto definido no config.js
+    const currentPath = PATHS.occurrences;
+    
     document.querySelectorAll('.btn-del-adm').forEach(btn => { 
         btn.onclick = (e) => { 
             const id = e.currentTarget.dataset.id; 

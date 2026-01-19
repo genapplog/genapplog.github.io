@@ -3,7 +3,8 @@
  * DESCRIÇÃO: Gestão de Divergências, Etiquetas e Notificações (Core).
  */
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { onSnapshot, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// ✅ CORREÇÃO: Adicionados 'orderBy' e 'limit' para otimização de performance
+import { onSnapshot, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { safeBind, showToast, openConfirmModal, closeConfirmModal, sendDesktopNotification, requestNotificationPermission } from '../utils.js';
 import { PATHS } from '../config.js';
 import { getUserRole, getCurrentUserName } from './auth.js';
@@ -30,21 +31,41 @@ let unsubscribeOccurrences = null;
 
 export async function initRncModule(db, isTest) {
     globalDb = db; 
-    const PROD_OC_PATH = PATHS.prod.occurrences;
-    const path = isTest ? PATHS.test.occurrences : PROD_OC_PATH;
+    
+    // O arquivo config.js agora já entrega o caminho correto (Teste ou Prod)
+    const path = PATHS.occurrences;
     
     currentCollectionRef = collection(db, path);
 
     if (unsubscribeOccurrences) unsubscribeOccurrences();
 
-    unsubscribeOccurrences = onSnapshot(currentCollectionRef, (snapshot) => {
+    // PERFORMANCE: Carrega apenas dados do MÊS ATUAL (do dia 1 até agora)
+    // Isso garante que o dashboard mostre o mês corrente completo, mas sem carregar anos de história.
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const qInitial = query(
+        currentCollectionRef, 
+        where('createdAt', '>=', startOfMonth),
+        orderBy('createdAt', 'desc')
+    );
+
+    unsubscribeOccurrences = onSnapshot(qInitial, (snapshot) => {
         allOccurrencesData = []; 
         pendingOccurrencesData = []; 
         
         if (bindingsInitialized) {
             snapshot.docChanges().forEach(change => {
                 if (change.type === "added" || change.type === "modified") {
-                    checkAndNotify(change.doc.data());
+                    // Pequena proteção extra: só notifica se o item for recente (última 1 hora)
+                    // para evitar spam se um item antigo entrar na lista de repente.
+                    const data = change.doc.data();
+                    const isRecent = data.createdAt && data.createdAt.toDate 
+                        ? (new Date() - data.createdAt.toDate()) < 1000 * 60 * 60 
+                        : true;
+                        
+                    if(isRecent) checkAndNotify(data);
                 }
             });
         }
@@ -68,7 +89,7 @@ export async function initRncModule(db, isTest) {
 
     // LISTENER DE CHAMADOS (Lado do Líder)
     const myCurrentRole = getUserRole(); // Retorna Array agora
-    // ✅ CORREÇÃO: Verifica se o array CONTÉM o papel
+    
     if (myCurrentRole.includes('ADMIN') || myCurrentRole.includes('LIDER')) {
         const notificationsRef = collection(db, `artifacts/${globalDb.app.options.appId}/public/data/notifications`);
         const recentTime = new Date(Date.now() - 2 * 60 * 1000); 
@@ -226,7 +247,6 @@ function checkAndNotify(data) {
     const myRole = getUserRole(); // Array
     const myName = getCurrentUserName();
     
-    // ✅ CORREÇÃO: .includes()
     if (data.status === 'pendente_lider' && (myRole.includes('LIDER') || myRole.includes('ADMIN'))) { 
         if (data.ass_colab !== myName) sendDesktopNotification("Nova Pendência", `RNC de ${data.tipo} aguardando aprovação.`); 
     }
@@ -370,7 +390,6 @@ function updatePendingList() {
                 btn.className = "text-indigo-400 hover:text-white text-xs font-bold uppercase tracking-wide bg-indigo-900/30 px-3 py-1.5 rounded border border-indigo-500/30 hover:bg-indigo-600 hover:border-indigo-500 transition-all btn-open-occurrence";
                 btn.dataset.id = item.id;
                 
-                // Texto do botão dinâmico
                 btn.textContent = item.status === 'pendente_lider' ? 'Assinar (Líder)' : item.status === 'pendente_inventario' ? 'Revisar e Finalizar' : 'Ver Detalhes';
                 tdAction.appendChild(btn);
 
@@ -383,7 +402,6 @@ function updatePendingList() {
     if (tbodyPallet) {
         tbodyPallet.innerHTML = '';
         const myRole = getUserRole(); // Array
-        // ✅ CORREÇÃO: .includes()
         const canFinish = myRole.includes('INVENTARIO') || myRole.includes('ADMIN');
 
         if (palletItems.length === 0) { 
@@ -481,9 +499,8 @@ async function submitLeaderAuth() {
         }
 
         const userDoc = snapshot.docs[0].data();
-        // Fallback: Se o user não tiver role no array, trata string antiga
         let rawRole = userDoc.role || 'OPERADOR';
-        if (Array.isArray(rawRole)) rawRole = rawRole[0]; // Pega o primeiro se for array no banco
+        if (Array.isArray(rawRole)) rawRole = rawRole[0]; 
         const role = String(rawRole).toUpperCase();
 
         if (!role.includes('LIDER') && role !== 'ADMIN') {
@@ -597,7 +614,6 @@ function updateFormStateUI() {
     } else if (status === 'pendente_lider') {
         statusBar.innerText = "Etapa 2: Aprovação do Líder"; statusBar.className = "bg-amber-900/40 text-amber-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-center border-b border-amber-500/20"; dataInputs.forEach(input => input.disabled = true);
         
-        // ✅ CORREÇÃO: .includes()
         if (myRole.includes('LIDER') || myRole.includes('ADMIN')) { 
             inputLider.disabled = false; inputLider.value = myName; btnSave.innerText = "Aprovar e Enviar"; btnReject.classList.remove('hidden'); btnDelete.classList.remove('hidden'); btnDelete.innerText = "Excluir RD"; 
         } else { 
@@ -606,7 +622,6 @@ function updateFormStateUI() {
     } else if (status === 'pendente_inventario') {
         statusBar.innerText = "Etapa 3: Validação do Inventário"; statusBar.className = "bg-blue-900/40 text-blue-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-center border-b border-blue-500/20"; dataInputs.forEach(input => input.disabled = false);
         
-        // ✅ CORREÇÃO: .includes()
         if (myRole.includes('INVENTARIO') || myRole.includes('ADMIN')) { 
             inputInfrator.disabled = false; inputInfrator.classList.remove('opacity-50'); inputInv.disabled = false; inputInv.value = myName; btnSave.innerText = "Validar e Finalizar"; btnReject.classList.remove('hidden'); btnDelete.classList.remove('hidden'); btnDelete.innerText = "Excluir RD"; 
         } else { 

@@ -2,15 +2,12 @@
  * ARQUIVO: js/modules/dashboard.js
  * DESCRIÇÃO: Dashboard Operacional, Relatórios, Impressão e Modo TV (Wallboard).
  */
-import { safeBind, showToast, printDocument } from '../utils.js';
-// Usamos a versão UMD (que já contém todas as dependências) e pegamos a global window.Chart
-import 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
-const Chart = window.Chart;
-
-// --- ESTADO GERAL ---
+// ✅ CORREÇÃO: Importação única e consolidada (incluindo escapeHtml)
+import { safeBind, showToast, printDocument, escapeHtml } from '../utils.js';
 
 // --- ESTADO GERAL ---
 let localAllData = [];
+let ChartLib = null; // Variável para guardar a biblioteca Chart.js carregada dinamicamente
 
 // Instâncias de Gráficos (Dashboard Normal)
 let chartTypeInstance = null;
@@ -24,6 +21,22 @@ let tvChartLocalInstance = null;
 let tvChartCausadorInstance = null;
 let tvChartIdentificadorInstance = null;
 let tvClockInterval = null;
+
+// =========================================================
+// FUNÇÃO AUXILIAR: Carregamento Dinâmico do Chart.js
+// =========================================================
+async function loadChartLib() {
+    if (ChartLib) return ChartLib;
+    try {
+        // Importação dinâmica: Se falhar (offline), não trava o app
+        await import('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js');
+        ChartLib = window.Chart;
+        return ChartLib;
+    } catch (e) {
+        console.warn("Chart.js não carregou (Offline ou Bloqueado). Gráficos desativados.");
+        return null;
+    }
+}
 
 // =========================================================
 // INICIALIZAÇÃO
@@ -108,7 +121,10 @@ function startClock() {
     tvClockInterval = setInterval(updateTime, 1000);
 }
 
-function updateTVView() {
+async function updateTVView() {
+    // Carrega Chart.js sob demanda para a TV também
+    const Chart = await loadChartLib();
+
     // FILTRO TV: Apenas Ocorrências Concluídas de HOJE
     const today = new Date();
     today.setHours(0,0,0,0);
@@ -138,10 +154,14 @@ function updateTVView() {
         recent.forEach(d => {
             const tr = document.createElement('tr');
             tr.className = "border-b border-slate-800/50";
+            // Proteção XSS básica na TV também
+            const safeEmb = escapeHtml(d.embarque || d.nf);
+            const safeTipo = escapeHtml(d.tipo);
+            
             tr.innerHTML = `
                 <td class="p-3 text-slate-400 font-mono text-base">${d.jsDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</td>
-                <td class="p-3 text-white font-bold text-base">${d.tipo}</td>
-                <td class="p-3 text-right text-indigo-400 font-mono text-base truncate max-w-[120px]">${d.embarque || d.nf}</td>
+                <td class="p-3 text-white font-bold text-base">${safeTipo}</td>
+                <td class="p-3 text-right text-indigo-400 font-mono text-base truncate max-w-[120px]">${safeEmb}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -169,6 +189,7 @@ function updateTVView() {
     document.getElementById('tv-kpi-type').innerText = maxType;
 
     // --- 4. RENDERIZAÇÃO DOS GRÁFICOS TV ---
+    if (!Chart) return; // Se não carregou o Chart.js, para aqui (KPIs e Lista já atualizaram)
     
     const commonOptions = {
         responsive: true,
@@ -266,7 +287,35 @@ function applyDashboardFilters() {
     renderHistoryTable(filteredRNC);
 }
 
-function updateChartsAndStats(data) {
+// ✅ ATUALIZAÇÃO: Blindagem contra falha de carregamento do Chart.js
+async function updateChartsAndStats(data) {
+    const Chart = await loadChartLib();
+
+    // Se não carregou (offline), esconde os gráficos e mostra aviso
+    if (!Chart) {
+        ['chartOcType', 'chartOcLocal', 'chartOcCausador', 'chartOcIdentificador'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.style.display = 'none';
+                if(!el.parentNode.querySelector('.chart-offline-msg')) {
+                   el.parentNode.insertAdjacentHTML('beforeend', '<div class="chart-offline-msg text-xs text-slate-500 text-center py-4">Gráfico indisponível offline</div>');
+                }
+            }
+        });
+        updateKPIsOnly(data);
+        return;
+    } else {
+        // Se voltou a internet, remove as mensagens e mostra os canvas
+        ['chartOcType', 'chartOcLocal', 'chartOcCausador', 'chartOcIdentificador'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.style.display = 'block';
+                const msg = el.parentNode.querySelector('.chart-offline-msg');
+                if(msg) msg.remove();
+            }
+        });
+    }
+
     let total = data.length; 
     let types = { FALTA: 0, SOBRA: 0, AVARIA: 0, FALTA_INTERNA: 0 }; 
     let locals = { ARMAZENAGEM: 0, ESTOQUE: 0, CHECKOUT: 0, SEPARAÇÃO: 0 }; 
@@ -281,11 +330,7 @@ function updateChartsAndStats(data) {
         if(nmIdentificador) identificadores[nmIdentificador] = (identificadores[nmIdentificador] || 0) + 1; 
     });
 
-    const elTotal = document.getElementById('dash-total-oc'); if(elTotal) elTotal.innerText = total; 
-    const elDate = document.getElementById('dash-last-date'); if(elDate) elDate.innerText = (total > 0 && data[0].jsDate) ? data[0].jsDate.toLocaleDateString('pt-BR') : "-";
-    
-    let maxType = "-", maxVal = -1; for(const [k, v] of Object.entries(types)) if(v > maxVal && v > 0) { maxVal = v; maxType = k; }
-    const elType = document.getElementById('dash-top-type'); if(elType) elType.innerText = maxType;
+    updateKPIsOnly(data);
 
     // Helper Gráfico Padrão
     const createOrUpdateChart = (canvasId, config, currentInstance) => { 
@@ -324,6 +369,18 @@ function updateChartsAndStats(data) {
     }, chartIdentificadorInstance);
 }
 
+function updateKPIsOnly(data) {
+    let total = data.length; 
+    let types = { FALTA: 0, SOBRA: 0, AVARIA: 0, FALTA_INTERNA: 0 }; 
+    data.forEach(d => { if(types[d.tipo] !== undefined) types[d.tipo]++; });
+
+    const elTotal = document.getElementById('dash-total-oc'); if(elTotal) elTotal.innerText = total; 
+    const elDate = document.getElementById('dash-last-date'); if(elDate) elDate.innerText = (total > 0 && data[0].jsDate) ? data[0].jsDate.toLocaleDateString('pt-BR') : "-";
+    
+    let maxType = "-", maxVal = -1; for(const [k, v] of Object.entries(types)) if(v > maxVal && v > 0) { maxVal = v; maxType = k; }
+    const elType = document.getElementById('dash-top-type'); if(elType) elType.innerText = maxType;
+}
+
 function renderHistoryTable(dataToRender) {
     const tbody = document.getElementById('history-list-tbody'); 
     const searchInput = document.getElementById('history-search-input'); 
@@ -347,13 +404,17 @@ function renderHistoryTable(dataToRender) {
     truncatedList.forEach(item => {
         const tr = document.createElement('tr'); 
         tr.className = "border-b border-slate-700 hover:bg-slate-750 transition-colors";
-        const displayNF = item.nf ? item.nf : '-';
+        
+        // ✅ CORREÇÃO: Uso de escapeHtml para evitar XSS
+        const displayNF = item.nf ? escapeHtml(item.nf) : '-';
+        const displayEmb = item.embarque ? escapeHtml(item.embarque) : '-';
+        
         let statusDot = item.status === 'concluido' ? '<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>' : '<span class="inline-block w-2 h-2 rounded-full bg-amber-500 mr-2"></span>';
 
         tr.innerHTML = `
             <td class="px-4 py-3 font-mono text-slate-300 text-xs">${statusDot}${item.jsDate.toLocaleDateString('pt-BR')}</td>
-            <td class="px-4 py-3 text-white font-medium text-sm">${item.embarque || '-'}<br><span class="text-slate-500 text-[10px] font-normal">${displayNF}</span></td>
-            <td class="px-4 py-3 text-slate-300 text-xs">${item.tipo}</td>
+            <td class="px-4 py-3 text-white font-medium text-sm">${displayEmb}<br><span class="text-slate-500 text-[10px] font-normal">${displayNF}</span></td>
+            <td class="px-4 py-3 text-slate-300 text-xs">${escapeHtml(item.tipo)}</td>
             <td class="px-4 py-3 text-right">
                 <button class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition btn-print-history flex items-center gap-2 ml-auto text-xs" data-id="${item.id}">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
@@ -365,59 +426,153 @@ function renderHistoryTable(dataToRender) {
     tbody.querySelectorAll('.btn-print-history').forEach(btn => btn.addEventListener('click', (e) => printRncReport(e.currentTarget.dataset.id)));
 }
 
-function exportToXlsx() {
+// ✅ NOVA IMPORTAÇÃO NECESSÁRIA NO TOPO DO ARQUIVO DASHBOARD.JS:
+// Certifique-se de importar: getDocs, query, collection, where, orderBy
+import { getDocs, query, collection, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { PATHS } from '../config.js'; // Precisamos do PATHS para saber onde buscar
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Para garantir acesso ao db
+
+// ... (Mantenha o resto do código até chegar nas funções de exportação) ...
+
+// ✅ NOVA FUNÇÃO DE EXPORTAÇÃO INDEPENDENTE (Busca direto no Banco)
+async function exportToXlsx() {
+    const btn = document.getElementById('btn-dash-export');
+    const originalText = btn.innerHTML;
+    
+    // 1. Pega as datas selecionadas nos filtros OU define padrão (últimos 30 dias)
     const iStart = document.getElementById('dash-filter-start'); 
     const iEnd = document.getElementById('dash-filter-end');
+    
     let startDate, endDate;
-    const isDefaultFilter = !iStart.value && !iEnd.value;
 
-    if (iStart.value) { startDate = new Date(iStart.value + 'T00:00:00'); } 
-    else { startDate = new Date(); startDate.setDate(startDate.getDate() - 30); startDate.setHours(0,0,0,0); }
+    if (iStart.value) { 
+        startDate = new Date(iStart.value + 'T00:00:00'); 
+    } else { 
+        // Se não escolheu nada, pega o mês atual inteiro por padrão
+        startDate = new Date(); 
+        startDate.setDate(1); 
+        startDate.setHours(0,0,0,0);
+    }
 
-    if (iEnd.value) { endDate = new Date(iEnd.value + 'T23:59:59'); } 
-    else { endDate = new Date(); endDate.setHours(23,59,59,999); }
+    if (iEnd.value) { 
+        endDate = new Date(iEnd.value + 'T23:59:59'); 
+    } else { 
+        endDate = new Date(); 
+        endDate.setHours(23,59,59,999);
+    }
 
-    const data = localAllData.filter(d => d.type !== 'pallet_label_request' && d.status === 'concluido').filter(d => { 
-        if(d.jsDate < startDate) return false; 
-        if(d.jsDate > endDate) return false; 
-        return true; 
-    });
+    try {
+        btn.disabled = true;
+        btn.innerText = "Baixando do Banco...";
+        showToast("Buscando dados no servidor...", "info");
 
-    if (data.length === 0) { showToast("Nenhum dado RD no período.", "info"); return; }
-    if (isDefaultFilter) showToast("Exportando últimos 30 dias (Padrão)", "info");
+        // 2. Busca Dedicada no Firebase (Ignora o que está na tela)
+        const db = getFirestore();
+        const occurrencesRef = collection(db, PATHS.occurrences);
+        
+        // Busca tudo nesse intervalo
+        const q = query(
+            occurrencesRef, 
+            where('createdAt', '>=', startDate),
+            where('createdAt', '<=', endDate),
+            orderBy('createdAt', 'desc')
+        );
 
-    const exportData = data.map(d => {
-        let detalhesEmb = [];
-        if(d.emb_amassada) detalhesEmb.push("Amassada");
-        if(d.emb_rasgada) detalhesEmb.push("Rasgada");
-        if(d.emb_vazamento) detalhesEmb.push("Vazamento");
-        if(d.emb_outros) detalhesEmb.push(d.emb_outros);
-        const tipoDetalhado = detalhesEmb.length > 0 ? detalhesEmb.join(", ") : "-";
-        return {
-            "DATA": d.jsDate.toLocaleDateString('pt-BR'), "MÊS": d.jsDate.toLocaleString('pt-BR', { month: 'long' }).toUpperCase(), "ANO": d.jsDate.getFullYear(),
-            "ORIGEM / RESPONSÁVEL": d.infrator || '-', "IDENTIFICADOR": d.ass_colab || '-', "LOCAL": d.local || '-', "OCORRENCIA": d.tipo || '-', "TIPO OCORRENCIA": tipoDetalhado,
-            "EMBARQUE": d.embarque || '-', "CLIENTE": d.nf || '-', "CÓDIGO": d.item_cod || '-', "DESCRIÇÃO DO ITEM": d.item_desc || '-', "LOTE": d.item_lote || '-', "QTD (CX)": d.item_qtd || '0', "ENDEREÇO": d.item_end || '-', "LIDER": d.ass_lider || '-', "INVENTÁRIO": d.ass_inv || '-', "OBSERVAÇÕES": d.obs || '-'
-        };
-    });
-    generateXlsx(exportData, "Relatorio_RD");
+        const snapshot = await getDocs(q);
+        
+        // 3. Processa os dados
+        const rawData = [];
+        snapshot.forEach(doc => {
+            const d = doc.data();
+            d.jsDate = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
+            // Filtra apenas concluídos e que NÃO sejam etiqueta de pallet (igual antes)
+            if (d.type !== 'pallet_label_request' && d.status === 'concluido') {
+                rawData.push(d);
+            }
+        });
+
+        if (rawData.length === 0) { 
+            showToast("Nenhum dado encontrado no banco para este período.", "info"); 
+            return; 
+        }
+
+        // 4. Monta o Excel
+        const exportData = rawData.map(d => {
+            let detalhesEmb = [];
+            if(d.emb_amassada) detalhesEmb.push("Amassada");
+            if(d.emb_rasgada) detalhesEmb.push("Rasgada");
+            if(d.emb_vazamento) detalhesEmb.push("Vazamento");
+            if(d.emb_outros) detalhesEmb.push(d.emb_outros);
+            const tipoDetalhado = detalhesEmb.length > 0 ? detalhesEmb.join(", ") : "-";
+            
+            return {
+                "DATA": d.jsDate.toLocaleDateString('pt-BR'), 
+                "MÊS": d.jsDate.toLocaleString('pt-BR', { month: 'long' }).toUpperCase(), 
+                "ANO": d.jsDate.getFullYear(),
+                "ORIGEM / RESPONSÁVEL": d.infrator || '-', 
+                "IDENTIFICADOR": d.ass_colab || '-', 
+                "LOCAL": d.local || '-', 
+                "OCORRENCIA": d.tipo || '-', 
+                "TIPO OCORRENCIA": tipoDetalhado,
+                "EMBARQUE": d.embarque || '-', 
+                "CLIENTE": d.nf || '-', 
+                "CÓDIGO": d.item_cod || '-', 
+                "DESCRIÇÃO DO ITEM": d.item_desc || '-', 
+                "LOTE": d.item_lote || '-', 
+                "QTD (CX)": d.item_qtd || '0', 
+                "ENDEREÇO": d.item_end || '-', 
+                "LIDER": d.ass_lider || '-', 
+                "INVENTÁRIO": d.ass_inv || '-', 
+                "OBSERVAÇÕES": d.obs || '-'
+            };
+        });
+
+        generateXlsx(exportData, `Relatorio_RD_${startDate.toLocaleDateString('pt-BR').replace(/\//g,'-')}_a_${endDate.toLocaleDateString('pt-BR').replace(/\//g,'-')}`);
+        showToast(`Download de ${rawData.length} registros iniciado!`);
+
+    } catch (e) {
+        console.error(e);
+        showToast("Erro ao baixar dados.", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
 }
 
-function exportPalletReqToXlsx() {
-    const iStart = document.getElementById('dash-filter-start'); const iEnd = document.getElementById('dash-filter-end');
+// ✅ MESMA LÓGICA PARA ETIQUETAS
+async function exportPalletReqToXlsx() {
+    const btn = document.getElementById('btn-dash-export-pallet');
+    const originalText = btn.innerHTML;
+    
+    const iStart = document.getElementById('dash-filter-start'); 
+    const iEnd = document.getElementById('dash-filter-end');
+    
     let startDate, endDate;
-    if (iStart.value) { startDate = new Date(iStart.value + 'T00:00:00'); } else { startDate = new Date(); startDate.setDate(startDate.getDate() - 30); startDate.setHours(0,0,0,0); }
+    if (iStart.value) { startDate = new Date(iStart.value + 'T00:00:00'); } else { startDate = new Date(); startDate.setDate(1); startDate.setHours(0,0,0,0); }
     if (iEnd.value) { endDate = new Date(iEnd.value + 'T23:59:59'); } else { endDate = new Date(); endDate.setHours(23,59,59,999); }
 
-    const data = localAllData.filter(d => d.type === 'pallet_label_request' && d.status === 'concluido').filter(d => { 
-        if(d.jsDate < startDate) return false; if(d.jsDate > endDate) return false; return true; 
-    });
+    try {
+        btn.disabled = true; btn.innerText = "...";
+        
+        const db = getFirestore();
+        const q = query(collection(db, PATHS.occurrences), where('createdAt', '>=', startDate), where('createdAt', '<=', endDate), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+        
+        const rawData = [];
+        snapshot.forEach(doc => {
+            const d = doc.data();
+            d.jsDate = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
+            if (d.type === 'pallet_label_request' && d.status === 'concluido') rawData.push(d);
+        });
 
-    if (data.length === 0) { showToast("Nenhuma etiqueta concluída no período.", "info"); return; }
-    
-    const exportData = data.map(d => {
-        return { "Item / Código": d.item || '-', "Lote": d.lote || '-', "Quantidade": d.qtd || 0, "Data Solicitação": d.jsDate ? d.jsDate.toLocaleDateString('pt-BR') + ' ' + d.jsDate.toLocaleTimeString('pt-BR') : '-', "Status": "CONCLUÍDO" };
-    });
-    generateXlsx(exportData, "Etiquetas_Palete_Concluidas", [{wch: 50}, {wch: 20}, {wch: 15}, {wch: 20}, {wch: 15}]);
+        if (rawData.length === 0) { showToast("Nenhuma etiqueta no período.", "info"); return; }
+        
+        const exportData = rawData.map(d => ({ "Item / Código": d.item || '-', "Lote": d.lote || '-', "Quantidade": d.qtd || 0, "Data Solicitação": d.jsDate.toLocaleString('pt-BR'), "Status": "CONCLUÍDO" }));
+        
+        generateXlsx(exportData, "Etiquetas_Palete", [{wch: 50}, {wch: 20}, {wch: 15}, {wch: 20}, {wch: 15}]);
+
+    } catch (e) { console.error(e); showToast("Erro.", "error"); } 
+    finally { btn.disabled = false; btn.innerHTML = originalText; }
 }
 
 function generateXlsx(data, sheetName, cols) {
@@ -442,6 +597,10 @@ export function printRncReport(id) {
     const statusText = item.status === 'concluido' ? 'CONCLUÍDO' : 'PENDENTE';
     const statusBg = item.status === 'concluido' ? 'bg-emerald-600' : 'bg-amber-500';
 
+    // Para impressão usamos innerHTML confiável pois é apenas visualização, 
+    // mas ainda assim aplicamos escape para campos de texto livre
+    const safeObs = escapeHtml(item.obs || 'Nenhuma observação registrada.');
+    
     const content = `
         <div class="flex justify-between items-start mb-6 border-b-2 ${statusColor} pb-4">
             <div>
@@ -461,15 +620,15 @@ export function printRncReport(id) {
             </div>
             <div class="col-span-1 bg-slate-50 p-3 rounded border border-slate-200">
                 <p class="text-[9px] font-bold text-slate-400 uppercase">Tipo</p>
-                <p class="text-lg font-bold text-slate-800">${item.tipo}</p>
+                <p class="text-lg font-bold text-slate-800">${escapeHtml(item.tipo)}</p>
             </div>
             <div class="col-span-1 bg-slate-50 p-3 rounded border border-slate-200">
                 <p class="text-[9px] font-bold text-slate-400 uppercase">Local</p>
-                <p class="text-lg font-bold text-slate-800">${item.local}</p>
+                <p class="text-lg font-bold text-slate-800">${escapeHtml(item.local)}</p>
             </div>
              <div class="col-span-1 bg-slate-50 p-3 rounded border border-slate-200">
                 <p class="text-[9px] font-bold text-slate-400 uppercase">Origem/Infrator</p>
-                <p class="text-sm font-bold text-slate-800 truncate">${item.infrator || 'N/A'}</p>
+                <p class="text-sm font-bold text-slate-800 truncate">${escapeHtml(item.infrator || 'N/A')}</p>
             </div>
         </div>
 
@@ -480,20 +639,20 @@ export function printRncReport(id) {
             <div class="p-4 grid grid-cols-2 gap-y-4 gap-x-8">
                 <div>
                     <span class="block text-[10px] text-slate-400 uppercase">Embarque</span>
-                    <span class="block font-mono font-bold text-slate-700 text-lg">${item.embarque || '-'}</span>
+                    <span class="block font-mono font-bold text-slate-700 text-lg">${escapeHtml(item.embarque || '-')}</span>
                 </div>
                 <div>
                     <span class="block text-[10px] text-slate-400 uppercase">Nota Fiscal / Cliente</span>
-                    <span class="block font-mono font-bold text-slate-700 text-lg">${item.nf || '-'}</span>
+                    <span class="block font-mono font-bold text-slate-700 text-lg">${escapeHtml(item.nf || '-')}</span>
                 </div>
                 <div class="col-span-2 border-t border-slate-100 pt-2"></div>
                 <div class="col-span-2">
                     <span class="block text-[10px] text-slate-400 uppercase">Produto Afetado</span>
-                    <span class="block font-bold text-slate-800 text-xl">${item.item_cod || '?'} - ${item.item_desc || '(Sem descrição)'}</span>
+                    <span class="block font-bold text-slate-800 text-xl">${escapeHtml(item.item_cod || '?')} - ${escapeHtml(item.item_desc || '(Sem descrição)')}</span>
                 </div>
                 <div>
                     <span class="block text-[10px] text-slate-400 uppercase">Lote</span>
-                    <span class="block font-mono text-slate-700">${item.item_lote || '-'}</span>
+                    <span class="block font-mono text-slate-700">${escapeHtml(item.item_lote || '-')}</span>
                 </div>
                 <div>
                     <span class="block text-[10px] text-slate-400 uppercase">Quantidade (Caixas)</span>
@@ -509,28 +668,28 @@ export function printRncReport(id) {
                 <div class="flex-1">${check(item.emb_rasgada)} <span class="text-xs ml-5">Rasgada</span></div>
                 <div class="flex-1">${check(item.emb_vazamento)} <span class="text-xs ml-5">Vazamento</span></div>
             </div>
-            ${item.emb_outros ? `<div class="mt-2 text-xs text-slate-500 italic bg-slate-50 p-2 rounded border border-slate-100">Obs: ${item.emb_outros}</div>` : ''}
+            ${item.emb_outros ? `<div class="mt-2 text-xs text-slate-500 italic bg-slate-50 p-2 rounded border border-slate-100">Obs: ${escapeHtml(item.emb_outros)}</div>` : ''}
         </div>
 
         <div class="mb-8">
             <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Relato Técnico / Observações</h3>
             <div class="w-full p-4 border border-slate-300 rounded bg-slate-50 min-h-[100px] text-sm text-slate-700 leading-relaxed">
-                ${item.obs || 'Nenhuma observação registrada.'}
+                ${safeObs}
             </div>
         </div>
 
         <div class="mt-auto pt-4 border-t-2 border-slate-800">
             <div class="grid grid-cols-3 gap-8 text-center">
                 <div>
-                    <div class="h-10 flex items-end justify-center pb-1"><span class="font-bold text-slate-800 text-sm">${item.ass_colab || '-'}</span></div>
+                    <div class="h-10 flex items-end justify-center pb-1"><span class="font-bold text-slate-800 text-sm">${escapeHtml(item.ass_colab || '-')}</span></div>
                     <div class="border-t border-slate-400 pt-1 text-[9px] uppercase font-bold text-slate-500">Reportado Por</div>
                 </div>
                 <div>
-                    <div class="h-10 flex items-end justify-center pb-1"><span class="font-bold text-slate-800 text-sm">${item.ass_lider || ''}</span></div>
+                    <div class="h-10 flex items-end justify-center pb-1"><span class="font-bold text-slate-800 text-sm">${escapeHtml(item.ass_lider || '')}</span></div>
                     <div class="border-t border-slate-400 pt-1 text-[9px] uppercase font-bold text-slate-500">Liderança</div>
                 </div>
                 <div>
-                    <div class="h-10 flex items-end justify-center pb-1"><span class="font-bold text-slate-800 text-sm">${item.ass_inv || ''}</span></div>
+                    <div class="h-10 flex items-end justify-center pb-1"><span class="font-bold text-slate-800 text-sm">${escapeHtml(item.ass_inv || '')}</span></div>
                     <div class="border-t border-slate-400 pt-1 text-[9px] uppercase font-bold text-slate-500">Inventário</div>
                 </div>
             </div>

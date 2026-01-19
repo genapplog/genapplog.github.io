@@ -155,3 +155,24 @@ export function sendDesktopNotification(title, body) {
         notification.onclick = () => { window.focus(); notification.close(); };
     }
 }
+// ... (mantenha o código anterior)
+
+// NOVA FUNÇÃO: Sanitização de segurança para prevenir injeção de HTML/Scripts
+export function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// NOVA FUNÇÃO: Limpeza para ZPL (Remove acentos e caracteres que travam impressoras zebras antigas)
+export function sanitizeForZpl(text) {
+    if (!text) return '';
+    return String(text)
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
+        .replace(/[\^~]/g, "") // Remove comandos de controle ZPL (^ e ~)
+        .toUpperCase();
+}
