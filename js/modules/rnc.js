@@ -113,10 +113,10 @@ export async function initRncModule(db, isTest) {
     }
 
     if (!bindingsInitialized) {
-        setupRncBindings();
-        initDashboard(); 
-        requestNotificationPermission();
-        setInterval(checkReminders, 300000);
+            setupRncBindings();
+            initDashboard(db); 
+            requestNotificationPermission();
+            setInterval(checkReminders, 300000);
         bindingsInitialized = true;
     }
 }

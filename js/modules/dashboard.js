@@ -2,8 +2,18 @@
  * ARQUIVO: js/modules/dashboard.js
  * DESCRIÇÃO: Dashboard Operacional, Relatórios, Impressão e Modo TV (Wallboard).
  */
-// ✅ CORREÇÃO: Importação única e consolidada (incluindo escapeHtml)
+
+// ✅ 1. TODAS AS IMPORTAÇÕES DEVEM FICAR AQUI NO TOPO (Senão o site quebra!)
 import { safeBind, showToast, printDocument, escapeHtml } from '../utils.js';
+import { PATHS } from '../config.js';
+import { 
+    getFirestore, 
+    collection, 
+    query, 
+    where, 
+    orderBy, 
+    getDocs 
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- ESTADO GERAL ---
 let localAllData = [];
@@ -53,7 +63,7 @@ export function initDashboard() {
         applyDashboardFilters(); 
     });
 
-    // Exportação
+    // Exportação (Aponta para as funções novas e robustas)
     safeBind('btn-dash-export', 'click', exportToXlsx);
     safeBind('btn-dash-export-pallet', 'click', exportPalletReqToXlsx);
     
@@ -86,7 +96,6 @@ export function updateDashboardView(allData) {
 // MODO TV (WALLBOARD)
 // =========================================================
 
-// Chamado pelo app.js (Menu)
 export function startTVMode() {
     document.getElementById('tv-mode').classList.remove('hidden');
     
@@ -122,31 +131,21 @@ function startClock() {
 }
 
 async function updateTVView() {
-    // Carrega Chart.js sob demanda para a TV também
     const Chart = await loadChartLib();
-
-    // FILTRO TV: Apenas Ocorrências Concluídas de HOJE
     const today = new Date();
     today.setHours(0,0,0,0);
     
     const tvData = localAllData.filter(d => {
-        return d.type !== 'pallet_label_request' && 
-               d.status === 'concluido' &&
-               d.jsDate >= today;
+        return d.type !== 'pallet_label_request' && d.status === 'concluido' && d.jsDate >= today;
     });
 
-    // --- 1. KPIs ---
     document.getElementById('tv-kpi-total').innerText = tvData.length;
-    
     const elLast = document.getElementById('tv-kpi-last');
-    elLast.innerText = tvData.length > 0 
-        ? tvData[0].jsDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) 
-        : "-";
+    elLast.innerText = tvData.length > 0 ? tvData[0].jsDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : "-";
 
-    // --- 2. LISTA RECENTE ---
     const tbody = document.getElementById('tv-list-tbody');
     tbody.innerHTML = '';
-    const recent = tvData.slice(0, 8); // Mostra até 8 linhas
+    const recent = tvData.slice(0, 8);
     
     if (recent.length === 0) {
         tbody.innerHTML = '<tr><td colspan="3" class="p-6 text-center text-slate-500 text-xl">Aguardando registros hoje...</td></tr>';
@@ -154,20 +153,13 @@ async function updateTVView() {
         recent.forEach(d => {
             const tr = document.createElement('tr');
             tr.className = "border-b border-slate-800/50";
-            // Proteção XSS básica na TV também
             const safeEmb = escapeHtml(d.embarque || d.nf);
             const safeTipo = escapeHtml(d.tipo);
-            
-            tr.innerHTML = `
-                <td class="p-3 text-slate-400 font-mono text-base">${d.jsDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</td>
-                <td class="p-3 text-white font-bold text-base">${safeTipo}</td>
-                <td class="p-3 text-right text-indigo-400 font-mono text-base truncate max-w-[120px]">${safeEmb}</td>
-            `;
+            tr.innerHTML = `<td class="p-3 text-slate-400 font-mono text-base">${d.jsDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</td><td class="p-3 text-white font-bold text-base">${safeTipo}</td><td class="p-3 text-right text-indigo-400 font-mono text-base truncate max-w-[120px]">${safeEmb}</td>`;
             tbody.appendChild(tr);
         });
     }
 
-    // --- 3. DADOS PARA GRÁFICOS ---
     let types = { FALTA: 0, SOBRA: 0, AVARIA: 0, FALTA_INTERNA: 0 };
     let locals = { ARMAZENAGEM: 0, ESTOQUE: 0, CHECKOUT: 0, SEPARAÇÃO: 0 }; 
     let causadores = {}, identificadores = {};
@@ -175,90 +167,37 @@ async function updateTVView() {
     tvData.forEach(d => {
         if(types[d.tipo] !== undefined) types[d.tipo]++;
         if(locals[d.local] !== undefined) locals[d.local]++;
-        
-        const c = (d.infrator || 'N/A').toUpperCase();
-        causadores[c] = (causadores[c] || 0) + 1;
-        
-        const i = (d.ass_colab || 'N/A').toUpperCase();
-        identificadores[i] = (identificadores[i] || 0) + 1;
+        const c = (d.infrator || 'N/A').toUpperCase(); causadores[c] = (causadores[c] || 0) + 1;
+        const i = (d.ass_colab || 'N/A').toUpperCase(); identificadores[i] = (identificadores[i] || 0) + 1;
     });
 
-    // KPI Tipo mais frequente
     let maxType = "-", maxVal = -1; 
     for(const [k, v] of Object.entries(types)) if(v > maxVal && v > 0) { maxVal = v; maxType = k; }
     document.getElementById('tv-kpi-type').innerText = maxType;
 
-    // --- 4. RENDERIZAÇÃO DOS GRÁFICOS TV ---
-    if (!Chart) return; // Se não carregou o Chart.js, para aqui (KPIs e Lista já atualizaram)
-    
-    const commonOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-            x: { grid: { color: '#334155' }, ticks: { color: '#cbd5e1' } },
-            y: { grid: { display: false }, ticks: { color: '#fff', font: { weight: 'bold' } } }
-        }
+    if (!Chart) return;
+
+    const commonOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#334155' }, ticks: { color: '#cbd5e1' } }, y: { grid: { display: false }, ticks: { color: '#fff', font: { weight: 'bold' } } } } };
+
+    const createTVChart = (id, type, data, opts) => {
+        const ctx = document.getElementById(id);
+        if(ctx) return new Chart(ctx, { type, data, options: opts });
+        return null;
     };
 
-    // A) CHART TIPO (Rosca)
-    const ctxType = document.getElementById('tvChartType');
-    if (ctxType) {
-        if (tvChartTypeInstance) tvChartTypeInstance.destroy();
-        tvChartTypeInstance = new Chart(ctxType, {
-            type: 'doughnut',
-            data: {
-                labels: ['Falta', 'Sobra', 'Avaria', 'Interna'],
-                datasets: [{
-                    data: [types.FALTA, types.SOBRA, types.AVARIA, types.FALTA_INTERNA],
-                    backgroundColor: ['#ef4444', '#3b82f6', '#f59e0b', '#a855f7'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { position: 'right', labels: { color: '#fff', font: { size: 12 }, padding: 15 } } }
-            }
-        });
-    }
+    if (tvChartTypeInstance) tvChartTypeInstance.destroy();
+    tvChartTypeInstance = createTVChart('tvChartType', 'doughnut', { labels: ['Falta', 'Sobra', 'Avaria', 'Interna'], datasets: [{ data: [types.FALTA, types.SOBRA, types.AVARIA, types.FALTA_INTERNA], backgroundColor: ['#ef4444', '#3b82f6', '#f59e0b', '#a855f7'], borderWidth: 0 }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#fff', font: { size: 12 }, padding: 15 } } } });
 
-    // B) CHART LOCAL (Barras)
-    const ctxLocal = document.getElementById('tvChartLocal');
-    if (ctxLocal) {
-        if (tvChartLocalInstance) tvChartLocalInstance.destroy();
-        tvChartLocalInstance = new Chart(ctxLocal, {
-            type: 'bar',
-            data: {
-                labels: ['Armaz.', 'Estoque', 'Chk', 'Sep.'],
-                datasets: [{ data: [locals.ARMAZENAGEM, locals.ESTOQUE, locals.CHECKOUT, locals.SEPARAÇÃO], backgroundColor: '#0ea5e9', borderRadius: 6 }]
-            },
-            options: commonOptions
-        });
-    }
+    if (tvChartLocalInstance) tvChartLocalInstance.destroy();
+    tvChartLocalInstance = createTVChart('tvChartLocal', 'bar', { labels: ['Armaz.', 'Estoque', 'Chk', 'Sep.'], datasets: [{ data: [locals.ARMAZENAGEM, locals.ESTOQUE, locals.CHECKOUT, locals.SEPARAÇÃO], backgroundColor: '#0ea5e9', borderRadius: 6 }] }, commonOptions);
 
-    // C) CHART CAUSADOR (Top 5 Horizontal)
     const sortedCaus = Object.entries(causadores).sort((a,b) => b[1] - a[1]).slice(0, 5);
-    const ctxCaus = document.getElementById('tvChartCausador');
-    if (ctxCaus) {
-        if (tvChartCausadorInstance) tvChartCausadorInstance.destroy();
-        tvChartCausadorInstance = new Chart(ctxCaus, {
-            type: 'bar',
-            data: { labels: sortedCaus.map(i => i[0]), datasets: [{ data: sortedCaus.map(i => i[1]), backgroundColor: '#f43f5e', borderRadius: 6 }] },
-            options: { ...commonOptions, indexAxis: 'y' }
-        });
-    }
+    if (tvChartCausadorInstance) tvChartCausadorInstance.destroy();
+    tvChartCausadorInstance = createTVChart('tvChartCausador', 'bar', { labels: sortedCaus.map(i => i[0]), datasets: [{ data: sortedCaus.map(i => i[1]), backgroundColor: '#f43f5e', borderRadius: 6 }] }, { ...commonOptions, indexAxis: 'y' });
 
-    // D) CHART IDENTIFICADOR (Top 5 Horizontal)
     const sortedIdent = Object.entries(identificadores).sort((a,b) => b[1] - a[1]).slice(0, 5);
-    const ctxIdent = document.getElementById('tvChartIdentificador');
-    if (ctxIdent) {
-        if (tvChartIdentificadorInstance) tvChartIdentificadorInstance.destroy();
-        tvChartIdentificadorInstance = new Chart(ctxIdent, {
-            type: 'bar',
-            data: { labels: sortedIdent.map(i => i[0]), datasets: [{ data: sortedIdent.map(i => i[1]), backgroundColor: '#10b981', borderRadius: 6 }] },
-            options: { ...commonOptions, indexAxis: 'y' }
-        });
-    }
+    if (tvChartIdentificadorInstance) tvChartIdentificadorInstance.destroy();
+    tvChartIdentificadorInstance = createTVChart('tvChartIdentificador', 'bar', { labels: sortedIdent.map(i => i[0]), datasets: [{ data: sortedIdent.map(i => i[1]), backgroundColor: '#10b981', borderRadius: 6 }] }, { ...commonOptions, indexAxis: 'y' });
 }
 
 // =========================================================
@@ -270,13 +209,11 @@ function applyDashboardFilters() {
     const iEnd = document.getElementById('dash-filter-end');
     if(!iStart || !iEnd) return;
 
-    const startVal = iStart.value; 
-    const endVal = iEnd.value;
+    const startVal = iStart.value; const endVal = iEnd.value;
     let startDate = startVal ? new Date(startVal + 'T00:00:00') : null; 
     let endDate = endVal ? new Date(endVal + 'T23:59:59') : null;
     
     const onlyRNC = localAllData.filter(d => d.type !== 'pallet_label_request' && d.status === 'concluido');
-
     const filteredRNC = onlyRNC.filter(d => { 
         if(startDate && d.jsDate < startDate) return false; 
         if(endDate && d.jsDate > endDate) return false; 
@@ -287,36 +224,23 @@ function applyDashboardFilters() {
     renderHistoryTable(filteredRNC);
 }
 
-// ✅ ATUALIZAÇÃO: Blindagem contra falha de carregamento do Chart.js
 async function updateChartsAndStats(data) {
     const Chart = await loadChartLib();
 
-    // Se não carregou (offline), esconde os gráficos e mostra aviso
     if (!Chart) {
         ['chartOcType', 'chartOcLocal', 'chartOcCausador', 'chartOcIdentificador'].forEach(id => {
             const el = document.getElementById(id);
-            if(el) {
-                el.style.display = 'none';
-                if(!el.parentNode.querySelector('.chart-offline-msg')) {
-                   el.parentNode.insertAdjacentHTML('beforeend', '<div class="chart-offline-msg text-xs text-slate-500 text-center py-4">Gráfico indisponível offline</div>');
-                }
-            }
+            if(el) { el.style.display = 'none'; if(!el.parentNode.querySelector('.chart-offline-msg')) el.parentNode.insertAdjacentHTML('beforeend', '<div class="chart-offline-msg text-xs text-slate-500 text-center py-4">Gráfico indisponível offline</div>'); }
         });
         updateKPIsOnly(data);
         return;
     } else {
-        // Se voltou a internet, remove as mensagens e mostra os canvas
         ['chartOcType', 'chartOcLocal', 'chartOcCausador', 'chartOcIdentificador'].forEach(id => {
             const el = document.getElementById(id);
-            if(el) {
-                el.style.display = 'block';
-                const msg = el.parentNode.querySelector('.chart-offline-msg');
-                if(msg) msg.remove();
-            }
+            if(el) { el.style.display = 'block'; const msg = el.parentNode.querySelector('.chart-offline-msg'); if(msg) msg.remove(); }
         });
     }
 
-    let total = data.length; 
     let types = { FALTA: 0, SOBRA: 0, AVARIA: 0, FALTA_INTERNA: 0 }; 
     let locals = { ARMAZENAGEM: 0, ESTOQUE: 0, CHECKOUT: 0, SEPARAÇÃO: 0 }; 
     let causadores = {}, identificadores = {};
@@ -324,49 +248,25 @@ async function updateChartsAndStats(data) {
     data.forEach(d => { 
         if(types[d.tipo] !== undefined) types[d.tipo]++; 
         if(locals[d.local] !== undefined) locals[d.local]++; 
-        const nmCausador = (d.infrator || 'Não Informado').trim().toUpperCase(); 
-        if(nmCausador) causadores[nmCausador] = (causadores[nmCausador] || 0) + 1; 
-        const nmIdentificador = (d.ass_colab || 'Não Informado').trim().toUpperCase(); 
-        if(nmIdentificador) identificadores[nmIdentificador] = (identificadores[nmIdentificador] || 0) + 1; 
+        const nmCausador = (d.infrator || 'Não Informado').trim().toUpperCase(); if(nmCausador) causadores[nmCausador] = (causadores[nmCausador] || 0) + 1; 
+        const nmIdentificador = (d.ass_colab || 'Não Informado').trim().toUpperCase(); if(nmIdentificador) identificadores[nmIdentificador] = (identificadores[nmIdentificador] || 0) + 1; 
     });
 
     updateKPIsOnly(data);
 
-    // Helper Gráfico Padrão
     const createOrUpdateChart = (canvasId, config, currentInstance) => { 
-        const ctx = document.getElementById(canvasId); 
-        if (!ctx) return null; 
-        if (currentInstance) currentInstance.destroy(); 
-        return new Chart(ctx, config); 
+        const ctx = document.getElementById(canvasId); if (!ctx) return null; 
+        if (currentInstance) currentInstance.destroy(); return new Chart(ctx, config); 
     };
 
-    // 1. Tipo
-    chartTypeInstance = createOrUpdateChart('chartOcType', { 
-        type: 'doughnut', 
-        data: { labels: ['Falta', 'Sobra', 'Avaria', 'Falta Interna'], datasets: [{ data: [types.FALTA, types.SOBRA, types.AVARIA, types.FALTA_INTERNA], backgroundColor: ['#ef4444', '#3b82f6', '#f59e0b', '#a855f7'], borderWidth: 0, borderRadius: 4 }] }, 
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { color: '#cbd5e1', usePointStyle: true, boxWidth: 8, padding: 20, font: { size: 11 } } } }, layout: { padding: { bottom: 10 } } } 
-    }, chartTypeInstance);
+    chartTypeInstance = createOrUpdateChart('chartOcType', { type: 'doughnut', data: { labels: ['Falta', 'Sobra', 'Avaria', 'Int.'], datasets: [{ data: [types.FALTA, types.SOBRA, types.AVARIA, types.FALTA_INTERNA], backgroundColor: ['#ef4444', '#3b82f6', '#f59e0b', '#a855f7'], borderWidth: 0, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { color: '#cbd5e1', usePointStyle: true, boxWidth: 8, padding: 20, font: { size: 11 } } } }, layout: { padding: { bottom: 10 } } } }, chartTypeInstance);
+    chartLocalInstance = createOrUpdateChart('chartOcLocal', { type: 'bar', data: { labels: ['Armazenagem', 'Estoque', 'Checkout', 'Separação'], datasets: [{ label: 'Qtd', data: [locals.ARMAZENAGEM, locals.ESTOQUE, locals.CHECKOUT, locals.SEPARAÇÃO], backgroundColor: '#6366f1', borderWidth: 0, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#cbd5e1' } }, x: { grid: { display: false }, ticks: { color: '#cbd5e1' } } } } }, chartLocalInstance);
     
-    // 2. Local
-    chartLocalInstance = createOrUpdateChart('chartOcLocal', { 
-        type: 'bar', 
-        data: { labels: ['Armazenagem', 'Estoque', 'Checkout', 'Separação'], datasets: [{ label: 'Qtd', data: [locals.ARMAZENAGEM, locals.ESTOQUE, locals.CHECKOUT, locals.SEPARAÇÃO], backgroundColor: '#6366f1', borderWidth: 0, borderRadius: 4 }] }, 
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#cbd5e1' } }, x: { grid: { display: false }, ticks: { color: '#cbd5e1' } } } } 
-    }, chartLocalInstance);
-    
-    // 3. Causador
     const sCaus = Object.entries(causadores).sort((a, b) => b[1] - a[1]).slice(0, 10);
-    chartCausadorInstance = createOrUpdateChart('chartOcCausador', { 
-        type: 'bar', data: { labels: sCaus.map(i=>i[0]), datasets: [{ data: sCaus.map(i=>i[1]), backgroundColor: '#f43f5e', borderRadius: 4, barThickness: 20 }] }, 
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#cbd5e1', stepSize: 1 } }, y: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { size: 10 } } } } } 
-    }, chartCausadorInstance);
+    chartCausadorInstance = createOrUpdateChart('chartOcCausador', { type: 'bar', data: { labels: sCaus.map(i=>i[0]), datasets: [{ data: sCaus.map(i=>i[1]), backgroundColor: '#f43f5e', borderRadius: 4, barThickness: 20 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#cbd5e1', stepSize: 1 } }, y: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { size: 10 } } } } } }, chartCausadorInstance);
     
-    // 4. Identificador
     const sIdent = Object.entries(identificadores).sort((a, b) => b[1] - a[1]).slice(0, 10);
-    chartIdentificadorInstance = createOrUpdateChart('chartOcIdentificador', { 
-        type: 'bar', data: { labels: sIdent.map(i=>i[0]), datasets: [{ data: sIdent.map(i=>i[1]), backgroundColor: '#10b981', borderRadius: 4, barThickness: 20 }] }, 
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#cbd5e1', stepSize: 1 } }, y: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { size: 10 } } } } } 
-    }, chartIdentificadorInstance);
+    chartIdentificadorInstance = createOrUpdateChart('chartOcIdentificador', { type: 'bar', data: { labels: sIdent.map(i=>i[0]), datasets: [{ data: sIdent.map(i=>i[1]), backgroundColor: '#10b981', borderRadius: 4, barThickness: 20 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#cbd5e1', stepSize: 1 } }, y: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { size: 10 } } } } } }, chartIdentificadorInstance);
 }
 
 function updateKPIsOnly(data) {
@@ -404,99 +304,53 @@ function renderHistoryTable(dataToRender) {
     truncatedList.forEach(item => {
         const tr = document.createElement('tr'); 
         tr.className = "border-b border-slate-700 hover:bg-slate-750 transition-colors";
-        
-        // ✅ CORREÇÃO: Uso de escapeHtml para evitar XSS
         const displayNF = item.nf ? escapeHtml(item.nf) : '-';
         const displayEmb = item.embarque ? escapeHtml(item.embarque) : '-';
-        
         let statusDot = item.status === 'concluido' ? '<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>' : '<span class="inline-block w-2 h-2 rounded-full bg-amber-500 mr-2"></span>';
 
-        tr.innerHTML = `
-            <td class="px-4 py-3 font-mono text-slate-300 text-xs">${statusDot}${item.jsDate.toLocaleDateString('pt-BR')}</td>
-            <td class="px-4 py-3 text-white font-medium text-sm">${displayEmb}<br><span class="text-slate-500 text-[10px] font-normal">${displayNF}</span></td>
-            <td class="px-4 py-3 text-slate-300 text-xs">${escapeHtml(item.tipo)}</td>
-            <td class="px-4 py-3 text-right">
-                <button class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition btn-print-history flex items-center gap-2 ml-auto text-xs" data-id="${item.id}">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                    Imprimir
-                </button>
-            </td>`;
+        tr.innerHTML = `<td class="px-4 py-3 font-mono text-slate-300 text-xs">${statusDot}${item.jsDate.toLocaleDateString('pt-BR')}</td><td class="px-4 py-3 text-white font-medium text-sm">${displayEmb}<br><span class="text-slate-500 text-[10px] font-normal">${displayNF}</span></td><td class="px-4 py-3 text-slate-300 text-xs">${escapeHtml(item.tipo)}</td><td class="px-4 py-3 text-right"><button class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition btn-print-history flex items-center gap-2 ml-auto text-xs" data-id="${item.id}"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg> Imprimir</button></td>`;
         tbody.appendChild(tr);
     });
     tbody.querySelectorAll('.btn-print-history').forEach(btn => btn.addEventListener('click', (e) => printRncReport(e.currentTarget.dataset.id)));
 }
 
-// ✅ NOVA IMPORTAÇÃO NECESSÁRIA NO TOPO DO ARQUIVO DASHBOARD.JS:
-// Certifique-se de importar: getDocs, query, collection, where, orderBy
-import { getDocs, query, collection, where, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { PATHS } from '../config.js'; // Precisamos do PATHS para saber onde buscar
-import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Para garantir acesso ao db
+// =========================================================
+// FUNÇÕES DE EXPORTAÇÃO EXCEL (Conectadas ao Banco)
+// =========================================================
 
-// ... (Mantenha o resto do código até chegar nas funções de exportação) ...
-
-// ✅ NOVA FUNÇÃO DE EXPORTAÇÃO INDEPENDENTE (Busca direto no Banco)
 async function exportToXlsx() {
     const btn = document.getElementById('btn-dash-export');
     const originalText = btn.innerHTML;
     
-    // 1. Pega as datas selecionadas nos filtros OU define padrão (últimos 30 dias)
+    // Filtros de Data
     const iStart = document.getElementById('dash-filter-start'); 
     const iEnd = document.getElementById('dash-filter-end');
     
     let startDate, endDate;
-
-    if (iStart.value) { 
-        startDate = new Date(iStart.value + 'T00:00:00'); 
-    } else { 
-        // Se não escolheu nada, pega o mês atual inteiro por padrão
-        startDate = new Date(); 
-        startDate.setDate(1); 
-        startDate.setHours(0,0,0,0);
-    }
-
-    if (iEnd.value) { 
-        endDate = new Date(iEnd.value + 'T23:59:59'); 
-    } else { 
-        endDate = new Date(); 
-        endDate.setHours(23,59,59,999);
-    }
+    if (iStart.value) { startDate = new Date(iStart.value + 'T00:00:00'); } else { startDate = new Date(); startDate.setDate(1); startDate.setHours(0,0,0,0); }
+    if (iEnd.value) { endDate = new Date(iEnd.value + 'T23:59:59'); } else { endDate = new Date(); endDate.setHours(23,59,59,999); }
 
     try {
-        btn.disabled = true;
-        btn.innerText = "Baixando do Banco...";
+        btn.disabled = true; btn.innerText = "Baixando...";
         showToast("Buscando dados no servidor...", "info");
 
-        // 2. Busca Dedicada no Firebase (Ignora o que está na tela)
+        // ✅ Busca Dedicada no Firebase (Ignora o que está na tela)
         const db = getFirestore();
         const occurrencesRef = collection(db, PATHS.occurrences);
         
-        // Busca tudo nesse intervalo
-        const q = query(
-            occurrencesRef, 
-            where('createdAt', '>=', startDate),
-            where('createdAt', '<=', endDate),
-            orderBy('createdAt', 'desc')
-        );
+        const q = query(occurrencesRef, where('createdAt', '>=', startDate), where('createdAt', '<=', endDate), orderBy('createdAt', 'desc'));
 
         const snapshot = await getDocs(q);
         
-        // 3. Processa os dados
         const rawData = [];
         snapshot.forEach(doc => {
             const d = doc.data();
             d.jsDate = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
-            // Filtra apenas concluídos e que NÃO sejam etiqueta de pallet (igual antes)
-            if (d.type !== 'pallet_label_request' && d.status === 'concluido') {
-                rawData.push(d);
-            }
+            if (d.type !== 'pallet_label_request' && d.status === 'concluido') rawData.push(d);
         });
 
-        if (rawData.length === 0) { 
-            showToast("Nenhum dado encontrado no banco para este período.", "info"); 
-            return; 
-        }
+        if (rawData.length === 0) { showToast("Nenhum dado encontrado.", "info"); return; }
 
-        // 4. Monta o Excel
         const exportData = rawData.map(d => {
             let detalhesEmb = [];
             if(d.emb_amassada) detalhesEmb.push("Amassada");
@@ -534,12 +388,10 @@ async function exportToXlsx() {
         console.error(e);
         showToast("Erro ao baixar dados.", "error");
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
+        btn.disabled = false; btn.innerHTML = originalText;
     }
 }
 
-// ✅ MESMA LÓGICA PARA ETIQUETAS
 async function exportPalletReqToXlsx() {
     const btn = document.getElementById('btn-dash-export-pallet');
     const originalText = btn.innerHTML;
@@ -553,7 +405,6 @@ async function exportPalletReqToXlsx() {
 
     try {
         btn.disabled = true; btn.innerText = "...";
-        
         const db = getFirestore();
         const q = query(collection(db, PATHS.occurrences), where('createdAt', '>=', startDate), where('createdAt', '<=', endDate), orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(q);
@@ -568,7 +419,6 @@ async function exportPalletReqToXlsx() {
         if (rawData.length === 0) { showToast("Nenhuma etiqueta no período.", "info"); return; }
         
         const exportData = rawData.map(d => ({ "Item / Código": d.item || '-', "Lote": d.lote || '-', "Quantidade": d.qtd || 0, "Data Solicitação": d.jsDate.toLocaleString('pt-BR'), "Status": "CONCLUÍDO" }));
-        
         generateXlsx(exportData, "Etiquetas_Palete", [{wch: 50}, {wch: 20}, {wch: 15}, {wch: 20}, {wch: 15}]);
 
     } catch (e) { console.error(e); showToast("Erro.", "error"); } 
@@ -580,8 +430,8 @@ function generateXlsx(data, sheetName, cols) {
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         if(cols) ws['!cols'] = cols;
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        XLSX.writeFile(wb, `${sheetName}_${new Date().toISOString().slice(0,10)}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 30));
+        XLSX.writeFile(wb, `${sheetName}.xlsx`);
     } else { showToast("Erro: Biblioteca XLSX não carregada.", "error"); }
 }
 
@@ -597,101 +447,37 @@ export function printRncReport(id) {
     const statusText = item.status === 'concluido' ? 'CONCLUÍDO' : 'PENDENTE';
     const statusBg = item.status === 'concluido' ? 'bg-emerald-600' : 'bg-amber-500';
 
-    // Para impressão usamos innerHTML confiável pois é apenas visualização, 
-    // mas ainda assim aplicamos escape para campos de texto livre
     const safeObs = escapeHtml(item.obs || 'Nenhuma observação registrada.');
     
     const content = `
         <div class="flex justify-between items-start mb-6 border-b-2 ${statusColor} pb-4">
-            <div>
-                <h1 class="text-3xl font-black text-slate-800 uppercase tracking-tighter">Relatório de Divergência</h1>
-                <p class="text-sm text-slate-500 font-mono mt-1">ID: ${item.id.toUpperCase()}</p>
-            </div>
-            <div class="text-right">
-                <span class="${statusBg} text-white px-3 py-1 rounded text-xs font-bold uppercase tracking-wider">${statusText}</span>
-                <p class="text-xs text-slate-400 mt-2">Data Emissão: ${new Date().toLocaleDateString('pt-BR')}</p>
-            </div>
+            <div><h1 class="text-3xl font-black text-slate-800 uppercase tracking-tighter">Relatório de Divergência</h1><p class="text-sm text-slate-500 font-mono mt-1">ID: ${item.id.toUpperCase()}</p></div>
+            <div class="text-right"><span class="${statusBg} text-white px-3 py-1 rounded text-xs font-bold uppercase tracking-wider">${statusText}</span><p class="text-xs text-slate-400 mt-2">Data Emissão: ${new Date().toLocaleDateString('pt-BR')}</p></div>
         </div>
-
         <div class="grid grid-cols-4 gap-4 mb-6">
-            <div class="col-span-1 bg-slate-50 p-3 rounded border border-slate-200">
-                <p class="text-[9px] font-bold text-slate-400 uppercase">Data Ocorrência</p>
-                <p class="text-lg font-bold text-slate-800">${item.jsDate.toLocaleDateString('pt-BR')}</p>
-            </div>
-            <div class="col-span-1 bg-slate-50 p-3 rounded border border-slate-200">
-                <p class="text-[9px] font-bold text-slate-400 uppercase">Tipo</p>
-                <p class="text-lg font-bold text-slate-800">${escapeHtml(item.tipo)}</p>
-            </div>
-            <div class="col-span-1 bg-slate-50 p-3 rounded border border-slate-200">
-                <p class="text-[9px] font-bold text-slate-400 uppercase">Local</p>
-                <p class="text-lg font-bold text-slate-800">${escapeHtml(item.local)}</p>
-            </div>
-             <div class="col-span-1 bg-slate-50 p-3 rounded border border-slate-200">
-                <p class="text-[9px] font-bold text-slate-400 uppercase">Origem/Infrator</p>
-                <p class="text-sm font-bold text-slate-800 truncate">${escapeHtml(item.infrator || 'N/A')}</p>
-            </div>
+            <div class="col-span-1 bg-slate-50 p-3 rounded border border-slate-200"><p class="text-[9px] font-bold text-slate-400 uppercase">Data Ocorrência</p><p class="text-lg font-bold text-slate-800">${item.jsDate.toLocaleDateString('pt-BR')}</p></div>
+            <div class="col-span-1 bg-slate-50 p-3 rounded border border-slate-200"><p class="text-[9px] font-bold text-slate-400 uppercase">Tipo</p><p class="text-lg font-bold text-slate-800">${escapeHtml(item.tipo)}</p></div>
+            <div class="col-span-1 bg-slate-50 p-3 rounded border border-slate-200"><p class="text-[9px] font-bold text-slate-400 uppercase">Local</p><p class="text-lg font-bold text-slate-800">${escapeHtml(item.local)}</p></div>
+             <div class="col-span-1 bg-slate-50 p-3 rounded border border-slate-200"><p class="text-[9px] font-bold text-slate-400 uppercase">Origem/Infrator</p><p class="text-sm font-bold text-slate-800 truncate">${escapeHtml(item.infrator || 'N/A')}</p></div>
         </div>
-
         <div class="mb-6 border border-slate-200 rounded-lg overflow-hidden">
-            <div class="bg-slate-100 px-4 py-2 border-b border-slate-200 flex justify-between">
-                <span class="text-xs font-bold text-slate-600 uppercase">Dados Logísticos & Produto</span>
-            </div>
+            <div class="bg-slate-100 px-4 py-2 border-b border-slate-200 flex justify-between"><span class="text-xs font-bold text-slate-600 uppercase">Dados Logísticos & Produto</span></div>
             <div class="p-4 grid grid-cols-2 gap-y-4 gap-x-8">
-                <div>
-                    <span class="block text-[10px] text-slate-400 uppercase">Embarque</span>
-                    <span class="block font-mono font-bold text-slate-700 text-lg">${escapeHtml(item.embarque || '-')}</span>
-                </div>
-                <div>
-                    <span class="block text-[10px] text-slate-400 uppercase">Nota Fiscal / Cliente</span>
-                    <span class="block font-mono font-bold text-slate-700 text-lg">${escapeHtml(item.nf || '-')}</span>
-                </div>
+                <div><span class="block text-[10px] text-slate-400 uppercase">Embarque</span><span class="block font-mono font-bold text-slate-700 text-lg">${escapeHtml(item.embarque || '-')}</span></div>
+                <div><span class="block text-[10px] text-slate-400 uppercase">Nota Fiscal / Cliente</span><span class="block font-mono font-bold text-slate-700 text-lg">${escapeHtml(item.nf || '-')}</span></div>
                 <div class="col-span-2 border-t border-slate-100 pt-2"></div>
-                <div class="col-span-2">
-                    <span class="block text-[10px] text-slate-400 uppercase">Produto Afetado</span>
-                    <span class="block font-bold text-slate-800 text-xl">${escapeHtml(item.item_cod || '?')} - ${escapeHtml(item.item_desc || '(Sem descrição)')}</span>
-                </div>
-                <div>
-                    <span class="block text-[10px] text-slate-400 uppercase">Lote</span>
-                    <span class="block font-mono text-slate-700">${escapeHtml(item.item_lote || '-')}</span>
-                </div>
-                <div>
-                    <span class="block text-[10px] text-slate-400 uppercase">Quantidade (Caixas)</span>
-                    <span class="block font-mono font-bold text-red-600 text-xl">${item.item_qtd || '0'}</span>
-                </div>
+                <div class="col-span-2"><span class="block text-[10px] text-slate-400 uppercase">Produto Afetado</span><span class="block font-bold text-slate-800 text-xl">${escapeHtml(item.item_cod || '?')} - ${escapeHtml(item.item_desc || '(Sem descrição)')}</span></div>
+                <div><span class="block text-[10px] text-slate-400 uppercase">Lote</span><span class="block font-mono text-slate-700">${escapeHtml(item.item_lote || '-')}</span></div>
+                <div><span class="block text-[10px] text-slate-400 uppercase">Quantidade (Caixas)</span><span class="block font-mono font-bold text-red-600 text-xl">${item.item_qtd || '0'}</span></div>
             </div>
         </div>
-
-        <div class="mb-6">
-            <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Estado da Embalagem</h3>
-            <div class="flex gap-4 border border-slate-200 rounded p-3 bg-white">
-                <div class="flex-1">${check(item.emb_amassada)} <span class="text-xs ml-5">Amassada</span></div>
-                <div class="flex-1">${check(item.emb_rasgada)} <span class="text-xs ml-5">Rasgada</span></div>
-                <div class="flex-1">${check(item.emb_vazamento)} <span class="text-xs ml-5">Vazamento</span></div>
-            </div>
-            ${item.emb_outros ? `<div class="mt-2 text-xs text-slate-500 italic bg-slate-50 p-2 rounded border border-slate-100">Obs: ${escapeHtml(item.emb_outros)}</div>` : ''}
-        </div>
-
-        <div class="mb-8">
-            <h3 class="text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Relato Técnico / Observações</h3>
-            <div class="w-full p-4 border border-slate-300 rounded bg-slate-50 min-h-[100px] text-sm text-slate-700 leading-relaxed">
-                ${safeObs}
-            </div>
-        </div>
-
+        <div class="mb-6"><h3 class="text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Estado da Embalagem</h3><div class="flex gap-4 border border-slate-200 rounded p-3 bg-white"><div class="flex-1">${check(item.emb_amassada)} <span class="text-xs ml-5">Amassada</span></div><div class="flex-1">${check(item.emb_rasgada)} <span class="text-xs ml-5">Rasgada</span></div><div class="flex-1">${check(item.emb_vazamento)} <span class="text-xs ml-5">Vazamento</span></div></div>${item.emb_outros ? `<div class="mt-2 text-xs text-slate-500 italic bg-slate-50 p-2 rounded border border-slate-100">Obs: ${escapeHtml(item.emb_outros)}</div>` : ''}</div>
+        <div class="mb-8"><h3 class="text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Relato Técnico / Observações</h3><div class="w-full p-4 border border-slate-300 rounded bg-slate-50 min-h-[100px] text-sm text-slate-700 leading-relaxed">${safeObs}</div></div>
         <div class="mt-auto pt-4 border-t-2 border-slate-800">
             <div class="grid grid-cols-3 gap-8 text-center">
-                <div>
-                    <div class="h-10 flex items-end justify-center pb-1"><span class="font-bold text-slate-800 text-sm">${escapeHtml(item.ass_colab || '-')}</span></div>
-                    <div class="border-t border-slate-400 pt-1 text-[9px] uppercase font-bold text-slate-500">Reportado Por</div>
-                </div>
-                <div>
-                    <div class="h-10 flex items-end justify-center pb-1"><span class="font-bold text-slate-800 text-sm">${escapeHtml(item.ass_lider || '')}</span></div>
-                    <div class="border-t border-slate-400 pt-1 text-[9px] uppercase font-bold text-slate-500">Liderança</div>
-                </div>
-                <div>
-                    <div class="h-10 flex items-end justify-center pb-1"><span class="font-bold text-slate-800 text-sm">${escapeHtml(item.ass_inv || '')}</span></div>
-                    <div class="border-t border-slate-400 pt-1 text-[9px] uppercase font-bold text-slate-500">Inventário</div>
-                </div>
+                <div><div class="h-10 flex items-end justify-center pb-1"><span class="font-bold text-slate-800 text-sm">${escapeHtml(item.ass_colab || '-')}</span></div><div class="border-t border-slate-400 pt-1 text-[9px] uppercase font-bold text-slate-500">Reportado Por</div></div>
+                <div><div class="h-10 flex items-end justify-center pb-1"><span class="font-bold text-slate-800 text-sm">${escapeHtml(item.ass_lider || '')}</span></div><div class="border-t border-slate-400 pt-1 text-[9px] uppercase font-bold text-slate-500">Liderança</div></div>
+                <div><div class="h-10 flex items-end justify-center pb-1"><span class="font-bold text-slate-800 text-sm">${escapeHtml(item.ass_inv || '')}</span></div><div class="border-t border-slate-400 pt-1 text-[9px] uppercase font-bold text-slate-500">Inventário</div></div>
             </div>
         </div>
     `;

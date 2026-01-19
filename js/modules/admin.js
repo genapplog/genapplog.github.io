@@ -1,20 +1,48 @@
 /**
  * ARQUIVO: js/modules/admin.js
  */
-import { writeBatch, doc, getDocs, deleteDoc, collection, query, where, getDoc, addDoc, onSnapshot, orderBy, limit, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { safeBind, showToast, openConfirmModal, closeConfirmModal, renderSkeleton } from '../utils.js';
-// Importamos PATHS diretamente (agora ele já traz o caminho certo do ambiente atual)
+
+// ✅ 1. IMPORTAÇÕES NO TOPO (Padrão Obrigatório)
+import { 
+    writeBatch, 
+    doc, 
+    getDocs, 
+    deleteDoc, 
+    collection, 
+    query, 
+    where, 
+    getDoc, 
+    addDoc, 
+    onSnapshot, 
+    orderBy, 
+    limit, 
+    setDoc 
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+import { 
+    safeBind, 
+    showToast, 
+    openConfirmModal, 
+    closeConfirmModal, 
+    renderSkeleton 
+} from '../utils.js';
+
 import { defaultChecklistData, specificClientRules, PATHS } from '../config.js';
 import { printRncReport } from './dashboard.js';
 import { getCurrentUserName, getUserRole } from './auth.js';
 
+// --- ESTADO GERAL ---
 let localAdminData = []; 
 let globalDbForAdmin = null;
 let currentAuditData = []; 
 
+// =========================================================
+// INICIALIZAÇÃO
+// =========================================================
 export function initAdminModule(db, clientsCollection) {
     globalDbForAdmin = db;
 
+    // 1. Restaurar Padrões de Fábrica (Perigo!)
     safeBind('btn-reset-db', 'click', () => {
         openConfirmModal("Restaurar Padrões?", "PERIGO: Todos os checklists voltarão ao padrão de fábrica.", async () => {
             try {
@@ -27,53 +55,65 @@ export function initAdminModule(db, clientsCollection) {
                 await b.commit();
                 showToast("Padrões restaurados.");
                 registerLog('RESET_SYSTEM', 'Sistema', 'Restaurou padrões');
-            } catch { showToast("Erro.", 'error'); }
+            } catch { showToast("Erro ao restaurar.", 'error'); }
             closeConfirmModal();
         });
     });
 
-    // ATUALIZAÇÃO: Funcionalidade desativada pois agora usamos projetos isolados
+    // 2. Botão de Sincronização (Desativado intencionalmente)
     safeBind('btn-sync-prod-to-test', 'click', () => {
         showToast("Indisponível: Ambientes isolados via .env", "info");
-        /* Lógica antiga removida para evitar erros */
     });
 
+    // =========================================================
+    // IMPORTAÇÃO DE CLIENTES (O que você precisa!)
+    // =========================================================
     safeBind('download-template-btn', 'click', () => downloadJSON([{ "name": "CLIENTE EXEMPLO", "checklist": defaultChecklistData }], "modelo_clientes.json"));
-    safeBind('file-upload', 'change', (e) => handleImport(e, db, 'clients', async (data, batch) => {
+    
+    // ✅ CORREÇÃO: Agora usa o PATHS.clients correto (seja dev ou prod)
+    safeBind('file-upload', 'change', (e) => handleImport(e, db, PATHS.clients, async (data, batch) => {
+        // Busca nomes existentes para não duplicar (atualiza se existir)
+        const clientsRef = collection(db, PATHS.clients);
         const existingNames = new Map();
-        (await getDocs(clientsCollection)).forEach(d => existingNames.set(d.data().name.toUpperCase().trim(), d.id));
+        (await getDocs(clientsRef)).forEach(d => existingNames.set(d.data().name.toUpperCase().trim(), d.id));
+        
         let count = 0;
         data.forEach(c => {
             if(c.name) {
-                const id = existingNames.get(c.name.toUpperCase().trim());
-                const ref = id ? doc(clientsCollection, id) : doc(clientsCollection);
-                batch.set(ref, { name: c.name.toUpperCase().trim(), checklist: c.checklist || defaultChecklistData }, { merge: true });
+                const nameKey = c.name.toUpperCase().trim();
+                const id = existingNames.get(nameKey);
+                // Se existe ID, atualiza. Se não, cria novo doc na coleção correta.
+                const ref = id ? doc(db, PATHS.clients, id) : doc(clientsRef);
+                
+                batch.set(ref, { 
+                    name: nameKey, 
+                    checklist: c.checklist || defaultChecklistData 
+                }, { merge: true });
                 count++;
             }
         });
         return count;
     }, 'import-status'));
 
-    // O template agora sugere múltiplos cargos separados por vírgula
+    // =========================================================
+    // IMPORTAÇÃO DE USUÁRIOS
+    // =========================================================
     safeBind('download-users-template-btn', 'click', () => downloadJSON([{ "id": "UID_FIREBASE", "name": "Nome", "role": "OPERADOR, LIDER" }], "modelo_equipe.json"));
+    
     safeBind('users-upload', 'change', (e) => handleImport(e, db, 'users', async (data, batch) => {
         let count = 0;
         data.forEach(u => {
             if(u.id && u.name) {
-                // LÓGICA DE MÚLTIPLOS PAPEIS
-                let roles = ['LEITOR']; // Padrão
-                
+                let roles = ['LEITOR'];
                 if (Array.isArray(u.role)) {
-                    // Se já vier como lista no JSON: ["LIDER", "INVENTARIO"]
                     roles = u.role.map(r => r.toString().toUpperCase().trim());
                 } else if (u.role && typeof u.role === 'string') {
-                    // Se vier como texto separado por vírgula: "LIDER, INVENTARIO"
                     roles = u.role.split(',').map(r => r.toUpperCase().trim()).filter(r => r !== "");
                 }
 
                 batch.set(doc(db, 'users', u.id.trim()), { 
                     name: u.name.trim(), 
-                    role: roles, // Salva como Array no Firestore
+                    role: roles, 
                     updatedAt: new Date() 
                 });
                 count++;
@@ -82,7 +122,11 @@ export function initAdminModule(db, clientsCollection) {
         return count;
     }, 'users-import-status'));
 
+    // =========================================================
+    // IMPORTAÇÃO DE PRODUTOS
+    // =========================================================
     safeBind('download-products-template-btn', 'click', () => downloadJSON([{ "dun": "17891000123456", "codigo": "200300", "descricao": "SHAMPOO" }], "modelo_produtos.json"));
+    
     safeBind('products-upload', 'change', (e) => handleImport(e, db, 'products', async (data, batch) => {
         let count = 0;
         data.forEach(p => {
@@ -101,29 +145,42 @@ export function initAdminModule(db, clientsCollection) {
 
     setupProductSearch(db);
 
+    // =========================================================
+    // TABELA ADMIN E AUDITORIA
+    // =========================================================
     safeBind('btn-refresh-admin-list', 'click', () => { 
         renderAdminTable(); 
-        if(getUserRole().includes('ADMIN')) loadInitialAuditLogs(db); 
+        const roles = getUserRole() || [];
+        if(roles.includes('ADMIN')) loadInitialAuditLogs(db); 
     });
     safeBind('admin-search-rnc', 'input', () => renderAdminTable());
     safeBind('admin-search-label', 'input', () => renderAdminTable());
     safeBind('btn-audit-filter', 'click', () => filterAuditLogs(db));
     safeBind('btn-audit-export', 'click', () => exportAuditLogs());
 
-    if(getUserRole().includes('ADMIN')) {
+    const roles = getUserRole() || [];
+    if(roles.includes('ADMIN')) {
         const auditSection = document.getElementById('admin-audit-section');
         if(auditSection) auditSection.classList.remove('hidden');
         loadInitialAuditLogs(db);
     }
 }
 
+// =========================================================
+// LOGS DE AUDITORIA
+// =========================================================
 export async function registerLog(action, target, details) {
     if (!globalDbForAdmin) return;
     try {
         const user = getCurrentUserName() || "Sistema/Anon";
-        const role = getUserRole() || "N/A";
+        const role = getUserRole() || ["N/A"];
         await addDoc(collection(globalDbForAdmin, 'audit_logs'), {
-            createdAt: new Date(), user, role, action: action.toUpperCase(), target, details
+            createdAt: new Date(), 
+            user, 
+            role: Array.isArray(role) ? role.join(', ') : role, 
+            action: action.toUpperCase(), 
+            target, 
+            details
         });
     } catch (e) { console.error("Falha log:", e); }
 }
@@ -225,6 +282,8 @@ function renderAdminTable() {
 
     const termRNC = searchRNC ? searchRNC.value.toLowerCase().trim() : "";
     const termLabel = searchLabel ? searchLabel.value.toLowerCase().trim() : "";
+    
+    // Filtro e Ordenação
     const uniqueList = Array.from(new Map(localAdminData.map(item => [item.id, item])).values());
     let rncList = uniqueList.filter(d => d.type !== 'pallet_label_request').sort((a,b) => b.jsDate - a.jsDate);
     let labelList = uniqueList.filter(d => d.type === 'pallet_label_request').sort((a,b) => b.jsDate - a.jsDate);
@@ -232,6 +291,7 @@ function renderAdminTable() {
     if (termRNC) rncList = rncList.filter(item => `${item.embarque || ''} ${item.nf || ''} ${item.tipo || ''}`.toLowerCase().includes(termRNC));
     if (termLabel) labelList = labelList.filter(item => `${item.item || ''} ${item.lote || ''}`.toLowerCase().includes(termLabel));
 
+    // Renderiza Tabela RNC (Últimos 10)
     const rncDisplay = rncList.slice(0, 10);
     tbodyRNC.innerHTML = '';
     
@@ -270,6 +330,7 @@ function renderAdminTable() {
         });
     }
 
+    // Renderiza Tabela Labels
     const labelDisplay = labelList.slice(0, 10);
     tbodyLabels.innerHTML = '';
     if (labelDisplay.length === 0) { 
@@ -298,9 +359,8 @@ function renderAdminTable() {
         });
     }
 
-    // CORREÇÃO: Usamos o caminho direto definido no config.js
+    // Eventos de Exclusão (Admin)
     const currentPath = PATHS.occurrences;
-    
     document.querySelectorAll('.btn-del-adm').forEach(btn => { 
         btn.onclick = (e) => { 
             const id = e.currentTarget.dataset.id; 
@@ -320,6 +380,9 @@ function renderAdminTable() {
     });
 }
 
+// =========================================================
+// BUSCA DE PRODUTOS
+// =========================================================
 function setupProductSearch(db) {
     const btnSearch = document.getElementById('btn-search-product');
     const inputSearch = document.getElementById('product-search-input');
@@ -337,10 +400,14 @@ function setupProductSearch(db) {
         try {
             const productsRef = collection(db, 'products');
             let results = [];
+            
+            // Busca Exata (DUN)
             if (/^\d+$/.test(term)) {
                 const docSnap = await getDoc(doc(db, 'products', term));
                 if (docSnap.exists()) results.push({ id: docSnap.id, ...docSnap.data() });
             }
+            
+            // Busca Parcial (Descrição ou Código)
             if (results.length === 0) {
                 const q = query(productsRef);
                 const querySnapshot = await getDocs(q);
@@ -394,6 +461,9 @@ function setupProductSearch(db) {
     if(inputSearch) inputSearch.addEventListener('keypress', (e) => { if(e.key === 'Enter') doSearch(); });
 }
 
+// =========================================================
+// UTILS
+// =========================================================
 function downloadJSON(data, filename) {
     const a = document.createElement('a');
     a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
@@ -401,30 +471,39 @@ function downloadJSON(data, filename) {
     document.body.appendChild(a); a.click(); a.remove();
 }
 
-function handleImport(event, db, collectionName, processFn, statusId) {
+function handleImport(event, db, collectionOrPath, processFn, statusId) {
     const file = event.target.files[0]; if (!file) return;
     const statusDiv = document.getElementById(statusId);
     const statusText = document.getElementById(`${statusId}-text`);
-    statusDiv.classList.remove('hidden'); statusText.innerText = "Lendo...";
+    
+    if(statusDiv) statusDiv.classList.remove('hidden'); 
+    if(statusText) statusText.innerText = "Lendo arquivo...";
     
     const reader = new FileReader();
     reader.onload = async (evt) => {
         try {
             const data = JSON.parse(evt.target.result);
             if (!Array.isArray(data)) throw new Error("Formato inválido. Use uma lista [].");
+            
             const batch = writeBatch(db);
             const count = await processFn(data, batch);
+            
             if(count > 0) await batch.commit();
+            
             showToast(`${count} itens importados.`);
-            statusText.innerText = "Sucesso!";
+            if(statusText) statusText.innerText = "Sucesso!";
+            
+            // Log Seguro
+            const collectionName = typeof collectionOrPath === 'string' ? collectionOrPath : 'coleção';
             registerLog('IMPORT_DATA', collectionName, `Importou ${count} registros via JSON`);
+            
         } catch (e) { 
             console.error(e);
             showToast("Erro na importação.", 'error'); 
-            statusText.innerText = "Erro: " + e.message;
+            if(statusText) statusText.innerText = "Erro: " + e.message;
         }
-        event.target.value = '';
-        setTimeout(() => statusDiv.classList.add('hidden'), 4000);
+        event.target.value = ''; // Limpa para permitir re-upload do mesmo arquivo
+        setTimeout(() => { if(statusDiv) statusDiv.classList.add('hidden'); }, 4000);
     };
     reader.readAsText(file);
 }
