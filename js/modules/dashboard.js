@@ -3,7 +3,7 @@
  * DESCRIÇÃO: Dashboard Operacional, Relatórios, Impressão e Modo TV (Wallboard).
  */
 
-// ✅ 1. TODAS AS IMPORTAÇÕES DEVEM FICAR AQUI NO TOPO (Senão o site quebra!)
+// ✅ 1. IMPORTAÇÕES NO TOPO
 import { safeBind, showToast, printDocument, escapeHtml } from '../utils.js';
 import { PATHS } from '../config.js';
 import { 
@@ -17,33 +17,24 @@ import {
 
 // --- ESTADO GERAL ---
 let localAllData = [];
-let ChartLib = null; // Variável para guardar a biblioteca Chart.js carregada dinamicamente
+let ChartLib = null;
 
-// Instâncias de Gráficos (Dashboard Normal)
-let chartTypeInstance = null;
-let chartLocalInstance = null;
-let chartCausadorInstance = null;
-let chartIdentificadorInstance = null;
-
-// Instâncias de Gráficos (Modo TV)
-let tvChartTypeInstance = null;
-let tvChartLocalInstance = null;
-let tvChartCausadorInstance = null;
-let tvChartIdentificadorInstance = null;
+// Instâncias de Gráficos
+let chartTypeInstance = null, chartLocalInstance = null, chartCausadorInstance = null, chartIdentificadorInstance = null;
+let tvChartTypeInstance = null, tvChartLocalInstance = null, tvChartCausadorInstance = null, tvChartIdentificadorInstance = null;
 let tvClockInterval = null;
 
 // =========================================================
-// FUNÇÃO AUXILIAR: Carregamento Dinâmico do Chart.js
+// CARREGAMENTO DINÂMICO (CHART.JS)
 // =========================================================
 async function loadChartLib() {
     if (ChartLib) return ChartLib;
     try {
-        // Importação dinâmica: Se falhar (offline), não trava o app
         await import('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js');
         ChartLib = window.Chart;
         return ChartLib;
     } catch (e) {
-        console.warn("Chart.js não carregou (Offline ou Bloqueado). Gráficos desativados.");
+        console.warn("Chart.js Offline.");
         return null;
     }
 }
@@ -54,7 +45,7 @@ async function loadChartLib() {
 export function initDashboard() {
     console.log("Iniciando Módulo Dashboard...");
 
-    // Filtros de Data (Dashboard Normal)
+    // Filtros
     safeBind('btn-dash-filter-apply', 'click', () => applyDashboardFilters());
     safeBind('btn-dash-filter-clear', 'click', () => { 
         const i1 = document.getElementById('dash-filter-start');
@@ -63,46 +54,37 @@ export function initDashboard() {
         applyDashboardFilters(); 
     });
 
-    // Exportação (Aponta para as funções novas e robustas)
+    // Exportação
     safeBind('btn-dash-export', 'click', exportToXlsx);
     safeBind('btn-dash-export-pallet', 'click', exportPalletReqToXlsx);
     
-    // Busca na tabela de histórico
+    // Busca Histórico
     safeBind('history-search-input', 'input', () => renderHistoryTable());
     safeBind('history-search-clear', 'click', () => { 
         const i = document.getElementById('history-search-input'); 
         if(i){ i.value=''; renderHistoryTable(); } 
     });
 
-    // Modo TV
+    // TV Mode
     safeBind('btn-exit-tv', 'click', exitTVMode);
 }
 
-// Chamado pelo rnc.js sempre que o banco de dados muda
+// Chamado pelo rnc.js quando os dados mudam
 export function updateDashboardView(allData) {
     localAllData = allData;
-    
-    // Atualiza Dashboard Normal
     applyDashboardFilters(); 
     
-    // Se a TV estiver ligada, atualiza ela também em tempo real
     const tvEl = document.getElementById('tv-mode');
-    if (tvEl && !tvEl.classList.contains('hidden')) {
-        updateTVView();
-    }
+    if (tvEl && !tvEl.classList.contains('hidden')) updateTVView();
 }
 
 // =========================================================
-// MODO TV (WALLBOARD)
+// MODO TV
 // =========================================================
-
 export function startTVMode() {
     document.getElementById('tv-mode').classList.remove('hidden');
-    
-    // Tenta Fullscreen
     const elem = document.documentElement;
     if (elem.requestFullscreen) { elem.requestFullscreen().catch(console.log); }
-
     startClock();
     updateTVView();
 }
@@ -118,7 +100,6 @@ function startClock() {
         const now = new Date();
         const elTime = document.getElementById('tv-clock');
         const elDate = document.getElementById('tv-date');
-        
         if(elTime) elTime.innerText = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         if(elDate) {
             const d = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -132,17 +113,16 @@ function startClock() {
 
 async function updateTVView() {
     const Chart = await loadChartLib();
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
     
-    const tvData = localAllData.filter(d => {
-        return d.type !== 'pallet_label_request' && d.status === 'concluido' && d.jsDate >= today;
-    });
+    // Filtra dados para TV (apenas hoje e concluídos)
+    const tvData = localAllData.filter(d => d.type !== 'pallet_label_request' && d.status === 'concluido' && d.jsDate >= today);
 
+    // KPIs
     document.getElementById('tv-kpi-total').innerText = tvData.length;
-    const elLast = document.getElementById('tv-kpi-last');
-    elLast.innerText = tvData.length > 0 ? tvData[0].jsDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : "-";
+    document.getElementById('tv-kpi-last').innerText = tvData.length > 0 ? tvData[0].jsDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : "-";
 
+    // Feed Recente
     const tbody = document.getElementById('tv-list-tbody');
     tbody.innerHTML = '';
     const recent = tvData.slice(0, 8);
@@ -153,13 +133,12 @@ async function updateTVView() {
         recent.forEach(d => {
             const tr = document.createElement('tr');
             tr.className = "border-b border-slate-800/50";
-            const safeEmb = escapeHtml(d.embarque || d.nf);
-            const safeTipo = escapeHtml(d.tipo);
-            tr.innerHTML = `<td class="p-3 text-slate-400 font-mono text-base">${d.jsDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</td><td class="p-3 text-white font-bold text-base">${safeTipo}</td><td class="p-3 text-right text-indigo-400 font-mono text-base truncate max-w-[120px]">${safeEmb}</td>`;
+            tr.innerHTML = `<td class="p-3 text-slate-400 font-mono text-base">${d.jsDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</td><td class="p-3 text-white font-bold text-base">${escapeHtml(d.tipo)}</td><td class="p-3 text-right text-indigo-400 font-mono text-base truncate max-w-[120px]">${escapeHtml(d.embarque || d.nf)}</td>`;
             tbody.appendChild(tr);
         });
     }
 
+    // Processamento Gráficos
     let types = { FALTA: 0, SOBRA: 0, AVARIA: 0, FALTA_INTERNA: 0 };
     let locals = { ARMAZENAGEM: 0, ESTOQUE: 0, CHECKOUT: 0, SEPARAÇÃO: 0 }; 
     let causadores = {}, identificadores = {};
@@ -177,12 +156,12 @@ async function updateTVView() {
 
     if (!Chart) return;
 
+    // Renderiza Gráficos (Usando Helper)
     const commonOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#334155' }, ticks: { color: '#cbd5e1' } }, y: { grid: { display: false }, ticks: { color: '#fff', font: { weight: 'bold' } } } } };
-
-    const createTVChart = (id, type, data, opts) => {
-        const ctx = document.getElementById(id);
-        if(ctx) return new Chart(ctx, { type, data, options: opts });
-        return null;
+    const createTVChart = (id, type, data, opts) => { 
+        const ctx = document.getElementById(id); 
+        if(ctx) return new Chart(ctx, { type, data, options: opts }); 
+        return null; 
     };
 
     if (tvChartTypeInstance) tvChartTypeInstance.destroy();
@@ -201,20 +180,18 @@ async function updateTVView() {
 }
 
 // =========================================================
-// DASHBOARD PADRÃO (FILTROS E LÓGICA ANTIGA)
+// DASHBOARD PADRÃO
 // =========================================================
-
 function applyDashboardFilters() {
     const iStart = document.getElementById('dash-filter-start'); 
     const iEnd = document.getElementById('dash-filter-end');
     if(!iStart || !iEnd) return;
 
-    const startVal = iStart.value; const endVal = iEnd.value;
-    let startDate = startVal ? new Date(startVal + 'T00:00:00') : null; 
-    let endDate = endVal ? new Date(endVal + 'T23:59:59') : null;
+    let startDate = iStart.value ? new Date(iStart.value + 'T00:00:00') : null; 
+    let endDate = iEnd.value ? new Date(iEnd.value + 'T23:59:59') : null;
     
-    const onlyRNC = localAllData.filter(d => d.type !== 'pallet_label_request' && d.status === 'concluido');
-    const filteredRNC = onlyRNC.filter(d => { 
+    const filteredRNC = localAllData.filter(d => { 
+        if(d.type === 'pallet_label_request' || d.status !== 'concluido') return false;
         if(startDate && d.jsDate < startDate) return false; 
         if(endDate && d.jsDate > endDate) return false; 
         return true; 
@@ -226,20 +203,7 @@ function applyDashboardFilters() {
 
 async function updateChartsAndStats(data) {
     const Chart = await loadChartLib();
-
-    if (!Chart) {
-        ['chartOcType', 'chartOcLocal', 'chartOcCausador', 'chartOcIdentificador'].forEach(id => {
-            const el = document.getElementById(id);
-            if(el) { el.style.display = 'none'; if(!el.parentNode.querySelector('.chart-offline-msg')) el.parentNode.insertAdjacentHTML('beforeend', '<div class="chart-offline-msg text-xs text-slate-500 text-center py-4">Gráfico indisponível offline</div>'); }
-        });
-        updateKPIsOnly(data);
-        return;
-    } else {
-        ['chartOcType', 'chartOcLocal', 'chartOcCausador', 'chartOcIdentificador'].forEach(id => {
-            const el = document.getElementById(id);
-            if(el) { el.style.display = 'block'; const msg = el.parentNode.querySelector('.chart-offline-msg'); if(msg) msg.remove(); }
-        });
-    }
+    if (!Chart) { updateKPIsOnly(data); return; }
 
     let types = { FALTA: 0, SOBRA: 0, AVARIA: 0, FALTA_INTERNA: 0 }; 
     let locals = { ARMAZENAGEM: 0, ESTOQUE: 0, CHECKOUT: 0, SEPARAÇÃO: 0 }; 
@@ -248,37 +212,59 @@ async function updateChartsAndStats(data) {
     data.forEach(d => { 
         if(types[d.tipo] !== undefined) types[d.tipo]++; 
         if(locals[d.local] !== undefined) locals[d.local]++; 
-        const nmCausador = (d.infrator || 'Não Informado').trim().toUpperCase(); if(nmCausador) causadores[nmCausador] = (causadores[nmCausador] || 0) + 1; 
-        const nmIdentificador = (d.ass_colab || 'Não Informado').trim().toUpperCase(); if(nmIdentificador) identificadores[nmIdentificador] = (identificadores[nmIdentificador] || 0) + 1; 
+        const nmCausador = (d.infrator || 'Não Informado').trim().toUpperCase(); 
+        if(nmCausador) causadores[nmCausador] = (causadores[nmCausador] || 0) + 1; 
+        const nmIdentificador = (d.ass_colab || 'Não Informado').trim().toUpperCase(); 
+        if(nmIdentificador) identificadores[nmIdentificador] = (identificadores[nmIdentificador] || 0) + 1; 
     });
 
     updateKPIsOnly(data);
 
-    const createOrUpdateChart = (canvasId, config, currentInstance) => { 
-        const ctx = document.getElementById(canvasId); if (!ctx) return null; 
-        if (currentInstance) currentInstance.destroy(); return new Chart(ctx, config); 
+    // Fábrica de Gráficos (Reutilizável)
+    const createOrUpdateChart = (id, config, inst) => { 
+        const ctx = document.getElementById(id); 
+        if (!ctx) return null; 
+        if (inst) inst.destroy(); 
+        return new Chart(ctx, config); 
     };
 
-    chartTypeInstance = createOrUpdateChart('chartOcType', { type: 'doughnut', data: { labels: ['Falta', 'Sobra', 'Avaria', 'Int.'], datasets: [{ data: [types.FALTA, types.SOBRA, types.AVARIA, types.FALTA_INTERNA], backgroundColor: ['#ef4444', '#3b82f6', '#f59e0b', '#a855f7'], borderWidth: 0, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { color: '#cbd5e1', usePointStyle: true, boxWidth: 8, padding: 20, font: { size: 11 } } } }, layout: { padding: { bottom: 10 } } } }, chartTypeInstance);
-    chartLocalInstance = createOrUpdateChart('chartOcLocal', { type: 'bar', data: { labels: ['Armazenagem', 'Estoque', 'Checkout', 'Separação'], datasets: [{ label: 'Qtd', data: [locals.ARMAZENAGEM, locals.ESTOQUE, locals.CHECKOUT, locals.SEPARAÇÃO], backgroundColor: '#6366f1', borderWidth: 0, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#cbd5e1' } }, x: { grid: { display: false }, ticks: { color: '#cbd5e1' } } } } }, chartLocalInstance);
+    chartTypeInstance = createOrUpdateChart('chartOcType', { 
+        type: 'doughnut', 
+        data: { labels: ['Falta', 'Sobra', 'Avaria', 'Int.'], datasets: [{ data: [types.FALTA, types.SOBRA, types.AVARIA, types.FALTA_INTERNA], backgroundColor: ['#ef4444', '#3b82f6', '#f59e0b', '#a855f7'], borderWidth: 0, borderRadius: 4 }] }, 
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1' } } } } 
+    }, chartTypeInstance);
+    
+    chartLocalInstance = createOrUpdateChart('chartOcLocal', { 
+        type: 'bar', 
+        data: { labels: ['Armazenagem', 'Estoque', 'Checkout', 'Separação'], datasets: [{ label: 'Qtd', data: [locals.ARMAZENAGEM, locals.ESTOQUE, locals.CHECKOUT, locals.SEPARAÇÃO], backgroundColor: '#6366f1', borderRadius: 4 }] }, 
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#cbd5e1' } }, y: { ticks: { color: '#cbd5e1' } } } } 
+    }, chartLocalInstance);
     
     const sCaus = Object.entries(causadores).sort((a, b) => b[1] - a[1]).slice(0, 10);
-    chartCausadorInstance = createOrUpdateChart('chartOcCausador', { type: 'bar', data: { labels: sCaus.map(i=>i[0]), datasets: [{ data: sCaus.map(i=>i[1]), backgroundColor: '#f43f5e', borderRadius: 4, barThickness: 20 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#cbd5e1', stepSize: 1 } }, y: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { size: 10 } } } } } }, chartCausadorInstance);
+    chartCausadorInstance = createOrUpdateChart('chartOcCausador', { 
+        type: 'bar', 
+        data: { labels: sCaus.map(i=>i[0]), datasets: [{ data: sCaus.map(i=>i[1]), backgroundColor: '#f43f5e', borderRadius: 4 }] }, 
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#cbd5e1' } }, y: { ticks: { color: '#cbd5e1' } } } } 
+    }, chartCausadorInstance);
     
     const sIdent = Object.entries(identificadores).sort((a, b) => b[1] - a[1]).slice(0, 10);
-    chartIdentificadorInstance = createOrUpdateChart('chartOcIdentificador', { type: 'bar', data: { labels: sIdent.map(i=>i[0]), datasets: [{ data: sIdent.map(i=>i[1]), backgroundColor: '#10b981', borderRadius: 4, barThickness: 20 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#cbd5e1', stepSize: 1 } }, y: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { size: 10 } } } } } }, chartIdentificadorInstance);
+    chartIdentificadorInstance = createOrUpdateChart('chartOcIdentificador', { 
+        type: 'bar', 
+        data: { labels: sIdent.map(i=>i[0]), datasets: [{ data: sIdent.map(i=>i[1]), backgroundColor: '#10b981', borderRadius: 4 }] }, 
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#cbd5e1' } }, y: { ticks: { color: '#cbd5e1' } } } } 
+    }, chartIdentificadorInstance);
 }
 
 function updateKPIsOnly(data) {
-    let total = data.length; 
+    const total = data.length; 
     let types = { FALTA: 0, SOBRA: 0, AVARIA: 0, FALTA_INTERNA: 0 }; 
     data.forEach(d => { if(types[d.tipo] !== undefined) types[d.tipo]++; });
 
-    const elTotal = document.getElementById('dash-total-oc'); if(elTotal) elTotal.innerText = total; 
-    const elDate = document.getElementById('dash-last-date'); if(elDate) elDate.innerText = (total > 0 && data[0].jsDate) ? data[0].jsDate.toLocaleDateString('pt-BR') : "-";
+    document.getElementById('dash-total-oc').innerText = total; 
+    document.getElementById('dash-last-date').innerText = (total > 0 && data[0].jsDate) ? data[0].jsDate.toLocaleDateString('pt-BR') : "-";
     
     let maxType = "-", maxVal = -1; for(const [k, v] of Object.entries(types)) if(v > maxVal && v > 0) { maxVal = v; maxType = k; }
-    const elType = document.getElementById('dash-top-type'); if(elType) elType.innerText = maxType;
+    document.getElementById('dash-top-type').innerText = maxType;
 }
 
 function renderHistoryTable(dataToRender) {
@@ -304,42 +290,31 @@ function renderHistoryTable(dataToRender) {
     truncatedList.forEach(item => {
         const tr = document.createElement('tr'); 
         tr.className = "border-b border-slate-700 hover:bg-slate-750 transition-colors";
-        const displayNF = item.nf ? escapeHtml(item.nf) : '-';
-        const displayEmb = item.embarque ? escapeHtml(item.embarque) : '-';
-        let statusDot = item.status === 'concluido' ? '<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>' : '<span class="inline-block w-2 h-2 rounded-full bg-amber-500 mr-2"></span>';
-
-        tr.innerHTML = `<td class="px-4 py-3 font-mono text-slate-300 text-xs">${statusDot}${item.jsDate.toLocaleDateString('pt-BR')}</td><td class="px-4 py-3 text-white font-medium text-sm">${displayEmb}<br><span class="text-slate-500 text-[10px] font-normal">${displayNF}</span></td><td class="px-4 py-3 text-slate-300 text-xs">${escapeHtml(item.tipo)}</td><td class="px-4 py-3 text-right"><button class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition btn-print-history flex items-center gap-2 ml-auto text-xs" data-id="${item.id}"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg> Imprimir</button></td>`;
+        tr.innerHTML = `<td class="px-4 py-3 font-mono text-slate-300 text-xs"><span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>${item.jsDate.toLocaleDateString('pt-BR')}</td><td class="px-4 py-3 text-white font-medium text-sm">${escapeHtml(item.embarque || '-')}<br><span class="text-slate-500 text-[10px] font-normal">${escapeHtml(item.nf || '-')}</span></td><td class="px-4 py-3 text-slate-300 text-xs">${escapeHtml(item.tipo)}</td><td class="px-4 py-3 text-right"><button class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition btn-print-history flex items-center gap-2 ml-auto text-xs" data-id="${item.id}">Imprimir</button></td>`;
         tbody.appendChild(tr);
     });
     tbody.querySelectorAll('.btn-print-history').forEach(btn => btn.addEventListener('click', (e) => printRncReport(e.currentTarget.dataset.id)));
 }
 
 // =========================================================
-// FUNÇÕES DE EXPORTAÇÃO EXCEL (Conectadas ao Banco)
+// EXPORTAÇÃO EXCEL (Conectado ao DB)
 // =========================================================
-
 async function exportToXlsx() {
     const btn = document.getElementById('btn-dash-export');
     const originalText = btn.innerHTML;
     
-    // Filtros de Data
     const iStart = document.getElementById('dash-filter-start'); 
     const iEnd = document.getElementById('dash-filter-end');
     
-    let startDate, endDate;
-    if (iStart.value) { startDate = new Date(iStart.value + 'T00:00:00'); } else { startDate = new Date(); startDate.setDate(1); startDate.setHours(0,0,0,0); }
-    if (iEnd.value) { endDate = new Date(iEnd.value + 'T23:59:59'); } else { endDate = new Date(); endDate.setHours(23,59,59,999); }
+    let startDate = iStart.value ? new Date(iStart.value + 'T00:00:00') : new Date(new Date().setDate(1));
+    let endDate = iEnd.value ? new Date(iEnd.value + 'T23:59:59') : new Date();
 
     try {
         btn.disabled = true; btn.innerText = "Baixando...";
         showToast("Buscando dados no servidor...", "info");
 
-        // ✅ Busca Dedicada no Firebase (Ignora o que está na tela)
         const db = getFirestore();
-        const occurrencesRef = collection(db, PATHS.occurrences);
-        
-        const q = query(occurrencesRef, where('createdAt', '>=', startDate), where('createdAt', '<=', endDate), orderBy('createdAt', 'desc'));
-
+        const q = query(collection(db, PATHS.occurrences), where('createdAt', '>=', startDate), where('createdAt', '<=', endDate), orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(q);
         
         const rawData = [];
@@ -357,7 +332,6 @@ async function exportToXlsx() {
             if(d.emb_rasgada) detalhesEmb.push("Rasgada");
             if(d.emb_vazamento) detalhesEmb.push("Vazamento");
             if(d.emb_outros) detalhesEmb.push(d.emb_outros);
-            const tipoDetalhado = detalhesEmb.length > 0 ? detalhesEmb.join(", ") : "-";
             
             return {
                 "DATA": d.jsDate.toLocaleDateString('pt-BR'), 
@@ -367,22 +341,22 @@ async function exportToXlsx() {
                 "IDENTIFICADOR": d.ass_colab || '-', 
                 "LOCAL": d.local || '-', 
                 "OCORRENCIA": d.tipo || '-', 
-                "TIPO OCORRENCIA": tipoDetalhado,
+                "TIPO OCORRENCIA": detalhesEmb.join(", ") || '-',
                 "EMBARQUE": d.embarque || '-', 
                 "CLIENTE": d.nf || '-', 
                 "CÓDIGO": d.item_cod || '-', 
-                "DESCRIÇÃO DO ITEM": d.item_desc || '-', 
+                "DESCRIÇÃO": d.item_desc || '-', 
                 "LOTE": d.item_lote || '-', 
                 "QTD (CX)": d.item_qtd || '0', 
                 "ENDEREÇO": d.item_end || '-', 
                 "LIDER": d.ass_lider || '-', 
                 "INVENTÁRIO": d.ass_inv || '-', 
-                "OBSERVAÇÕES": d.obs || '-'
+                "OBS": d.obs || '-'
             };
         });
 
-        generateXlsx(exportData, `Relatorio_RD_${startDate.toLocaleDateString('pt-BR').replace(/\//g,'-')}_a_${endDate.toLocaleDateString('pt-BR').replace(/\//g,'-')}`);
-        showToast(`Download de ${rawData.length} registros iniciado!`);
+        generateXlsx(exportData, `Relatorio_RD_${startDate.toLocaleDateString('pt-BR').replace(/\//g,'-')}`);
+        showToast("Download iniciado!");
 
     } catch (e) {
         console.error(e);
@@ -399,9 +373,8 @@ async function exportPalletReqToXlsx() {
     const iStart = document.getElementById('dash-filter-start'); 
     const iEnd = document.getElementById('dash-filter-end');
     
-    let startDate, endDate;
-    if (iStart.value) { startDate = new Date(iStart.value + 'T00:00:00'); } else { startDate = new Date(); startDate.setDate(1); startDate.setHours(0,0,0,0); }
-    if (iEnd.value) { endDate = new Date(iEnd.value + 'T23:59:59'); } else { endDate = new Date(); endDate.setHours(23,59,59,999); }
+    let startDate = iStart.value ? new Date(iStart.value + 'T00:00:00') : new Date(new Date().setDate(1));
+    let endDate = iEnd.value ? new Date(iEnd.value + 'T23:59:59') : new Date();
 
     try {
         btn.disabled = true; btn.innerText = "...";
@@ -418,18 +391,17 @@ async function exportPalletReqToXlsx() {
 
         if (rawData.length === 0) { showToast("Nenhuma etiqueta no período.", "info"); return; }
         
-        const exportData = rawData.map(d => ({ "Item / Código": d.item || '-', "Lote": d.lote || '-', "Quantidade": d.qtd || 0, "Data Solicitação": d.jsDate.toLocaleString('pt-BR'), "Status": "CONCLUÍDO" }));
-        generateXlsx(exportData, "Etiquetas_Palete", [{wch: 50}, {wch: 20}, {wch: 15}, {wch: 20}, {wch: 15}]);
+        const exportData = rawData.map(d => ({ "Item": d.item || '-', "Lote": d.lote || '-', "Qtd": d.qtd || 0, "Data": d.jsDate.toLocaleString('pt-BR'), "Status": "CONCLUÍDO" }));
+        generateXlsx(exportData, "Etiquetas_Palete");
 
     } catch (e) { console.error(e); showToast("Erro.", "error"); } 
     finally { btn.disabled = false; btn.innerHTML = originalText; }
 }
 
-function generateXlsx(data, sheetName, cols) {
+function generateXlsx(data, sheetName) {
     if(window.XLSX) {
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
-        if(cols) ws['!cols'] = cols;
         XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 30));
         XLSX.writeFile(wb, `${sheetName}.xlsx`);
     } else { showToast("Erro: Biblioteca XLSX não carregada.", "error"); }
@@ -437,7 +409,7 @@ function generateXlsx(data, sheetName, cols) {
 
 export function printRncReport(id) {
     const item = localAllData.find(d => d.id === id);
-    if (!item) return showToast("Erro ao carregar dados.", "error");
+    if (!item) return showToast("Erro.", "error");
 
     const checkIcon = `<svg class="w-4 h-4 text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
     const emptyIcon = `<span class="w-4 h-4 inline-block border border-slate-300 rounded mr-1"></span>`;
@@ -446,7 +418,6 @@ export function printRncReport(id) {
     const statusColor = item.status === 'concluido' ? 'border-emerald-600' : 'border-amber-500';
     const statusText = item.status === 'concluido' ? 'CONCLUÍDO' : 'PENDENTE';
     const statusBg = item.status === 'concluido' ? 'bg-emerald-600' : 'bg-amber-500';
-
     const safeObs = escapeHtml(item.obs || 'Nenhuma observação registrada.');
     
     const content = `
