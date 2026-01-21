@@ -474,9 +474,9 @@
                 <div id="ocorrencias" class="page-content hidden fade-in max-w-7xl mx-auto">
                     <div id="ocorrencias-menu-view">
                         <header class="mb-10 border-b border-slate-700 pb-6">
-                                <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">Registro de Divergências</h1>
-                                <p class="text-indigo-400 max-w-2xl text-sm md:text-base">Selecione o modelo de divergência para continuar o registro.</p>
-                            </header>
+                            <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">Registro de Divergências</h1>
+                            <p class="text-indigo-400 max-w-2xl text-sm md:text-base">Selecione o modelo de divergência para continuar o registro.</p>
+                        </header>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
                              <button id="btn-open-pallet-req" class="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-500 transition-all p-8 rounded-2xl flex flex-col items-center text-center group shadow-lg w-full">
@@ -516,31 +516,31 @@
                         </div>
 
                         <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
-    <div class="px-6 py-4 border-b border-slate-700 bg-slate-800/50">
-        <h3 class="font-bold text-white flex items-center gap-2 text-lg">
-            <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-            Etiquetas Palete Pendentes
-        </h3>
-    </div>
-    <div class="overflow-x-auto">
-        <table class="min-w-full text-sm text-left">
-            <thead class="bg-slate-950 text-slate-400 font-medium border-b border-slate-800 text-xs uppercase tracking-wider">
-                <tr>
-                    <th class="px-6 py-3 text-left">Data</th>
-                    <th class="px-6 py-3 text-left">Item / Código</th>
-                    <th class="px-6 py-3 text-left">Lote</th>
-                    <th class="px-6 py-3 text-center">Qtd</th>
-                    <th class="px-6 py-3 text-left">Embarque</th>
-                    <th class="px-6 py-3 text-left">Local (Box/Check)</th>
-                    <th class="px-6 py-3 text-right">Ação</th>
-                </tr>
-            </thead>
-            <tbody id="pallet-list-tbody" class="divide-y divide-slate-700">
-                <tr><td colspan="7" class="px-4 py-8 text-center text-slate-500 italic">Nenhuma solicitação pendente.</td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+                            <div class="px-6 py-4 border-b border-slate-700 bg-slate-800/50">
+                                <h3 class="font-bold text-white flex items-center gap-2 text-lg">
+                                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                                    Etiquetas Palete Pendentes
+                                </h3>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full text-sm text-left">
+                                    <thead class="bg-slate-950 text-slate-400 font-medium border-b border-slate-800 text-xs uppercase tracking-wider">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left">Data</th>
+                                            <th class="px-6 py-3 text-left">Item / Código</th>
+                                            <th class="px-6 py-3 text-left">Lote</th>
+                                            <th class="px-6 py-3 text-center">Qtd</th>
+                                            <th class="px-6 py-3 text-left">Embarque</th>
+                                            <th class="px-6 py-3 text-left">Local (Box/Check)</th>
+                                            <th class="px-6 py-3 text-right">Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pallet-list-tbody" class="divide-y divide-slate-700">
+                                        <tr><td colspan="7" class="px-4 py-8 text-center text-slate-500 italic">Nenhuma solicitação pendente.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="pallet-req-form" class="hidden">
@@ -602,213 +602,202 @@
                         </div>
                     </div>
 
-<div id="ocorrencias-novo" class="hidden">
-    <button id="btn-back-oc-form" class="text-indigo-400 hover:text-white flex items-center gap-2 mb-6 transition group">
-        <span class="bg-slate-800 p-2 rounded-full group-hover:bg-slate-700 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-        </span>
-        <span class="font-medium">Voltar para Lista</span>
-    </button>
-    
-    <div class="bg-slate-800 rounded-lg shadow-xl overflow-hidden max-w-5xl mx-auto border border-slate-700 relative">
-        <div id="form-status-bar" class="bg-indigo-900/40 text-indigo-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-center border-b border-indigo-500/20 backdrop-blur-sm">Nova Divergência</div>
-        
-        <div class="bg-slate-950 text-center py-4 border-b border-slate-700">
-            <h2 class="text-white font-bold text-xl uppercase tracking-wide flex justify-center items-center gap-2">
-                <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-                Registro de Divergência
-            </h2>
-        </div>
+                    <div id="ocorrencias-novo" class="hidden">
+                        <button id="btn-back-oc-form" class="text-indigo-400 hover:text-white flex items-center gap-2 mb-6 transition group">
+                            <span class="bg-slate-800 p-2 rounded-full group-hover:bg-slate-700 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                            </span>
+                            <span class="font-medium">Voltar para Lista</span>
+                        </button>
+                        
+                        <div class="bg-slate-800 rounded-lg shadow-xl overflow-hidden max-w-5xl mx-auto border border-slate-700 relative">
+                            <div id="form-status-bar" class="bg-indigo-900/40 text-indigo-200 px-4 py-3 text-xs font-bold uppercase tracking-wider text-center border-b border-indigo-500/20 backdrop-blur-sm">Nova Divergência</div>
+                            
+                            <div class="bg-slate-950 text-center py-4 border-b border-slate-700">
+                                <h2 class="text-white font-bold text-xl uppercase tracking-wide flex justify-center items-center gap-2">
+                                    <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                                    Registro de Divergência
+                                </h2>
+                            </div>
 
-        <div class="p-6 bg-slate-900 relative space-y-6" id="form-content-area">
-            
-            <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
-                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 border-b border-slate-700 pb-1">Dados de Rastreabilidade</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="text-xs text-slate-400 mb-1 block">Embarque</label>
-                        <input type="text" id="form-embarque" class="data-input uppercase w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white focus:border-indigo-500 outline-none transition" placeholder="">
+                            <div class="p-6 bg-slate-900 relative space-y-6" id="form-content-area">
+                                
+
+                                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+                                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 border-b border-slate-700 pb-1">Classificação do Problema</h3>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
+                                            <input type="radio" name="oc_tipo" value="FALTA" class="hidden peer">
+                                            <span class="text-sm font-bold text-slate-400 peer-checked:text-red-400 group-hover:text-white transition">FALTA</span>
+                                        </label>
+                                        <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
+                                            <input type="radio" name="oc_tipo" value="SOBRA" class="hidden peer">
+                                            <span class="text-sm font-bold text-slate-400 peer-checked:text-blue-400 group-hover:text-white transition">SOBRA</span>
+                                        </label>
+                                        <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
+                                            <input type="radio" name="oc_tipo" value="AVARIA" class="hidden peer">
+                                            <span class="text-sm font-bold text-slate-400 peer-checked:text-amber-400 group-hover:text-white transition">AVARIA</span>
+                                        </label>
+                                        <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
+                                            <input type="radio" name="oc_tipo" value="FALTA_INTERNA" class="hidden peer">
+                                            <span class="text-sm font-bold text-slate-400 peer-checked:text-purple-400 group-hover:text-white transition">FALTA INT.</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+                                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 border-b border-slate-700 pb-1">Condição da Embalagem</h3>
+                                    <div class="flex flex-wrap items-center gap-6">
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="checkbox" id="check-amassada" class="data-input rounded border-slate-600 text-indigo-500 focus:ring-0">
+                                            <span class="text-sm text-slate-300">Amassada</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="checkbox" id="check-rasgada" class="data-input rounded border-slate-600 text-indigo-500 focus:ring-0">
+                                            <span class="text-sm text-slate-300">Rasgada</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="checkbox" id="check-vazamento" class="data-input rounded border-slate-600 text-indigo-500 focus:ring-0">
+                                            <span class="text-sm text-slate-300">Vazamento</span>
+                                        </label>
+                                        <div class="flex-1 min-w-[200px]">
+                                            <input type="text" id="form-outros-emb" placeholder="OUTROS DETALHES..." class="data-input uppercase w-full bg-slate-900 border-b border-slate-600 text-sm text-white px-2 py-1 outline-none focus:border-indigo-500 transition">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+                                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 border-b border-slate-700 pb-1">Local da Ocorrência</h3>
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
+                                            <input type="radio" name="oc_local" value="ARMAZENAGEM" class="hidden peer">
+                                            <span class="text-sm font-bold text-slate-400 peer-checked:text-indigo-400 group-hover:text-white transition">ARMAZENAGEM</span>
+                                        </label>
+                                        <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
+                                            <input type="radio" name="oc_local" value="ESTOQUE" class="hidden peer">
+                                            <span class="text-sm font-bold text-slate-400 peer-checked:text-indigo-400 group-hover:text-white transition">ESTOQUE</span>
+                                        </label>
+                                        <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
+                                            <input type="radio" name="oc_local" value="SEPARAÇÃO" class="hidden peer">
+                                            <span class="text-sm font-bold text-slate-400 peer-checked:text-indigo-400 group-hover:text-white transition">SEPARAÇÃO</span>
+                                        </label>
+                                        <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
+                                            <input type="radio" name="oc_local" value="CHECKOUT" class="hidden peer">
+                                            <span class="text-sm font-bold text-slate-400 peer-checked:text-indigo-400 group-hover:text-white transition">CHECKOUT</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+                                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Relato Detalhado</h3>
+                                    <textarea id="form-obs" class="data-input uppercase w-full h-24 bg-slate-900 border border-slate-600 rounded p-3 text-slate-200 text-sm resize-none focus:border-indigo-500 transition-colors" placeholder="DESCREVA OS DETALHES DO OCORRIDO..."></textarea>
+                                </div>
+                                
+                                <div class="bg-indigo-900/20 border border-indigo-500/30 p-3 rounded-lg mb-4 flex flex-col md:flex-row items-center gap-4 mt-6">
+                                    <div class="p-2 bg-indigo-600 rounded-full text-white shrink-0">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                                    </div>
+                                    <div class="flex-1 w-full">
+                                        <label class="block text-[10px] font-bold text-indigo-300 uppercase mb-1">Leitura de Etiqueta (GS1-128) ou Código Manual</label>
+                                        <input type="text" id="smart-scanner-input" class="w-full bg-slate-900 border border-indigo-500/50 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600 uppercase" placeholder="BIPE A ETIQUETA OU DIGITE O CÓDIGO AQUI">
+                                    </div>
+                                </div>
+
+                                <div class="border border-slate-700 rounded-lg overflow-hidden bg-slate-900 shadow-md">
+                                    <table class="w-full text-xs text-left">
+                                        <thead class="bg-slate-950 text-slate-400 font-medium border-b border-slate-700">
+                                            <tr>
+                                                <th class="p-2 border-r border-slate-700 w-24">CÓDIGO</th>
+                                                <th class="p-2 border-r border-slate-700">DESCRIÇÃO DO ITEM</th>
+                                                <th class="p-2 border-r border-slate-700 w-24">LOTE</th>
+                                                <th class="p-2 border-r border-slate-700 w-20 text-center">QTD</th>
+                                                <th class="p-2 w-24 text-center">ENDEREÇO</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-slate-800">
+                                            <tr>
+                                                <td class="p-0 border-r border-slate-700"><input type="text" id="form-item-cod" class="data-input uppercase w-full bg-transparent p-2 text-white text-center outline-none focus:bg-indigo-900/30 transition"></td>
+                                                <td class="p-0 border-r border-slate-700"><input type="text" id="form-item-desc" class="data-input uppercase w-full bg-transparent p-2 text-white outline-none focus:bg-indigo-900/30 transition"></td>
+                                                <td class="p-0 border-r border-slate-700"><input type="text" id="form-item-lote" class="data-input uppercase w-full bg-transparent p-2 text-white text-center outline-none focus:bg-indigo-900/30 transition"></td>
+                                                <td class="p-0 border-r border-slate-700"><input type="number" id="form-item-qtd" class="data-input w-full bg-transparent p-2 text-white text-center font-bold text-amber-400 outline-none focus:bg-indigo-900/30 transition"></td>
+                                                <td class="p-0"><input type="text" id="form-item-end" class="data-input uppercase w-full bg-transparent p-2 text-white text-center outline-none focus:bg-indigo-900/30 transition"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <button id="btn-add-item-list" class="w-full py-3 mt-2 bg-slate-800 border border-slate-600 hover:bg-slate-700 text-indigo-400 hover:text-white rounded text-xs font-bold uppercase tracking-wide transition flex items-center justify-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> 
+                                    Incluir Item na Lista (Para adicionar mais de um)
+                                </button>
+
+                                <div id="items-list-container" class="hidden mt-4 border border-slate-700 rounded-lg overflow-hidden shadow-md">
+                                    <div class="bg-slate-950 px-4 py-2 border-b border-slate-800 flex justify-between items-center">
+                                        <span class="text-xs uppercase font-bold text-slate-400">Itens Adicionados</span>
+                                        <span id="items-count-badge" class="bg-indigo-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                                    </div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr class="text-[10px] text-slate-400 border-b border-slate-700 uppercase tracking-wider bg-slate-900">
+                                                    <th class="p-2 w-24">Tipo</th>
+                                                    <th class="p-2 w-28">Código</th>
+                                                    <th class="p-2">Descrição</th>
+                                                    <th class="p-2 w-28">Lote</th>
+                                                    <th class="p-2 w-16 text-center">Qtd</th>
+                                                    <th class="p-2 w-32">Detalhe</th>
+                                                    <th class="p-2 w-24">Local</th>
+                                                    <th class="p-2 w-10"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="rnc-items-list" class="text-sm divide-y divide-slate-800">
+                                                </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-px bg-slate-700 border border-slate-700 rounded-lg overflow-hidden mt-6">
+                                    <div class="bg-slate-800 p-4">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase block mb-2">Origem / Responsável</label>
+                                        <input type="text" id="form-infrator" placeholder="PREENCHIDO PELO INVENTÁRIO" class="data-input uppercase w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:border-indigo-500 transition-colors">
+                                    </div>
+                                    <div class="bg-slate-800 p-4 relative">
+                                        <label class="text-[10px] font-bold text-indigo-400 uppercase block mb-2">1. Identificado Por</label>
+                                        <input type="text" id="form-ass-colab" placeholder="ASSINAR" class="w-full bg-slate-900 border border-indigo-900/50 rounded px-3 py-2 text-white text-sm focus:border-indigo-500 transition-colors uppercase">
+                                    </div>
+                                    <div class="bg-slate-800 p-4" id="box-lider">
+                                        <label class="text-[10px] font-bold text-amber-500 uppercase block mb-2">2. Validação Liderança</label>
+                                        <input type="text" id="form-ass-lider" placeholder="AGUARDANDO" disabled class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-slate-500 text-sm uppercase">
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-2 bg-slate-800 p-4 rounded border border-slate-700" id="box-inv">
+                                    <div class="flex items-center gap-4">
+                                        <div class="bg-blue-900/20 p-2 rounded text-blue-400">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        </div>
+                                        <div class="flex-1">
+                                            <label class="text-[10px] font-bold text-blue-400 uppercase block mb-1">3. Conclusão Inventário</label>
+                                            <input type="text" id="form-ass-inv" placeholder="AGUARDANDO VALIDAÇÃO FINAL" disabled class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-slate-500 text-sm uppercase">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-slate-950 p-4 flex flex-col md:flex-row justify-between items-center border-t border-slate-800 gap-4">
+                                <span id="form-action-desc" class="text-xs text-slate-400 italic">Preencha os dados e clique em "Salvar e Avançar".</span>
+                                <div class="flex gap-3">
+                                    <button id="btn-cancel-occurrence" class="px-5 py-2 rounded-lg border border-slate-700 text-indigo-400 hover:bg-slate-800 font-medium transition text-sm">Cancelar</button>
+                                    <button id="btn-reject-occurrence" class="hidden px-5 py-2 rounded-lg bg-amber-900/20 border border-amber-800 text-amber-200 font-medium hover:bg-amber-900/50 transition text-sm">Solicitar Correção</button>
+                                    <button id="btn-delete-permanent" class="hidden px-5 py-2 rounded-lg bg-red-900/20 border border-red-800 text-red-200 font-medium hover:bg-red-900/50 transition text-sm">Excluir RD</button>
+                                    <button id="btn-save-occurrence" class="px-6 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-500 shadow-lg shadow-indigo-900/20 transition text-sm flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                        Salvar e Avançar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="text-xs text-slate-400 mb-1 block">Cliente</label>
-                        <input type="text" id="form-nf" class="data-input uppercase w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white focus:border-indigo-500 outline-none transition" placeholder="">
-                    </div>
-                    <div>
-                        <label class="text-xs text-slate-400 mb-1 block">Data da Ocorrência</label>
-                        <input type="date" id="form-data" class="data-input w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white focus:border-indigo-500 outline-none transition [color-scheme:dark]">
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
-                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 border-b border-slate-700 pb-1">Classificação do Problema</h3>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
-                        <input type="radio" name="oc_tipo" value="FALTA" class="hidden peer">
-                        <span class="text-sm font-bold text-slate-400 peer-checked:text-red-400 group-hover:text-white transition">FALTA</span>
-                    </label>
-                    <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
-                        <input type="radio" name="oc_tipo" value="SOBRA" class="hidden peer">
-                        <span class="text-sm font-bold text-slate-400 peer-checked:text-blue-400 group-hover:text-white transition">SOBRA</span>
-                    </label>
-                    <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
-                        <input type="radio" name="oc_tipo" value="AVARIA" class="hidden peer">
-                        <span class="text-sm font-bold text-slate-400 peer-checked:text-amber-400 group-hover:text-white transition">AVARIA</span>
-                    </label>
-                    <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
-                        <input type="radio" name="oc_tipo" value="FALTA_INTERNA" class="hidden peer">
-                        <span class="text-sm font-bold text-slate-400 peer-checked:text-purple-400 group-hover:text-white transition">FALTA INT.</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
-                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 border-b border-slate-700 pb-1">Condição da Embalagem</h3>
-                <div class="flex flex-wrap items-center gap-6">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="check-amassada" class="data-input rounded border-slate-600 text-indigo-500 focus:ring-0">
-                        <span class="text-sm text-slate-300">Amassada</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="check-rasgada" class="data-input rounded border-slate-600 text-indigo-500 focus:ring-0">
-                        <span class="text-sm text-slate-300">Rasgada</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="check-vazamento" class="data-input rounded border-slate-600 text-indigo-500 focus:ring-0">
-                        <span class="text-sm text-slate-300">Vazamento</span>
-                    </label>
-                    <div class="flex-1 min-w-[200px]">
-                        <input type="text" id="form-outros-emb" placeholder="OUTROS DETALHES..." class="data-input uppercase w-full bg-slate-900 border-b border-slate-600 text-sm text-white px-2 py-1 outline-none focus:border-indigo-500 transition">
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
-                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 border-b border-slate-700 pb-1">Local da Ocorrência</h3>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
-                        <input type="radio" name="oc_local" value="ARMAZENAGEM" class="hidden peer">
-                        <span class="text-sm font-bold text-slate-400 peer-checked:text-indigo-400 group-hover:text-white transition">ARMAZENAGEM</span>
-                    </label>
-                    <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
-                        <input type="radio" name="oc_local" value="ESTOQUE" class="hidden peer">
-                        <span class="text-sm font-bold text-slate-400 peer-checked:text-indigo-400 group-hover:text-white transition">ESTOQUE</span>
-                    </label>
-                    <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
-                        <input type="radio" name="oc_local" value="SEPARAÇÃO" class="hidden peer">
-                        <span class="text-sm font-bold text-slate-400 peer-checked:text-indigo-400 group-hover:text-white transition">SEPARAÇÃO</span>
-                    </label>
-                    <label class="border border-slate-600 rounded p-3 cursor-pointer hover:bg-slate-700 text-center transition group">
-                        <input type="radio" name="oc_local" value="CHECKOUT" class="hidden peer">
-                        <span class="text-sm font-bold text-slate-400 peer-checked:text-indigo-400 group-hover:text-white transition">CHECKOUT</span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
-                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Relato Detalhado</h3>
-                <textarea id="form-obs" class="data-input uppercase w-full h-24 bg-slate-900 border border-slate-600 rounded p-3 text-slate-200 text-sm resize-none focus:border-indigo-500 transition-colors" placeholder="DESCREVA OS DETALHES DO OCORRIDO..."></textarea>
-            </div>
-            
-            <div class="bg-indigo-900/20 border border-indigo-500/30 p-3 rounded-lg mb-4 flex flex-col md:flex-row items-center gap-4 mt-6">
-                <div class="p-2 bg-indigo-600 rounded-full text-white shrink-0">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
-                </div>
-                <div class="flex-1 w-full">
-                    <label class="block text-[10px] font-bold text-indigo-300 uppercase mb-1">Leitura de Etiqueta (GS1-128) ou Código Manual</label>
-                    <input type="text" id="smart-scanner-input" class="w-full bg-slate-900 border border-indigo-500/50 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600 uppercase" placeholder="BIPE A ETIQUETA OU DIGITE O CÓDIGO AQUI">
-                </div>
-            </div>
-
-            <div class="border border-slate-700 rounded-lg overflow-hidden bg-slate-900 shadow-md">
-                <table class="w-full text-xs text-left">
-                    <thead class="bg-slate-950 text-slate-400 font-medium border-b border-slate-700">
-                        <tr>
-                            <th class="p-2 border-r border-slate-700 w-24">CÓDIGO</th>
-                            <th class="p-2 border-r border-slate-700">DESCRIÇÃO DO ITEM</th>
-                            <th class="p-2 border-r border-slate-700 w-24">LOTE</th>
-                            <th class="p-2 border-r border-slate-700 w-20 text-center">QTD</th>
-                            <th class="p-2 w-24 text-center">ENDEREÇO</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-slate-800">
-                        <tr>
-                            <td class="p-0 border-r border-slate-700"><input type="text" id="form-item-cod" class="data-input uppercase w-full bg-transparent p-2 text-white text-center outline-none focus:bg-indigo-900/30 transition"></td>
-                            <td class="p-0 border-r border-slate-700"><input type="text" id="form-item-desc" class="data-input uppercase w-full bg-transparent p-2 text-white outline-none focus:bg-indigo-900/30 transition"></td>
-                            <td class="p-0 border-r border-slate-700"><input type="text" id="form-item-lote" class="data-input uppercase w-full bg-transparent p-2 text-white text-center outline-none focus:bg-indigo-900/30 transition"></td>
-                            <td class="p-0 border-r border-slate-700"><input type="number" id="form-item-qtd" class="data-input w-full bg-transparent p-2 text-white text-center font-bold text-amber-400 outline-none focus:bg-indigo-900/30 transition"></td>
-                            <td class="p-0"><input type="text" id="form-item-end" class="data-input uppercase w-full bg-transparent p-2 text-white text-center outline-none focus:bg-indigo-900/30 transition"></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <button id="btn-add-item-list" class="w-full py-3 mt-2 bg-slate-800 border border-slate-600 hover:bg-slate-700 text-indigo-400 hover:text-white rounded text-xs font-bold uppercase tracking-wide transition flex items-center justify-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> 
-                Incluir Item na Lista (Para adicionar mais de um)
-            </button>
-
-            <div id="items-list-container" class="hidden mt-4 border border-slate-700 rounded-lg overflow-hidden shadow-md">
-                <div class="bg-slate-950 px-4 py-2 border-b border-slate-800 flex justify-between items-center">
-                    <span class="text-xs uppercase font-bold text-slate-400">Itens Adicionados</span>
-                    <span id="items-count-badge" class="bg-indigo-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
-                </div>
-                <table class="w-full text-xs text-left">
-                    <thead class="bg-slate-900 text-slate-500 font-medium border-b border-slate-800">
-                        <tr>
-                            <th class="p-3 w-24">Tipo</th>
-                            <th class="p-3">Item</th>
-                            <th class="p-3 text-center w-16">Qtd</th>
-                            <th class="p-3 text-right w-16">Ação</th>
-                        </tr>
-                    </thead>
-                    <tbody id="temp-items-tbody" class="divide-y divide-slate-800 bg-slate-900">
-                        </tbody>
-                </table>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-px bg-slate-700 border border-slate-700 rounded-lg overflow-hidden mt-6">
-                <div class="bg-slate-800 p-4">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase block mb-2">Origem / Responsável</label>
-                    <input type="text" id="form-infrator" placeholder="PREENCHIDO PELO INVENTÁRIO" class="data-input uppercase w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-sm focus:border-indigo-500 transition-colors">
-                </div>
-                <div class="bg-slate-800 p-4 relative">
-                    <label class="text-[10px] font-bold text-indigo-400 uppercase block mb-2">1. Identificado Por</label>
-                    <input type="text" id="form-ass-colab" placeholder="ASSINAR" class="w-full bg-slate-900 border border-indigo-900/50 rounded px-3 py-2 text-white text-sm focus:border-indigo-500 transition-colors uppercase">
-                </div>
-                <div class="bg-slate-800 p-4" id="box-lider">
-                    <label class="text-[10px] font-bold text-amber-500 uppercase block mb-2">2. Validação Liderança</label>
-                    <input type="text" id="form-ass-lider" placeholder="AGUARDANDO" disabled class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-slate-500 text-sm uppercase">
-                </div>
-            </div>
-            
-            <div class="mt-2 bg-slate-800 p-4 rounded border border-slate-700" id="box-inv">
-                <div class="flex items-center gap-4">
-                    <div class="bg-blue-900/20 p-2 rounded text-blue-400">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    </div>
-                    <div class="flex-1">
-                        <label class="text-[10px] font-bold text-blue-400 uppercase block mb-1">3. Conclusão Inventário</label>
-                        <input type="text" id="form-ass-inv" placeholder="AGUARDANDO VALIDAÇÃO FINAL" disabled class="w-full bg-slate-900/50 border border-slate-700 rounded px-3 py-2 text-slate-500 text-sm uppercase">
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="bg-slate-950 p-4 flex flex-col md:flex-row justify-between items-center border-t border-slate-800 gap-4">
-            <span id="form-action-desc" class="text-xs text-slate-400 italic">Preencha os dados e clique em "Salvar e Avançar".</span>
-            <div class="flex gap-3">
-                <button id="btn-cancel-occurrence" class="px-5 py-2 rounded-lg border border-slate-700 text-indigo-400 hover:bg-slate-800 font-medium transition text-sm">Cancelar</button>
-                <button id="btn-reject-occurrence" class="hidden px-5 py-2 rounded-lg bg-amber-900/20 border border-amber-800 text-amber-200 font-medium hover:bg-amber-900/50 transition text-sm">Solicitar Correção</button>
-                <button id="btn-delete-permanent" class="hidden px-5 py-2 rounded-lg bg-red-900/20 border border-red-800 text-red-200 font-medium hover:bg-red-900/50 transition text-sm">Excluir RD</button>
-                <button id="btn-save-occurrence" class="px-6 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-500 shadow-lg shadow-indigo-900/20 transition text-sm flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    Salvar e Avançar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
                 </div>
 
                 <div id="configuracoes" class="page-content hidden fade-in max-w-4xl mx-auto">
@@ -952,83 +941,6 @@
                                 </div>
                                 <p class="text-[10px] text-slate-500 mt-2 text-right italic">* Exibindo os últimos 10 registros por padrão. Use os filtros para ver mais.</p>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="perfil" class="page-content hidden fade-in max-w-lg mx-auto">
-                    <header class="mb-8 text-center">
-                        <h1 class="text-3xl font-bold text-white">Minha Conta</h1>
-                        <p class="text-slate-300 mt-1">Gerencie suas credenciais de acesso.</p>
-                    </header>
-
-                    <div class="bg-slate-800 rounded-2xl shadow-xl border border-slate-700 overflow-hidden">
-                        
-                        <div class="p-8 flex flex-col items-center border-b border-slate-700 bg-slate-800 relative overflow-hidden">
-                            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500"></div>
-                            <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl"></div>
-
-                            <div class="bg-amber-500/10 p-4 rounded-full mb-4 ring-1 ring-amber-500/30">
-                                <svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                            </div>
-                            
-                            <h3 class="text-xl font-bold text-white mb-2">Visto Eletrônico</h3>
-                            <p class="text-slate-400 text-sm text-center max-w-xs mb-6">Este PIN de 4 dígitos é sua assinatura digital para validar ocorrências presencialmente.</p>
-
-                            <div class="w-full max-w-[240px] relative group">
-                                <label class="block text-[10px] font-bold text-amber-500 uppercase mb-1 text-center tracking-widest">Seu PIN Atual</label>
-                                <input 
-                                    type="password" 
-                                    id="profile-pin" 
-                                    name="user_set_pin_visual_update" 
-                                    autocomplete="new-password" 
-                                    readonly 
-                                    onfocus="this.removeAttribute('readonly');"
-                                    maxlength="4" 
-                                    class="w-full bg-slate-900 border-2 border-slate-600 text-white text-3xl font-bold py-3 rounded-xl focus:border-amber-500 focus:ring-4 focus:ring-amber-500/20 outline-none transition-all text-center tracking-[0.5em] font-mono placeholder-slate-700 shadow-inner" 
-                                    placeholder="••••">
-                            </div>
-
-                            <button type="button" id="btn-save-pin" class="mt-6 bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg shadow-amber-900/20 transition-all active:scale-95 flex items-center gap-2">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                Salvar PIN
-                            </button>
-                        </div>
-
-                        <div class="p-8 bg-slate-800/50">
-                            <div class="flex items-center gap-3 mb-6">
-                                <div class="bg-indigo-500/10 p-2 rounded-lg">
-                                    <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
-                                </div>
-                                <div>
-                                    <h3 class="text-base font-bold text-white">Senha de Login</h3>
-                                    <p class="text-xs text-slate-400">Credenciais para acessar o AppLog.</p>
-                                </div>
-                            </div>
-
-                            <form id="form-change-pass" class="space-y-4">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Senha Atual</label>
-                                    <input type="password" id="current-pass" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-indigo-500 outline-none transition" required placeholder="••••••">
-                                </div>
-                                
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Nova Senha</label>
-                                        <input type="password" id="new-pass" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-indigo-500 outline-none transition" required placeholder="Mín 6 caracteres">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">Confirmar</label>
-                                        <input type="password" id="confirm-new-pass" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-indigo-500 outline-none transition" required placeholder="Repita a nova senha">
-                                    </div>
-                                </div>
-
-                                <div class="pt-4">
-                                    <button type="submit" id="btn-save-pass" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-lg shadow-lg transition active:scale-95">
-                                        Atualizar Senha de Acesso
-                                    </button>
-                                </div>
-                            </form>
                         </div>
                     </div>
                 </div>

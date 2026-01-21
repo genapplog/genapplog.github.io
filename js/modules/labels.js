@@ -2,11 +2,10 @@
  * ARQUIVO: js/modules/labels.js
  * DESCRIÇÃO: Gerador de ZPL e Integração com API Labelary.
  */
-// ✅ CORREÇÃO: Importamos sanitizeForZpl
-import { safeBind, showToast, sanitizeForZpl } from '../utils.js';
-import { labelDimensions, cdData } from '../config.js';
-
-const baseApiUrl = 'https://api.labelary.com/v1/printers/8dpmm/labels/';
+import { safeBind, showToast } from '../utils.js';
+import { LABEL_DIMENSIONS, CD_DATA } from './labels-data.js';
+import { getAmazonTemplate, getManualTemplate } from './zpl-templates.js';
+import { fetchLabelPreview, fetchLabelPdf } from '../services/labelary.js';
 
 export function initLabelsModule() {
     console.log("Iniciando Módulo de Etiquetas...");
@@ -44,76 +43,6 @@ export function initLabelsModule() {
     safeBind('printButtonManual', 'click', async () => handlePrintPDF('zplCodeManual', null, 'printButtonManual', '4x3.15'));
 }
 
-function scaleY(value, labelLength) {
-    const baseHeight = 1200;
-    if (labelLength === baseHeight) return value;
-    const scaled = Math.round((value / baseHeight) * labelLength);
-    return scaled < 1 ? 1 : scaled;
-}
-
-function generateZplTemplate(dims, cdCode, cdInfo, nfKey, poNumber, currentBox, totalBoxes) {
-    const volumeStr = `${currentBox}/${totalBoxes}`;
-    const len = dims.ll;
-    
-    // ✅ CORREÇÃO: Sanitização dos dados variáveis
-    const safeInfo = {
-        nome: sanitizeForZpl(cdInfo.nome),
-        linha1: sanitizeForZpl(cdInfo.linha1),
-        linha2: sanitizeForZpl(cdInfo.linha2),
-        po: sanitizeForZpl(poNumber),
-        nf: sanitizeForZpl(nfKey)
-    };
-
-    return `^XA^CI28^PW${dims.pw}^LL${dims.ll}^LH0,0^PO^FWB` +
-           `^FO10,${scaleY(10,len)}^GB780,${scaleY(1180,len)},3^FS` +
-           `^FO20,${scaleY(20,len)}^GB40,${scaleY(575,len)},3^FS^FO20,${scaleY(605,len)}^GB40,${scaleY(575,len)},3^FS` +
-           `^FO70,${scaleY(20,len)}^GB220,${scaleY(575,len)},3^FS^FO70,${scaleY(605,len)}^GB220,${scaleY(575,len)},3^FS` +
-           `^FO300,${scaleY(20,len)}^GB40,${scaleY(575,len)},3^FS^FO300,${scaleY(605,len)}^GB40,${scaleY(575,len)},3^FS` +
-           `^FO350,${scaleY(20,len)}^GB180,${scaleY(575,len)},3^FS^FO350,${scaleY(605,len)}^GB180,${scaleY(575,len)},3^FS` +
-           `^FO540,${scaleY(20,len)}^GB40,${scaleY(1160,len)},3^FS` +
-           `^FO590,${scaleY(20,len)}^GB190,${scaleY(1160,len)},3^FS` +
-           `^CFA,30^FO30,${scaleY(810,len)}^FH^FDEndereco de destino:^FS` +
-           `^CFA,20^FO90,${scaleY(990,len)}^FH^FDAmazon CD: ${cdCode}^FS` +
-           `^FO120,${scaleY(690,len)}^FH^FD${safeInfo.nome}^FS` +
-           `^FO150,${scaleY(930,len)}^FH^FDCNPJ: ${cdInfo.cnpj}^FS` +
-           `^FO180,${scaleY(965,len)}^FH^FDIE: ${cdInfo.ie}^FS` +
-           `^FO210,${scaleY(665,len)}^FH^FD${safeInfo.linha1}^FS` +
-           `^FO240,${scaleY(685,len)}^FH^FD${safeInfo.linha2}^FS` +
-           `^CFA,30^FO30,${scaleY(170,len)}^FH^FDEndereco do fornecedor:^FS` +
-           `^CFA,20^FO150,${scaleY(135,len)}^FH^FDESTRADA MUNICIPAL LUIZ LOPES NETO, 21^FS` +
-           `^FO180,${scaleY(305,len)}^FH^FDEXTREMA - MG, 37640-050^FS` +
-           `^CFA,30^FO310,${scaleY(860,len)}^FH^FDPedido de COMPRA:^FS` +
-           `^BY2,3,${scaleY(100,len)}^FO380,${scaleY(740,len)}^BC,${scaleY(110,len)},,,,N^FH^FD${safeInfo.po}^FS` +
-           `^CFA,30^FO310,${scaleY(280,len)}^FH^FDNumero de caixas:^FS` +
-           `^CFA,${scaleY(100,len)}^FO400,${scaleY(120,len)},^A0B,${scaleY(100,len)},${scaleY(70,len)}^FB400,1,0,C,0^FH^FD${volumeStr}\\&^FS` +
-           `^CFA,30^FO550,${scaleY(950,len)}^FH^FDNota fiscal:^FS` +
-           `^BY2,3,${scaleY(130,len)}^FO620,${scaleY(80,len)}^BC,${scaleY(120,len)},,,,N^FH^FD${safeInfo.nf}^FS^XZ`; 
-}
-
-function generateZplManualTemplate(data) { 
-    // ✅ CORREÇÃO: Sanitização dos dados manuais (Essencial!)
-    const safeData = {
-        documento: sanitizeForZpl(data.documento),
-        nf: sanitizeForZpl(data.nf),
-        solicitante: sanitizeForZpl(data.solicitante),
-        destinatario: sanitizeForZpl(data.destinatario),
-        cidade: sanitizeForZpl(data.cidade),
-        transportadora: sanitizeForZpl(data.transportadora),
-        volAtual: data.volAtual,
-        volTotal: data.volTotal
-    };
-
-    return `^XA^MMT^PW799^LL640^LS1` +
-           `^FO15,55^GB767,4,4^FS^FO15,115^GB767,4,4^FS^FO15,270^GB767,4,4^FS^FO15,440^GB767,4,4^FS^FO15,520^GB767,4,4^FS` +
-           `^FT15,45^A0N,34,33^FH\\^FDGENOMMA MG ^FS^FT15,80^A0N,17,16^FH\\^FDDocumento^FS` +
-           `^FT100,105^A0N,34,33^FH\\^FD${safeData.documento}^FS^FT415,80^A0N,17,16^FH\\^FDSolicitante^FS` +
-           `^FT500,105^A0N,34,33^FH\\^FD${safeData.solicitante}^FS^FT15,155^A0N,17,16^FH\\^FDNota Fiscal^FS` +
-           `^FT280,240^A0N,100,100^FH\\^FD${safeData.nf}^FS^FT15,305^A0N,17,16^FH\\^FDDestinatario^FS` +
-           `^FT15,355^A0N,34,33^FH\\^FD${safeData.destinatario}^FS^FT15,400^A0N,23,24^FH\\^FD${safeData.cidade}^FS` +
-           `^FT15,510^A0N,34,33^FH\\^FD${safeData.transportadora}^FS^FT15,470^A0N,17,16^FH\\^FDTransportador^FS` +
-           `^FT15,555^A0N,17,16^FH\\^FDVolumes^FS^FT55,595^A0N,34,33^FH\\^FD${safeData.volAtual} / ${safeData.volTotal} CAIXA^FS^XZ`; 
-}
-
 async function handleGenerateAmazon() {
     // ... (o resto da função permanece igual)
     const btn = document.getElementById('generateButton');
@@ -122,9 +51,9 @@ async function handleGenerateAmazon() {
     const zplArea = document.getElementById('zplCode');
     
     const sizeKey = document.getElementById('selectTamanho').value;
-    const dimensionConfig = labelDimensions[sizeKey];
+    const dimensionConfig = LABEL_DIMENSIONS[sizeKey];
     const cdCode = document.getElementById('selectCdAmazon').value;
-    const cdInfo = cdData[cdCode];
+    const cdInfo = CD_DATA[cdCode];
     const nfKey = document.getElementById('inputChaveNf').value;
     const poNumber = document.getElementById('inputPedido').value;
     
@@ -137,68 +66,94 @@ async function handleGenerateAmazon() {
 
     let fullZplBatch = ""; 
     for (let i = boxStart; i <= boxEnd; i++) {
-        fullZplBatch += generateZplTemplate(dimensionConfig, cdCode, cdInfo, nfKey, poNumber, i, totalQty);
+        fullZplBatch += getAmazonTemplate(dimensionConfig, cdCode, cdInfo, nfKey, poNumber, i, totalQty);
     }
     zplArea.value = fullZplBatch;
 
-    const previewZpl = generateZplTemplate(dimensionConfig, cdCode, cdInfo, nfKey, poNumber, boxStart, totalQty);
+    const previewZpl = getAmazonTemplate(dimensionConfig, cdCode, cdInfo, nfKey, poNumber, boxStart, totalQty);
     
     fetchPreview(sizeKey, previewZpl, btn, btnPrint, preview, 'Gerar Etiqueta', true);
     
     if(boxEnd > boxStart) showToast(`Lote de ${boxEnd - boxStart + 1} etiquetas gerado.`);
 }
 
+// Função para Gerar Etiqueta Manual (Refatorada)
 async function handleGenerateManual() {
-    const btn = document.getElementById('generateButtonManual');
-    const btnPrint = document.getElementById('printButtonManual');
-    const preview = document.getElementById('previewContainerManual');
-    const zplArea = document.getElementById('zplCodeManual');
-    const sizeKey = "4x3.15";
+    const docInput = document.getElementById('manual-doc').value.trim();
+    const nfInput = document.getElementById('manual-nf').value.trim();
+    const solicitanteInput = document.getElementById('manual-solicitante').value.trim();
+    const destInput = document.getElementById('manual-dest').value.trim();
+    const cidadeInput = document.getElementById('manual-cidade').value.trim();
+    const transpInput = document.getElementById('manual-transp').value.trim();
+    const qtdTotal = parseInt(document.getElementById('manual-qtd').value) || 1;
 
-    const docInput = document.getElementById('inputManualDocumento').value;
-    const nfInput = document.getElementById('inputManualNf').value;
-    const solicitanteInput = document.getElementById('inputManualSolicitante').value;
-    const destInput = document.getElementById('inputManualDestinatario').value;
-    const cidadeInput = document.getElementById('inputManualCidade').value;
-    const transpInput = document.getElementById('inputManualTransportadora').value;
-    
-    const qtdTotal = parseInt(document.getElementById('inputManualQtdTotal').value) || 0;
-    const boxStart = parseInt(document.getElementById('inputManualCaixaIni').value) || 1;
-    const boxEnd = parseInt(document.getElementById('inputManualCaixaFim').value) || 1;
+    // Elementos de UI
+    const zplArea = document.getElementById('generated-zpl-manual');
+    const manualPreview = document.getElementById('manual-label-preview');
+    const btnGenerate = document.getElementById('btn-manual-generate');
+    const btnPrint = document.getElementById('btn-manual-print');
 
-    if (qtdTotal <= 0) { showToast("Quantidade Total inválida", 'error'); return; }
+    if (!docInput || !nfInput || !destInput) {
+        showToast("Preencha os campos obrigatórios (*)", "warning");
+        return;
+    }
 
-    let fullZplBatch = ""; 
-    for (let i = boxStart; i <= boxEnd; i++) {
-        fullZplBatch += generateZplManualTemplate({ documento: docInput, nf: nfInput, solicitante: solicitanteInput, destinatario: destInput, cidade: cidadeInput, transportadora: transpInput, volAtual: i, volTotal: qtdTotal });
+    // 1. Gera o lote completo de ZPL (para o PDF de todas as etiquetas)
+    // Usa o template importado de zpl-templates.js
+    let fullZplBatch = "";
+    for (let i = 1; i <= qtdTotal; i++) {
+        fullZplBatch += getManualTemplate({
+            documento: docInput,
+            nf: nfInput,
+            solicitante: solicitanteInput,
+            destinatario: destInput,
+            cidade: cidadeInput,
+            transportadora: transpInput,
+            volAtual: i,
+            volTotal: qtdTotal
+        });
     }
     zplArea.value = fullZplBatch;
 
-    const previewZpl = generateZplManualTemplate({ documento: docInput, nf: nfInput, solicitante: solicitanteInput, destinatario: destInput, cidade: cidadeInput, transportadora: transpInput, volAtual: boxStart, volTotal: qtdTotal });
-    fetchPreview(sizeKey, previewZpl, btn, btnPrint, preview, 'Gerar Etiqueta', false);
-}
+    // 2. Gera apenas a primeira etiqueta para o Preview na tela
+    const previewZpl = getManualTemplate({
+        documento: docInput,
+        nf: nfInput,
+        solicitante: solicitanteInput,
+        destinatario: destInput,
+        cidade: cidadeInput,
+        transportadora: transpInput,
+        volAtual: 1,
+        volTotal: qtdTotal
+    });
 
-// ... (As funções fetchPreview e handlePrintPDF permanecem iguais)
+    // 3. Chama o Serviço de API (labelary.js)
+    // Nota: Passamos '4x6' como tamanho padrão para a etiqueta manual
+    await fetchPreview('4x6', previewZpl, btnGenerate, btnPrint, manualPreview, 'Gerar Etiqueta', false);
+}
 async function fetchPreview(sizeKey, zpl, btn, btnPrint, previewContainer, btnText, rotate = false) {
     btn.disabled = true; btn.innerText = 'Gerando...'; 
     previewContainer.innerHTML = ''; 
     const spinner = document.createElement('span'); spinner.className = 'spinner'; previewContainer.appendChild(spinner);
+    
     try {
-        const response = await fetch(`${baseApiUrl}${sizeKey}/0/`, { method: 'POST', headers: { 'Accept': 'image/png', 'Content-Type': 'application/x-www-form-urlencoded' }, body: zpl });
-        if (response.ok) {
-            const imageUrl = URL.createObjectURL(await response.blob());
-            previewContainer.innerHTML = '';
-            const img = document.createElement('img'); img.src = imageUrl; img.className = "bg-white rounded-lg shadow-sm";
-            img.style.cssText = rotate ? 'transform: rotate(90deg) scale(0.55); transform-origin: center; width: auto; height: auto;' : 'width: 100%; height: 100%; object-fit: contain;';
-            previewContainer.appendChild(img);
-            btnPrint.disabled = false;
-        } else {
-            previewContainer.innerHTML = ''; const errSpan = document.createElement('span'); errSpan.className = 'text-red-400 text-xs'; errSpan.textContent = 'Erro API Labelary'; previewContainer.appendChild(errSpan);
-        }
-    } catch { 
-        previewContainer.innerHTML = ''; const errSpan = document.createElement('span'); errSpan.className = 'text-red-400 text-xs'; errSpan.textContent = 'Erro de Rede'; previewContainer.appendChild(errSpan);
+        const blob = await fetchLabelPreview(zpl, sizeKey);
+        const imageUrl = URL.createObjectURL(blob);
+        
+        previewContainer.innerHTML = '';
+        const img = document.createElement('img'); img.src = imageUrl; img.className = "bg-white rounded-lg shadow-sm";
+        img.style.cssText = rotate ? 'transform: rotate(90deg) scale(0.55); transform-origin: center; width: auto; height: auto;' : 'width: 100%; height: 100%; object-fit: contain;';
+        previewContainer.appendChild(img);
+        
+        btnPrint.disabled = false;
+    } catch (e) { 
+        console.error(e);
+        previewContainer.innerHTML = ''; 
+        const errSpan = document.createElement('span'); errSpan.className = 'text-red-400 text-xs'; errSpan.textContent = 'Erro na API'; 
+        previewContainer.appendChild(errSpan);
+    } finally { 
+        btn.disabled = false; btn.innerText = btnText; 
     }
-    finally { btn.disabled = false; btn.innerText = btnText; }
 }
 
 async function handlePrintPDF(zplId, sizeId, btnId, fixedSize) {
@@ -208,12 +163,14 @@ async function handlePrintPDF(zplId, sizeId, btnId, fixedSize) {
     if (!zplContent) return;
     
     btn.disabled = true; btn.innerText = "Baixando...";
+    
     try {
-        const response = await fetch(`${baseApiUrl}${sizeKey}/`, { method: 'POST', headers: { 'Accept': 'application/pdf', 'Content-Type': 'application/x-www-form-urlencoded' }, body: zplContent });
-        if (response.ok) window.open(URL.createObjectURL(await response.blob()), '_blank');
-        else showToast("Erro ao gerar PDF completo", 'error');
-    } catch { showToast("Erro na API de Impressão", 'error'); } 
-    finally { 
+        const blob = await fetchLabelPdf(zplContent, sizeKey);
+        window.open(URL.createObjectURL(blob), '_blank');
+    } catch (e) { 
+        console.error(e);
+        showToast("Erro ao gerar PDF", 'error'); 
+    } finally { 
         btn.disabled = false; btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>Baixar PDF`; 
     }
 }
