@@ -1,36 +1,53 @@
 /**
  * ARQUIVO: js/config.js
- * DESCRIÇÃO: Configurações globais, Firebase e Regras de Negócio.
+ * DESCRIÇÃO: Configurações globais e Seleção Inteligente de Ambiente (Prod/Teste).
  */
 
-// 1. CARREGA VARIÁVEIS DE AMBIENTE (.env)
-export const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_APP_ID
+// 1. CREDENCIAIS DE PRODUÇÃO (Projeto: genapplog)
+// Copie do Console Firebase > genapplog > Configurações do Projeto
+const configProducao = {
+    apiKey: "AIzaSyABGUTSwBMEuNLmFDsNRHgXOo3NEs8Q21A",
+    authDomain: "genapplog.firebaseapp.com",
+    projectId: "genapplog",
+    storageBucket: "genapplog.firebasestorage.app",
+    messagingSenderId: "787938700532",
+    appId: "1:787938700532:web:442b667367341fb4ac02a1"
 };
 
-// Admin Hardcoded (Backup)
+// 2. CREDENCIAIS DE TESTE (Projeto: genapplog-dev)
+// Copie do Console Firebase > genapplog-dev > Configurações do Projeto
+const configTeste = {
+    apiKey: "AIzaSyATlLsFES_JwcyfyluRhng4FzVfQC4fcus",
+    authDomain: "genapplog-dev.firebaseapp.com",
+    projectId: "genapplog-dev", // O SEGREDO: ID diferente = Banco diferente
+    storageBucket: "genapplog-dev.firebasestorage.app",
+    messagingSenderId: "948279995498",
+    appId: "1:948279995498:web:04b4a6c9c5d708500bee13"
+};
+
+// 3. LÓGICA DE SELEÇÃO AUTOMÁTICA
+const hostname = window.location.hostname;
+
+// Se o link tiver "teste" ou for local, ativa modo DEV
+export const IS_DEV = hostname.includes('teste') || hostname.includes('localhost') || hostname.includes('127.0.0.1');
+
+// Exporta a configuração escolhida para o app.js usar
+export const firebaseConfig = IS_DEV ? configTeste : configProducao;
+
+// Admin Hardcoded (Mantido)
 export const ADMIN_IDS = ["lssiHZQUGEMF9E2OPnv3iqIyjRW2"];
 
-// 2. DETECÇÃO DE AMBIENTE (DEV vs PROD)
-export const IS_DEV = import.meta.env.DEV;
-
-// 3. DEFINIÇÃO DE CAMINHOS (COLEÇÕES)
-// Se estiver em DEV e usando o mesmo projeto de prod, adiciona '_test' para não sujar o banco real.
-const suffix = (IS_DEV && firebaseConfig.projectId === "genapplog") ? '_test' : '';
-
+// 4. CAMINHOS DAS COLEÇÕES
+// Nota: Como agora são bancos separados, não precisamos mais do sufixo "_test" nas coleções.
+// As coleções terão o mesmo nome "limpo" em ambos os bancos.
 export const PATHS = {
-    clients: `artifacts/${firebaseConfig.appId}/public/data/clients${suffix}`,
-    occurrences: `artifacts/${firebaseConfig.appId}/public/data/occurrences${suffix}`,
-    users: 'users',      // Compartilhado (Login)
-    products: 'products' // Compartilhado (Base de Produtos)
+    clients: `artifacts/${firebaseConfig.appId}/public/data/clients`,
+    occurrences: `artifacts/${firebaseConfig.appId}/public/data/occurrences`,
+    users: 'users',
+    products: 'products'
 };
 
-// 4. REGRAS DE CHECKLIST (PADRÃO)
+// 5. REGRAS DE CHECKLIST (PADRÃO)
 export const defaultChecklistData = { 
     alturaPalete: { directa: "1.80M", fracionada: "1.80M" }, 
     multiplosSKU: { directa: "", fracionada: "", directaLimit: "", fracionadaLimit: "" },
@@ -59,4 +76,3 @@ export const specificClientRules = {
         observacao: { directa: "EXIGE AGENDAMENTO PRÉVIO (CARP).", fracionada: "EXIGE AGENDAMENTO PRÉVIO (CARP)." } 
     } 
 };
-// (Removemos cdData e labelDimensions daqui pois foram para labels-data.js)
