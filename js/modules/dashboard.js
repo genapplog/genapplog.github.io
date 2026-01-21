@@ -3,7 +3,9 @@
  * DESCRIÇÃO: Dashboard Operacional, Relatórios, Impressão e Modo TV (Wallboard).
  */
 
+import { getFirestore, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { safeBind, escapeHtml } from '../utils.js';
+import { PATHS } from '../config.js'; // Importar PATHS para saber o nome da coleção
 import { exportRncToXlsx, exportPalletToXlsx, printRncById } from './reports.js';
 import { CHART_COLORS, COMMON_OPTIONS, DOUGHNUT_OPTIONS } from './charts-config.js';
 
@@ -37,8 +39,31 @@ async function loadChartLib() {
 export function initDashboard() {
     console.log("Iniciando Módulo Dashboard...");
 
+    // ✅ DEFINIR FILTRO PADRÃO: MÊS VIGENTE
+    // Isso garante que ao abrir, mostre apenas o mês atual (zerando o anterior)
+    const date = new Date();
+    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+    // Função auxiliar para formatar YYYY-MM-DD (Corrigindo fuso horário)
+    const toInputDate = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const iStart = document.getElementById('dash-filter-start');
+    const iEnd = document.getElementById('dash-filter-end');
+
+   if(iStart && !iStart.value) iStart.value = toInputDate(firstDay);
+    if(iEnd && !iEnd.value) iEnd.value = toInputDate(lastDay);
+
     // Filtros
     safeBind('btn-dash-filter-apply', 'click', () => applyDashboardFilters());
+    
+    // ✅ Dispara a primeira busca automática para preencher os gráficos
+    applyDashboardFilters();
     safeBind('btn-dash-filter-clear', 'click', () => { 
         const i1 = document.getElementById('dash-filter-start');
         const i2 = document.getElementById('dash-filter-end');
@@ -178,41 +203,113 @@ async function updateTVView() {
         datasets: [{ data: [locals.ARMAZENAGEM, locals.ESTOQUE, locals.CHECKOUT, locals.SEPARAÇÃO], backgroundColor: CHART_COLORS.sobra, borderRadius: 6 }] 
     }, COMMON_OPTIONS);
 
+    // Opções visuais otimizadas para TV (Barras Horizontais + Fontes Maiores)
+    const tvChartOptions = {
+        ...COMMON_OPTIONS,
+        indexAxis: 'y', // Barra Horizontal
+        maintainAspectRatio: false,
+        scales: {
+            x: { 
+                beginAtZero: true, 
+                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                ticks: { color: '#cbd5e1', font: { size: 14 } } 
+            },
+            y: { 
+                grid: { display: false },
+                ticks: { 
+                    color: '#ffffff',
+                    autoSkip: false,
+                    font: { size: 14, weight: 'bold' } // Nome em destaque e maior
+                } 
+            }
+        },
+        plugins: {
+            legend: { display: false }
+        }
+    };
+
     const sortedCaus = Object.entries(causadores).sort((a,b) => b[1] - a[1]).slice(0, 5);
     if (tvChartCausadorInstance) tvChartCausadorInstance.destroy();
     tvChartCausadorInstance = createTVChart('tvChartCausador', 'bar', { 
         labels: sortedCaus.map(i => i[0]), 
-        datasets: [{ data: sortedCaus.map(i => i[1]), backgroundColor: CHART_COLORS.causador, borderRadius: 6 }] 
-    }, { ...COMMON_OPTIONS, indexAxis: 'y' });
+        datasets: [{ label: 'Qtd', data: sortedCaus.map(i => i[1]), backgroundColor: CHART_COLORS.causador, borderRadius: 6 }] 
+    }, tvChartOptions);
 
     const sortedIdent = Object.entries(identificadores).sort((a,b) => b[1] - a[1]).slice(0, 5);
     if (tvChartIdentificadorInstance) tvChartIdentificadorInstance.destroy();
     tvChartIdentificadorInstance = createTVChart('tvChartIdentificador', 'bar', { 
         labels: sortedIdent.map(i => i[0]), 
-        datasets: [{ data: sortedIdent.map(i => i[1]), backgroundColor: CHART_COLORS.identif, borderRadius: 6 }] 
-    }, { ...COMMON_OPTIONS, indexAxis: 'y' });
+        datasets: [{ label: 'Qtd', data: sortedIdent.map(i => i[1]), backgroundColor: CHART_COLORS.identif, borderRadius: 6 }] 
+    }, tvChartOptions);
 }
 
 // =========================================================
-// DASHBOARD PADRÃO
+// DASHBOARD PADRÃO (CONSULTA ECONÔMICA)
 // =========================================================
-function applyDashboardFilters() {
+async function applyDashboardFilters() {
     const iStart = document.getElementById('dash-filter-start'); 
     const iEnd = document.getElementById('dash-filter-end');
     if(!iStart || !iEnd) return;
 
-    let startDate = iStart.value ? new Date(iStart.value + 'T00:00:00') : null; 
-    let endDate = iEnd.value ? new Date(iEnd.value + 'T23:59:59') : null;
+    const btn = document.getElementById('btn-dash-filter-apply');
+
+    // ✅ CORREÇÃO DE SEGURANÇA:
+    // Se o botão já estiver desabilitado, significa que já existe uma busca em andamento.
+    // Aborta esta nova chamada para não sobrepor o texto "Buscando..." como original.
+    if (btn && btn.disabled) return;
     
-    const filteredRNC = localAllData.filter(d => { 
-        if(d.type === 'pallet_label_request' || d.status !== 'concluido') return false;
-        if(startDate && d.jsDate < startDate) return false; 
-        if(endDate && d.jsDate > endDate) return false; 
-        return true; 
-    });
+    // Salva o estado original (Texto + Ícone)
+    const originalContent = btn ? btn.innerHTML : 'Filtrar'; 
     
-    updateChartsAndStats(filteredRNC);
-    renderHistoryTable(filteredRNC);
+    if(btn) {
+        btn.disabled = true; 
+        btn.innerHTML = `<span class="animate-pulse">Buscando...</span>`; 
+    }
+
+    try {
+        const db = getFirestore();
+        // Garante datas válidas
+        let startDate = iStart.value ? new Date(iStart.value + 'T00:00:00') : new Date();
+        let endDate = iEnd.value ? new Date(iEnd.value + 'T23:59:59') : new Date();
+
+        // Query direto no banco (Traz apenas o necessário)
+        const q = query(
+            collection(db, PATHS.occurrences),
+            where('createdAt', '>=', startDate),
+            where('createdAt', '<=', endDate),
+            orderBy('createdAt', 'desc')
+        );
+
+        const querySnapshot = await getDocs(q);
+        const fetchedData = [];
+
+        querySnapshot.forEach((doc) => {
+            const d = doc.data();
+            d.id = doc.id;
+            d.jsDate = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
+            
+            // Aplica filtros de tipo e status
+            if (d.type !== 'pallet_label_request' && d.status === 'concluido') {
+                fetchedData.push(d);
+            }
+        });
+
+        // Atualiza a memória e a tela
+        localAllData = fetchedData; 
+        
+        updateChartsAndStats(fetchedData);
+        renderHistoryTable(fetchedData);
+
+    } catch (error) {
+        console.error("Erro ao buscar dados:", error);
+        // Opcional: alert("Erro ao carregar dados. Verifique sua conexão.");
+    } finally {
+        // ✅ GARANTIA: Isso roda sempre, restaurando o botão
+        if(btn) {
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+        }
+    }
 }
 
 async function updateChartsAndStats(data) {
@@ -264,18 +361,40 @@ async function updateChartsAndStats(data) {
         options: COMMON_OPTIONS 
     }, chartLocalInstance);
     
+    // Configuração Visual Específica para Barras Horizontais (Top 10)
+    const horizOptions = {
+        ...COMMON_OPTIONS,
+        indexAxis: 'y',
+        maintainAspectRatio: false,
+        scales: {
+            x: { 
+                beginAtZero: true, 
+                grid: { color: 'rgba(255, 255, 255, 0.05)' }, // Grade vertical suave
+                ticks: { color: '#94a3b8' } 
+            },
+            y: { 
+                grid: { display: false }, // Remove grade horizontal (em cima dos nomes)
+                ticks: { 
+                    color: '#e2e8f0',
+                    autoSkip: false, // Garante que TODOS os nomes apareçam
+                    font: { size: 10 }
+                } 
+            }
+        }
+    };
+
     const sCaus = Object.entries(causadores).sort((a, b) => b[1] - a[1]).slice(0, 10);
     chartCausadorInstance = createOrUpdateChart('chartOcCausador', { 
         type: 'bar', 
-        data: { labels: sCaus.map(i=>i[0]), datasets: [{ data: sCaus.map(i=>i[1]), backgroundColor: CHART_COLORS.causador, borderRadius: 4 }] }, 
-        options: { ...COMMON_OPTIONS, indexAxis: 'y' } 
+        data: { labels: sCaus.map(i=>i[0]), datasets: [{ label: 'Qtd', data: sCaus.map(i=>i[1]), backgroundColor: CHART_COLORS.causador, borderRadius: 4 }] }, 
+        options: horizOptions 
     }, chartCausadorInstance);
     
     const sIdent = Object.entries(identificadores).sort((a, b) => b[1] - a[1]).slice(0, 10);
     chartIdentificadorInstance = createOrUpdateChart('chartOcIdentificador', { 
         type: 'bar', 
-        data: { labels: sIdent.map(i=>i[0]), datasets: [{ data: sIdent.map(i=>i[1]), backgroundColor: CHART_COLORS.identif, borderRadius: 4 }] }, 
-        options: { ...COMMON_OPTIONS, indexAxis: 'y' } 
+        data: { labels: sIdent.map(i=>i[0]), datasets: [{ label: 'Qtd', data: sIdent.map(i=>i[1]), backgroundColor: CHART_COLORS.identif, borderRadius: 4 }] }, 
+        options: horizOptions 
     }, chartIdentificadorInstance);
 }
 

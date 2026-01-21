@@ -221,6 +221,9 @@ function setupClientBindings() {
 // =========================================================
 // RENDERIZAÇÃO E FILTROS
 // =========================================================
+// =========================================================
+// RENDERIZAÇÃO E FILTROS
+// =========================================================
 function filterAndRenderClients() {
     const searchEl = document.getElementById('client-search');
     const term = searchEl ? searchEl.value.toLowerCase().trim() : "";
@@ -234,6 +237,7 @@ function filterAndRenderClients() {
     const tbody = document.getElementById('client-list-tbody');
     if (!tbody) return;
 
+    // Remove listeners antigos clonando o elemento (Garbage Collection)
     const newBody = document.createElement('tbody');
     newBody.id = 'client-list-tbody';
     newBody.className = "bg-slate-800 divide-y divide-slate-700";
@@ -241,10 +245,15 @@ function filterAndRenderClients() {
     if (!filtered.length) {
         newBody.innerHTML = '<tr><td colspan="2" class="px-6 py-12 text-center text-slate-500">Nenhum cliente encontrado.</td></tr>';
     } else {
-        // ✅ PROTEÇÃO: Garante que role seja um array mesmo se getUserRole falhar
-        const role = getUserRole() || []; 
-        const canEdit = role.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
-        const canDelete = role.includes('ADMIN');
+        // ✅ RECUPERA PERMISSÕES ATUALIZADAS
+        const userRoles = getUserRole(); 
+        console.log("Permissões no Módulo Clientes:", userRoles); // Debug para você ver no console
+
+        // Lógica de Permissão
+        // Editar: ADMIN, LIDER ou INVENTARIO
+        const canEdit = userRoles && (userRoles.includes('ADMIN') || userRoles.includes('LIDER') || userRoles.includes('INVENTARIO'));
+        // Excluir: Apenas ADMIN
+        const canDelete = userRoles && userRoles.includes('ADMIN');
 
         filtered.forEach(c => {
             const tr = document.createElement('tr');
@@ -269,6 +278,7 @@ function filterAndRenderClients() {
                 return btn;
             };
 
+            // Botão Visualizar (Sempre visível)
             divActions.appendChild(makeBtn("Visualizar", "text-slate-400 hover:text-white font-medium action-view transition-colors", c.id));
             
             if (canEdit) {
@@ -286,7 +296,7 @@ function filterAndRenderClients() {
     
     if(tbody.parentNode) tbody.parentNode.replaceChild(newBody, tbody);
 
-    // Event Delegation para Botões
+    // Event Delegation
     newBody.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
@@ -382,4 +392,13 @@ function backToList() {
     if(editSec) editSec.classList.add('hidden');
     if(viewSec) viewSec.classList.add('hidden');
     if(listSec) listSec.classList.remove('hidden');
+}
+
+// ✅ NOVA FUNÇÃO EXPORTADA: Permite que outros módulos peguem a lista de nomes
+export function getClientNames() {
+    return Array.from(clientCache.values()).map(c => c.name).sort();
+}
+// ✅ Permite forçar a atualização da lista (útil após login para aplicar permissões)
+export function refreshClientList() {
+    filterAndRenderClients();
 }

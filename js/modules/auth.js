@@ -56,7 +56,8 @@ async function handleUserLoaded(user, db, callbackEnv) {
 
                 currentUserName = data.name || '';
                 
-                const pinField = document.getElementById('profile-pin');
+                // Ajuste de ID para bater com o novo HTML
+                const pinField = document.getElementById('account-pin');
                 if (pinField) pinField.value = data.pin || '';
             } else {
                 // Usuário não existe no banco, mas logou
@@ -135,38 +136,83 @@ function setupLoginUI(auth) {
 }
 
 function setupPinAndPassUI(auth) {
-     safeBind('form-change-pass', 'submit', async (e) => {
-        e.preventDefault();
-        const currentPass = document.getElementById('current-pass').value;
-        const newPass = document.getElementById('new-pass').value;
-        const confirmPass = document.getElementById('confirm-new-pass').value;
-        const btn = document.getElementById('btn-save-pass');
-
-        if (newPass.length < 6) return showToast("Mínimo 6 caracteres.", "error");
-        if (newPass !== confirmPass) return showToast("Confirmação incorreta.", "error");
+    // 1. Salvar PIN (Novo Layout)
+    safeBind('btn-save-pin', 'click', async () => {
         if (!currentUser) return;
+        
+        const pinInput = document.getElementById('account-pin');
+        const btn = document.getElementById('btn-save-pin');
+        const pinVal = pinInput.value.trim();
 
-        if(btn) { btn.disabled = true; btn.innerText = "..."; }
+        if (pinVal.length !== 4 || isNaN(pinVal)) {
+            showToast("O PIN deve ter 4 números.", "warning");
+            return;
+        }
+
+        // Feedback Visual no Botão
+        const originalText = btn.innerHTML;
+        btn.disabled = true; 
+        btn.innerHTML = `<span class="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent inline-block mr-2"></span>Salvando...`;
+
         try {
-            const credential = EmailAuthProvider.credential(currentUser.email, currentPass);
-            await reauthenticateWithCredential(currentUser, credential);
-            await updatePassword(currentUser, newPass);
-            showToast("Senha atualizada!");
-            document.getElementById('form-change-pass').reset();
-        } catch (error) {
-            console.error(error);
-            showToast("Erro ao atualizar.", "error");
+            const db = getFirestore();
+            await setDoc(doc(db, 'users', currentUser.uid), { pin: pinVal }, { merge: true });
+            showToast("Visto Eletrônico atualizado!", "success");
+        } catch (e) {
+            console.error(e);
+            showToast("Erro ao salvar PIN.", "error");
         } finally {
-            if(btn) { btn.disabled = false; btn.innerText = "Atualizar Senha"; }
+            btn.disabled = false; 
+            btn.innerHTML = originalText;
         }
     });
 
-    safeBind('btn-save-pin', 'click', async () => {
+    // 2. Atualizar Senha (Novo Layout)
+    safeBind('btn-update-pass', 'click', async () => {
+        const currentPass = document.getElementById('account-pass-current').value;
+        const newPass = document.getElementById('account-pass-new').value;
+        const confirmPass = document.getElementById('account-pass-confirm').value;
+        const btn = document.getElementById('btn-update-pass');
+
+        if (!currentPass || !newPass || !confirmPass) {
+            showToast("Preencha todos os campos de senha.", "warning");
+            return;
+        }
+        if (newPass.length < 6) return showToast("A nova senha deve ter no mínimo 6 caracteres.", "error");
+        if (newPass !== confirmPass) return showToast("A confirmação da senha não confere.", "error");
         if (!currentUser) return;
-        const pinVal = document.getElementById('profile-pin').value.trim();
-        const db = getFirestore();
-        await setDoc(doc(db, 'users', currentUser.uid), { pin: pinVal }, { merge: true });
-        showToast("PIN salvo!");
+
+        btn.disabled = true; btn.innerText = "Validando e Atualizando...";
+
+        try {
+            // Reautenticação necessária para operações sensíveis
+            const credential = EmailAuthProvider.credential(currentUser.email, currentPass);
+            await reauthenticateWithCredential(currentUser, credential);
+            
+            await updatePassword(currentUser, newPass);
+            
+            showToast("Senha atualizada com sucesso! Faça login novamente.");
+            
+            // Limpa campos
+            document.getElementById('account-pass-current').value = "";
+            document.getElementById('account-pass-new').value = "";
+            document.getElementById('account-pass-confirm').value = "";
+
+            // Desloga para forçar novo acesso com segurança
+            setTimeout(() => {
+                signOut(auth).then(() => window.location.reload());
+            }, 2000);
+
+        } catch (error) {
+            console.error("Erro Senha:", error);
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+                showToast("Senha atual incorreta.", "error");
+            } else {
+                showToast("Erro ao atualizar senha. Tente novamente.", "error");
+            }
+        } finally {
+            btn.disabled = false; btn.innerText = "Atualizar Senha de Acesso";
+        }
     });
 }
 
@@ -199,3 +245,7 @@ function updateUIForRole(roles) {
 export function getUserRole() { return currentUserRole; }
 export function getCurrentUserName() { return currentUserName; }
 export function checkIsAdmin() { return Array.isArray(currentUserRole) && currentUserRole.includes('ADMIN'); }
+export async function updateAccountUI(user) {
+    // Função placeholder
+    return;
+}

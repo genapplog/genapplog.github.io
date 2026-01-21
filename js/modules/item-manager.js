@@ -9,6 +9,9 @@ export function createItemRow(index, data = {}) {
     const tr = document.createElement('tr');
     tr.className = "border-b border-slate-700 hover:bg-slate-700/50 transition-colors item-row";
     tr.dataset.index = index;
+    
+    // ✅ Salva o endereço original (puro) no dataset da linha
+    tr.dataset.originalEnd = data.end || data.item_end || '';
 
     // Valores padrão
     const tipo = data.tipo || 'FALTA';
@@ -16,7 +19,7 @@ export function createItemRow(index, data = {}) {
     const desc = data.desc || '';
     const lote = data.lote || '';
     const qtd = data.qtd || '';
-    const obs = data.obs || ''; // ✨ Novo campo
+    const obs = data.obs || '';
     const local = data.local || '';
 
     tr.innerHTML = `
@@ -70,8 +73,10 @@ export function extractItemsFromTable(tbodyId) {
                 item_desc: desc, 
                 item_lote: lote, 
                 item_qtd: qtd, 
-                item_obs: obs, // ✨ Salva no objeto
-                local: local 
+                item_obs: obs, 
+                local: local,
+                // ✅ Recupera o endereço puro salvo no dataset
+                item_end: row.dataset.originalEnd || '' 
             });
         }
     });

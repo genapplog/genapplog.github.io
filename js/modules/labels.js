@@ -7,44 +7,90 @@ import { LABEL_DIMENSIONS, CD_DATA } from './labels-data.js';
 import { getAmazonTemplate, getManualTemplate } from './zpl-templates.js';
 import { fetchLabelPreview, fetchLabelPdf } from '../services/labelary.js';
 
+// --- HELPER DE BUSCA DE INPUTS ---
+function getSmartValue(ids, containerId = 'zpl-tool-manual', inputIndex = -1) {
+    if (!Array.isArray(ids)) ids = [ids];
+    for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.value) return el.value.trim().toUpperCase();
+    }
+    if (inputIndex >= 0 && containerId) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            const inputs = container.querySelectorAll('input[type="text"]');
+            if (inputs[inputIndex]) return inputs[inputIndex].value.trim().toUpperCase();
+        }
+    }
+    return "";
+}
+
 export function initLabelsModule() {
     console.log("Iniciando Módulo de Etiquetas...");
 
     // Navegação
-    safeBind('btn-open-amazon', 'click', () => { document.getElementById('zpl-menu').classList.add('hidden'); document.getElementById('zpl-tool-amazon').classList.remove('hidden'); });
-    safeBind('btn-back-zpl', 'click', () => { document.getElementById('zpl-tool-amazon').classList.add('hidden'); document.getElementById('zpl-menu').classList.remove('hidden'); });
-    safeBind('btn-open-manual', 'click', () => { document.getElementById('zpl-menu').classList.add('hidden'); document.getElementById('zpl-tool-manual').classList.remove('hidden'); });
-    safeBind('btn-back-zpl-manual', 'click', () => { document.getElementById('zpl-tool-manual').classList.add('hidden'); document.getElementById('zpl-menu').classList.remove('hidden'); });
+    const toggleTool = (targetId) => {
+        ['zpl-menu', 'zpl-tool-amazon', 'zpl-tool-manual'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.classList.add('hidden');
+        });
+        document.getElementById(targetId).classList.remove('hidden');
+    };
 
-    // Toggle Código
+    safeBind('btn-open-amazon', 'click', () => toggleTool('zpl-tool-amazon'));
+    safeBind('btn-back-zpl', 'click', () => toggleTool('zpl-menu'));
+    safeBind('btn-open-manual', 'click', () => toggleTool('zpl-tool-manual'));
+    safeBind('btn-back-zpl-manual', 'click', () => toggleTool('zpl-menu'));
+
+    // Toggle Código (Debug)
     safeBind('btn-toggle-zpl-amazon', 'click', () => document.getElementById('box-zpl-amazon').classList.toggle('hidden'));
     safeBind('btn-toggle-zpl-manual', 'click', () => document.getElementById('box-zpl-manual').classList.toggle('hidden'));
 
-    // Limpeza Automática Chave NF
+    setupInputBehaviors();
+
+    // Ações - Amazon
+    safeBind('generateButton', 'click', () => handleGenerateAmazon());
+    safeBind('printButton', 'click', () => handlePrintPDF('zplCode', 'selectTamanho', 'printButton'));
+
+    // Ações - Manual
+    safeBind('generateButtonManual', 'click', () => handleGenerateManual());
+    safeBind('printButtonManual', 'click', () => handlePrintPDF('generated-zpl-manual', null, 'printButtonManual', '4x3'));
+}
+
+function setupInputBehaviors() {
+    // Limpeza NF Amazon
     const inputNf = document.getElementById('inputChaveNf');
     if (inputNf) {
-        inputNf.removeAttribute('maxlength'); 
+        inputNf.removeAttribute('maxlength');
         inputNf.addEventListener('input', (e) => {
-            let cleanValue = e.target.value.replace(/\D/g, '');
-            if (cleanValue.length > 44) cleanValue = cleanValue.substring(0, 44);
-            e.target.value = cleanValue;
+            e.target.value = e.target.value.replace(/\D/g, '').substring(0, 44);
         });
     }
 
-    // Auto-preenchimento
-    safeBind('inputQuantidadeTotal', 'input', (e) => { document.getElementById('inputCaixaFinal').value = e.target.value; });
-    safeBind('inputManualQtdTotal', 'input', (e) => { document.getElementById('inputManualCaixaFim').value = e.target.value; });
+    // UpperCase Global para Manual
+    document.querySelectorAll('#zpl-tool-manual input').forEach(input => {
+        input.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
+    });
 
-    // Ações
-    safeBind('generateButton', 'click', async () => handleGenerateAmazon());
-    safeBind('generateButtonManual', 'click', async () => handleGenerateManual());
+    // Sincronia de Quantidades (Manual)
+    const manualContainer = document.getElementById('zpl-tool-manual');
+    if(manualContainer) {
+        const numInputs = manualContainer.querySelectorAll('input[type="number"]');
+        if(numInputs.length >= 3) {
+            numInputs[0].addEventListener('input', (e) => numInputs[2].value = e.target.value);
+        }
+    }
     
-    safeBind('printButton', 'click', async () => handlePrintPDF('zplCode', 'selectTamanho', 'printButton'));
-    safeBind('printButtonManual', 'click', async () => handlePrintPDF('zplCodeManual', null, 'printButtonManual', '4x3.15'));
+    // Sincronia de Quantidades (Amazon)
+    safeBind('inputQuantidadeTotal', 'input', (e) => { 
+        const el = document.getElementById('inputCaixaFinal');
+        if(el) el.value = e.target.value; 
+    });
 }
 
+// =========================================================
+// LÓGICA AMAZON
+// =========================================================
 async function handleGenerateAmazon() {
-    // ... (o resto da função permanece igual)
     const btn = document.getElementById('generateButton');
     const btnPrint = document.getElementById('printButton');
     const preview = document.getElementById('previewContainer');
@@ -61,8 +107,7 @@ async function handleGenerateAmazon() {
     const boxStart = parseInt(document.getElementById('inputCaixaInicial').value);
     const boxEnd = parseInt(document.getElementById('inputCaixaFinal').value);
 
-    if (!cdInfo) { showToast("CD inválido", 'error'); return; }
-    if (isNaN(boxStart) || isNaN(boxEnd) || isNaN(totalQty)) { showToast("Preencha números válidos", 'error'); return; }
+    if (!cdInfo || isNaN(boxStart) || isNaN(boxEnd)) { showToast("Verifique os dados.", 'error'); return; }
 
     let fullZplBatch = ""; 
     for (let i = boxStart; i <= boxEnd; i++) {
@@ -72,105 +117,150 @@ async function handleGenerateAmazon() {
 
     const previewZpl = getAmazonTemplate(dimensionConfig, cdCode, cdInfo, nfKey, poNumber, boxStart, totalQty);
     
-    fetchPreview(sizeKey, previewZpl, btn, btnPrint, preview, 'Gerar Etiqueta', true);
-    
-    if(boxEnd > boxStart) showToast(`Lote de ${boxEnd - boxStart + 1} etiquetas gerado.`);
+    // MODO 'AMAZON-ROTATED': Preenche e rotaciona
+    fetchPreview(sizeKey, previewZpl, btn, btnPrint, preview, 'Gerar Etiqueta', 'amazon-rotated');
 }
 
-// Função para Gerar Etiqueta Manual (Refatorada)
+// =========================================================
+// LÓGICA MANUAL
+// =========================================================
 async function handleGenerateManual() {
-    const docInput = document.getElementById('manual-doc').value.trim();
-    const nfInput = document.getElementById('manual-nf').value.trim();
-    const solicitanteInput = document.getElementById('manual-solicitante').value.trim();
-    const destInput = document.getElementById('manual-dest').value.trim();
-    const cidadeInput = document.getElementById('manual-cidade').value.trim();
-    const transpInput = document.getElementById('manual-transp').value.trim();
-    const qtdTotal = parseInt(document.getElementById('manual-qtd').value) || 1;
+    const docInput = getSmartValue(['manual-doc', 'inputManualDocumento'], 'zpl-tool-manual', 0);
+    const nfInput = getSmartValue(['manual-nf', 'inputManualNf'], 'zpl-tool-manual', 1);
+    const solicitanteInput = getSmartValue(['manual-solicitante', 'inputManualSolicitante'], 'zpl-tool-manual', 2);
+    const destInput = getSmartValue(['manual-dest', 'inputManualDest'], 'zpl-tool-manual', 3);
+    const cidadeInput = getSmartValue(['manual-cidade', 'inputManualCidade'], 'zpl-tool-manual', 4);
+    const transpInput = getSmartValue(['manual-transp', 'inputManualTransp'], 'zpl-tool-manual', 5);
 
-    // Elementos de UI
-    const zplArea = document.getElementById('generated-zpl-manual');
-    const manualPreview = document.getElementById('manual-label-preview');
-    const btnGenerate = document.getElementById('btn-manual-generate');
-    const btnPrint = document.getElementById('btn-manual-print');
+    const container = document.getElementById('zpl-tool-manual');
+    const numInputs = container ? container.querySelectorAll('input[type="number"]') : [];
+    const qtdTotal = (numInputs[0] && numInputs[0].value) ? parseInt(numInputs[0].value) : 1;
+    const inicioSeq = (numInputs[1] && numInputs[1].value) ? parseInt(numInputs[1].value) : 1;
+    const fimSeq = (numInputs[2] && numInputs[2].value) ? parseInt(numInputs[2].value) : qtdTotal;
 
-    if (!docInput || !nfInput || !destInput) {
-        showToast("Preencha os campos obrigatórios (*)", "warning");
-        return;
+    // Tenta encontrar onde salvar o ZPL
+    let zplArea = document.getElementById('generated-zpl-manual') || document.getElementById('zplCodeManual');
+    if (!zplArea) zplArea = document.querySelector('#box-zpl-manual textarea');
+
+    // Tenta encontrar onde exibir o preview
+    let manualPreview = document.getElementById('manual-label-preview');
+    if (!manualPreview) manualPreview = document.getElementById('previewManual');
+    
+    // Fallback visual para o preview
+    if (!manualPreview) {
+        const dashedBox = document.querySelector('#zpl-tool-manual .border-dashed');
+        if (dashedBox) manualPreview = dashedBox;
     }
 
-    // 1. Gera o lote completo de ZPL (para o PDF de todas as etiquetas)
-    // Usa o template importado de zpl-templates.js
+    const btnGenerate = document.getElementById('generateButtonManual');
+    const btnPrint = document.getElementById('printButtonManual');
+
+    if (!docInput || !nfInput || !destInput) { 
+        showToast("Preencha: Doc, Nota e Destinatário", "warning"); 
+        return; 
+    }
+
     let fullZplBatch = "";
-    for (let i = 1; i <= qtdTotal; i++) {
+    for (let i = inicioSeq; i <= fimSeq; i++) {
         fullZplBatch += getManualTemplate({
-            documento: docInput,
-            nf: nfInput,
-            solicitante: solicitanteInput,
-            destinatario: destInput,
-            cidade: cidadeInput,
-            transportadora: transpInput,
-            volAtual: i,
-            volTotal: qtdTotal
+            documento: docInput, nf: nfInput, solicitante: solicitanteInput,
+            destinatario: destInput, cidade: cidadeInput, transportadora: transpInput,
+            volAtual: i, volTotal: qtdTotal
         });
     }
-    zplArea.value = fullZplBatch;
+    
+    if (zplArea) zplArea.value = fullZplBatch;
 
-    // 2. Gera apenas a primeira etiqueta para o Preview na tela
     const previewZpl = getManualTemplate({
-        documento: docInput,
-        nf: nfInput,
-        solicitante: solicitanteInput,
-        destinatario: destInput,
-        cidade: cidadeInput,
-        transportadora: transpInput,
-        volAtual: 1,
-        volTotal: qtdTotal
+        documento: docInput, nf: nfInput, solicitante: solicitanteInput,
+        destinatario: destInput, cidade: cidadeInput, transportadora: transpInput,
+        volAtual: inicioSeq, volTotal: qtdTotal
     });
 
-    // 3. Chama o Serviço de API (labelary.js)
-    // Nota: Passamos '4x6' como tamanho padrão para a etiqueta manual
-    await fetchPreview('4x6', previewZpl, btnGenerate, btnPrint, manualPreview, 'Gerar Etiqueta', false);
+    await fetchPreview('4x3', previewZpl, btnGenerate, btnPrint, manualPreview, 'Gerar Etiqueta', 'horizontal');
 }
-async function fetchPreview(sizeKey, zpl, btn, btnPrint, previewContainer, btnText, rotate = false) {
-    btn.disabled = true; btn.innerText = 'Gerando...'; 
-    previewContainer.innerHTML = ''; 
-    const spinner = document.createElement('span'); spinner.className = 'spinner'; previewContainer.appendChild(spinner);
+
+// =========================================================
+// SERVIÇOS DE API
+// =========================================================
+async function fetchPreview(sizeKey, zpl, btn, btnPrint, previewContainer, btnText, mode = 'normal') {
+    if(btn) { btn.disabled = true; btn.innerText = 'Gerando...'; }
+    if(previewContainer) previewContainer.innerHTML = '<div class="flex items-center justify-center h-full w-full"><span class="animate-spin h-8 w-8 border-4 border-indigo-500 rounded-full border-t-transparent"></span></div>';
     
     try {
         const blob = await fetchLabelPreview(zpl, sizeKey);
         const imageUrl = URL.createObjectURL(blob);
         
-        previewContainer.innerHTML = '';
-        const img = document.createElement('img'); img.src = imageUrl; img.className = "bg-white rounded-lg shadow-sm";
-        img.style.cssText = rotate ? 'transform: rotate(90deg) scale(0.55); transform-origin: center; width: auto; height: auto;' : 'width: 100%; height: 100%; object-fit: contain;';
-        previewContainer.appendChild(img);
-        
-        btnPrint.disabled = false;
+        if(previewContainer) {
+            previewContainer.innerHTML = '';
+            const img = document.createElement('img'); 
+            img.src = imageUrl; 
+            img.className = "bg-white shadow-md border border-slate-700 rounded mx-auto"; 
+            
+            // Zoom reduzido para 0.55 na Amazon para não cortar
+            if (mode === 'amazon-rotated') {
+                img.style.cssText = 'transform: rotate(90deg) scale(0.55); transform-origin: center; display: block; margin: 30px auto;';
+            } else {
+                img.style.cssText = 'width: 100%; height: auto; max-height: 100%; object-fit: contain; display: block; margin: 0 auto;';
+            }
+            previewContainer.appendChild(img);
+        }
+        if(btnPrint) btnPrint.disabled = false;
     } catch (e) { 
-        console.error(e);
-        previewContainer.innerHTML = ''; 
-        const errSpan = document.createElement('span'); errSpan.className = 'text-red-400 text-xs'; errSpan.textContent = 'Erro na API'; 
-        previewContainer.appendChild(errSpan);
+        console.error("Erro API Preview:", e);
+        if(previewContainer) previewContainer.innerHTML = '<div class="flex items-center justify-center h-full text-red-400 text-xs p-4">Erro de Visualização</div>';
     } finally { 
-        btn.disabled = false; btn.innerText = btnText; 
+        if(btn) { btn.disabled = false; btn.innerText = btnText; }
     }
 }
 
 async function handlePrintPDF(zplId, sizeId, btnId, fixedSize) {
-    const zplContent = document.getElementById(zplId).value;
-    const sizeKey = fixedSize || document.getElementById(sizeId).value;
-    const btn = document.getElementById(btnId);
-    if (!zplContent) return;
+    let zplContent = "";
     
-    btn.disabled = true; btn.innerText = "Baixando...";
+    // 1. Tenta pegar pelo ID direto
+    const zplEl = document.getElementById(zplId);
+    if (zplEl && zplEl.value) {
+        zplContent = zplEl.value;
+    } 
+    // 2. Fallback Específico para MANUAL (Procura na caixa da ferramenta manual mesmo oculta)
+    else if (fixedSize === '4x3' || zplId === 'generated-zpl-manual') {
+         // Tenta achar o textarea dentro do container manual, mesmo que o container esteja hidden
+         const manualContainer = document.getElementById('box-zpl-manual');
+         if (manualContainer) {
+             const area = manualContainer.querySelector('textarea');
+             if (area && area.value) zplContent = area.value;
+         }
+    }
+
+    // 3. Fallback Geral (Varre todos os textareas, ignorando visibilidade)
+    if (!zplContent) {
+        const textareas = document.querySelectorAll('textarea');
+        textareas.forEach(t => {
+            // ✅ CORREÇÃO: Verifica apenas se tem cara de ZPL, sem checar se está visível
+            if(t.value.includes('^XA') && t.value.includes('^XZ')) {
+                zplContent = t.value;
+            }
+        });
+    }
+    
+    const sizeKey = fixedSize || (document.getElementById(sizeId) ? document.getElementById(sizeId).value : '4x6');
+    const btn = document.getElementById(btnId);
+    
+    if (!zplContent) { showToast("Gere a etiqueta primeiro.", "warning"); return; }
+    
+    if(btn) { btn.disabled = true; btn.innerText = "Baixando..."; }
     
     try {
         const blob = await fetchLabelPdf(zplContent, sizeKey);
-        window.open(URL.createObjectURL(blob), '_blank');
+        const pdfUrl = URL.createObjectURL(blob);
+        window.open(pdfUrl, '_blank');
     } catch (e) { 
         console.error(e);
-        showToast("Erro ao gerar PDF", 'error'); 
+        showToast("Erro na API de PDF.", 'error'); 
     } finally { 
-        btn.disabled = false; btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>Baixar PDF`; 
+        if(btn) {
+            btn.disabled = false; 
+            btn.innerHTML = `<svg class="w-5 h-5 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>PDF`; 
+        }
     }
 }

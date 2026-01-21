@@ -14,8 +14,9 @@ import { PATHS } from '../config.js';
 import { getUserRole, getCurrentUserName } from './auth.js';
 import { initDashboard, updateDashboardView } from './dashboard.js';
 import { updateAdminList, registerLog } from './admin.js';
-import { printRncById } from './reports.js'; // ✅ Impressão Centralizada
-import { createItemRow, extractItemsFromTable, validateItems, clearTable } from './item-manager.js'; // ✅ Gerenciador de Itens
+import { getClientNames } from './clients.js'; // ✅ Importando nomes dos clientes
+import { printRncById } from './reports.js';
+import { createItemRow, extractItemsFromTable, validateItems, clearTable } from './item-manager.js';
 
 // --- ESTADO ---
 let currentCollectionRef = null;
@@ -79,6 +80,9 @@ export async function initRncModule(db, isTest) {
         updateDashboardView([...pendingOccurrencesData, ...allOccurrencesData]);
         updateAdminList([...pendingOccurrencesData, ...allOccurrencesData]);
         updatePendingList(); 
+        
+        // ✅ ADICIONE ISSO: Carrega a lista de usuários assim que os dados chegarem
+        loadUserSuggestions(db);
     });
 
     const myCurrentRole = getUserRole() || [];
@@ -203,23 +207,40 @@ function handleAddItemToTable() {
     const itemQtd = document.getElementById('form-item-qtd').value;
     const itemEnd = document.getElementById('form-item-end').value.toUpperCase();
 
+    // Captura Condições da Embalagem
+    const conditions = [];
+    if(document.getElementById('check-amassada')?.checked) conditions.push('AMASSADA');
+    if(document.getElementById('check-rasgada')?.checked) conditions.push('RASGADA');
+    if(document.getElementById('check-vazamento')?.checked) conditions.push('VAZAMENTO');
+    
+    const outrosEmb = document.getElementById('form-outros-emb')?.value.trim().toUpperCase();
+    if(outrosEmb) conditions.push(outrosEmb);
+    
+    const itemObs = conditions.join(', ');
+
     // 2. Validações básicas antes de inserir
     if (!itemCod) return showToast("Informe o Código do Item.", "error");
     if (!itemQtd) return showToast("Informe a Quantidade.", "error");
 
     // 3. Monta o objeto de dados
+    // Combina Área e Endereço (ex: SEPARAÇÃO 030-010-013)
+    let localFinal = local;
+    if(itemEnd) {
+        localFinal = `${local} ${itemEnd}`;
+    }
+
     const data = {
         tipo,
-        local,
+        local: localFinal, // ✅ Agora salva a Área + Endereço
         cod: itemCod,
         desc: itemDesc,
         lote: itemLote,
         qtd: itemQtd,
-        end: itemEnd
+        end: itemEnd,
+        obs: itemObs 
     };
 
     // 4. Cria a linha usando o Módulo e adiciona ao DOM
-    // IMPORTANTE: O ID da tabela deve ser 'rnc-items-list' no HTML
     let tbody = document.getElementById('rnc-items-list');
     
     // Fallback caso o ID no HTML ainda seja o antigo 'temp-items-tbody'
@@ -239,6 +260,10 @@ function handleAddItemToTable() {
     document.getElementById('form-item-qtd').value = '';
     document.getElementById('form-item-end').value = '';
     
+    // Limpa também as condições de embalagem para não repetir no próximo
+    document.querySelectorAll('#ocorrencias-novo input[type="checkbox"]').forEach(el => el.checked = false);
+    if(document.getElementById('form-outros-emb')) document.getElementById('form-outros-emb').value = '';
+
     // Foca no scanner novamente
     const scanner = document.getElementById('smart-scanner-input');
     if(scanner) scanner.focus();
@@ -344,15 +369,34 @@ async function handleSave() {
     // 2. Verifica se tem um item "pendente" nos inputs que o usuário esqueceu de clicar em "Adicionar"
     const pendingCod = document.getElementById('form-item-cod').value;
     if (pendingCod) {
+        // Captura condições da embalagem para o item pendente também
+        const conditions = [];
+        if(document.getElementById('check-amassada')?.checked) conditions.push('AMASSADA');
+        if(document.getElementById('check-rasgada')?.checked) conditions.push('RASGADA');
+        if(document.getElementById('check-vazamento')?.checked) conditions.push('VAZAMENTO');
+        
+        const outrosEmb = document.getElementById('form-outros-emb')?.value.trim().toUpperCase();
+        if(outrosEmb) conditions.push(outrosEmb);
+        
+        const itemObs = conditions.join(', ');
+
+        // Lógica de Localização (Área + Endereço) para o item pendente
+        const area = document.querySelector('input[name="oc_local"]:checked')?.value || 'N/A';
+        const address = document.getElementById('form-item-end').value.toUpperCase();
+        let localFinal = area;
+        if(address) localFinal = `${area} ${address}`;
+
         // Se tiver, adiciona à lista para salvar junto (Feature de conveniência)
         currentItems.push({
             tipo: document.querySelector('input[name="oc_tipo"]:checked')?.value || 'N/A',
-            local: document.querySelector('input[name="oc_local"]:checked')?.value || 'N/A',
+            local: localFinal, // Área + Endereço (Visual)
+            // ✅ CORREÇÃO CRUCIAL: Salva o endereço separado para o relatório conseguir limpar depois
+            item_end: address, 
             item_cod: pendingCod.toUpperCase(),
             item_desc: document.getElementById('form-item-desc').value.toUpperCase(),
             item_lote: document.getElementById('form-item-lote').value.toUpperCase(),
             item_qtd: document.getElementById('form-item-qtd').value || '1',
-            local: document.getElementById('form-item-end').value.toUpperCase()
+            item_obs: itemObs 
         });
     }
 
@@ -616,7 +660,8 @@ function openOccurrenceForEdit(id) {
                 desc: it.item_desc || it.desc,
                 lote: it.item_lote || it.lote,
                 qtd: it.item_qtd || it.qtd,
-                end: it.item_end || it.end
+                end: it.item_end || it.end,
+                obs: it.item_obs || it.obs // ✅ CORREÇÃO: Recupera o detalhe salvo
             };
             tbody.appendChild(createItemRow(idx, normalizedData));
         });
@@ -640,17 +685,56 @@ function resetForm() {
     currentOccurrenceId = null; 
     currentFormStatus = 'draft'; 
     
-    // Limpa a tabela usando o módulo
+    // Limpa a tabela
     const tbody = document.getElementById('rnc-items-list') || document.getElementById('temp-items-tbody');
     if(tbody) clearTable(tbody.id);
     
+    // Reseta Inputs
     document.getElementById('form-data').valueAsDate = new Date(); 
+    document.getElementById('form-nf').value = ''; // Limpa cliente
+    document.getElementById('form-embarque').value = '';
     document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false); 
     document.querySelectorAll('input[name="oc_tipo"]').forEach(r => r.checked = false); 
     document.querySelectorAll('input[name="oc_local"]').forEach(r => r.checked = false); 
+    
+    // ✅ POPULA DATALIST DE CLIENTES
+    const dataList = document.getElementById('rnc-client-list');
+    if (dataList) {
+        dataList.innerHTML = ''; // Limpa anteriores
+        const clients = getClientNames(); // Pega atualizado do módulo clients.js
+        clients.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            dataList.appendChild(option);
+        });
+    }
+
     updateFormStateUI(); 
 }
+// ✅ FUNÇÃO NOVA: Carrega lista de usuários para o campo de assinatura
+async function loadUserSuggestions(db) {
+    try {
+        const usersRef = collection(db, 'users');
+        const snapshot = await getDocs(usersRef);
+        const dataList = document.getElementById('rnc-users-list');
+        
+        if (!dataList) return;
 
+        dataList.innerHTML = ''; // Limpa lista atual
+
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data.name) {
+                const option = document.createElement('option');
+                option.value = data.name.toUpperCase().trim(); // Padroniza em Maiúsculo
+                dataList.appendChild(option);
+            }
+        });
+        console.log("Lista de usuários carregada para sugestões.");
+    } catch (error) {
+        console.error("Erro ao carregar usuários:", error);
+    }
+}
 // =================================================================
 // 🔥 LÓGICA DE IMPRESSÃO GLOBAL
 // =================================================================

@@ -30,7 +30,6 @@ export async function exportRncToXlsx(startDate, endDate) {
         const exportData = [];
 
         rawData.forEach(d => {
-            // Cabeçalho limpo (Sem campos de embalagem antigos)
             const headerData = {
                 "DATA": d.jsDate.toLocaleDateString('pt-BR'), 
                 "MÊS": d.jsDate.toLocaleString('pt-BR', { month: 'long' }).toUpperCase(), 
@@ -44,31 +43,59 @@ export async function exportRncToXlsx(startDate, endDate) {
                 "OBS GERAL": d.obs || '-'
             };
 
+            // ✨ LOGICA INTELIGENTE: Tenta separar Local de Endereço mesmo em dados antigos
+            const processLocation = (fullLocal, savedAddress) => {
+                let local = fullLocal || '-';
+                let address = savedAddress || '';
+
+                // Se NÃO tem endereço salvo separado, tenta achar um padrão (ex: 030-010 ou 10-20-30)
+                if (!address) {
+                    // Procura por sequências de números e traços
+                    const match = local.match(/\b\d+-\d+(?:-\d+)?\b/); 
+                    if (match) {
+                        address = match[0]; // Captura o endereço encontrado (ex: 030-010)
+                    }
+                }
+
+                // Limpa o Local removendo o endereço
+                if (address && local.includes(address)) {
+                    local = local.replace(address, '').trim();
+                }
+
+                return { local, address };
+            };
+
             if (d.items && Array.isArray(d.items) && d.items.length > 0) {
                 d.items.forEach(item => {
+                    // Processa cada item
+                    const { local, address } = processLocation(item.local || d.local, item.item_end || item.end);
+                    
                     exportData.push({
                         ...headerData,
-                        "LOCAL": item.local || d.local || '-',
+                        "LOCAL": local,      // ✅ Agora limpo até nos antigos
                         "OCORRENCIA": item.tipo || d.tipo || '-',
                         "CÓDIGO": item.item_cod || '-', 
                         "DESCRIÇÃO": item.item_desc || '-', 
                         "LOTE": item.item_lote || '-', 
                         "QTD (CX)": item.item_qtd || '0', 
-                        "DETALHE DO ITEM": item.item_obs || '-', // ✅ Onde fica a info agora
-                        "ENDEREÇO": item.item_end || '-'
+                        "DETALHE DO ITEM": item.item_obs || '-', 
+                        "ENDEREÇO": address || '-' // ✅ Preenchido via extração se necessário
                     });
                 });
             } else {
+                // Processa registro legado (sem array de itens)
+                const { local, address } = processLocation(d.local, d.item_end || d.end);
+
                 exportData.push({
                     ...headerData,
-                    "LOCAL": d.local || '-',
+                    "LOCAL": local,
                     "OCORRENCIA": d.tipo || '-',
                     "CÓDIGO": d.item_cod || '-', 
                     "DESCRIÇÃO": d.item_desc || '-', 
                     "LOTE": d.item_lote || '-', 
                     "QTD (CX)": d.item_qtd || '0', 
                     "DETALHE DO ITEM": '-',
-                    "ENDEREÇO": d.item_end || '-'
+                    "ENDEREÇO": address || '-'
                 });
             }
         });
@@ -204,10 +231,26 @@ function generatePrintLayout(data) {
     <html lang="pt-BR">
     <head>
         <meta charset="UTF-8">
-        <title>RNC #${data.id.slice(0, 8)}</title>
+        <title>&nbsp;</title>
         <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-            body { font-family: 'Inter', sans-serif; padding: 40px; color: #0f172a; max-width: 900px; margin: 0 auto; background: white; }
+            
+            /* Força margem zero para esconder cabeçalhos do navegador */
+            @page { 
+                size: auto; 
+                margin: 0mm !important; 
+            }
+
+            /* Garante que o conteúdo tenha margem interna segura */
+            body { 
+                font-family: 'Inter', sans-serif; 
+                padding: 10mm 15mm; /* Margem segura para impressão A4 */
+                color: #0f172a; 
+                max-width: 900px; 
+                margin: 0 auto; 
+                background: white; 
+            }
+            
             .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 30px; }
             .logo h1 { font-size: 24px; font-weight: 800; letter-spacing: -1px; margin: 0; color: #0f172a; }
             .logo p { font-size: 12px; color: #64748b; margin: 2px 0 0 0; }
@@ -224,7 +267,12 @@ function generatePrintLayout(data) {
             .sig-block { text-align: center; }
             .sig-line { border-bottom: 1px solid #0f172a; margin-bottom: 8px; height: 30px; display: flex; align-items: flex-end; justify-content: center; font-family: 'Courier New', monospace; font-size: 12px; font-weight: bold; }
             .sig-label { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; }
-            @media print { body { padding: 0; margin: 20px; } .no-print { display: none; } }
+            
+            /* Ajusta a margem do corpo para compensar a remoção da margem da página */
+            @media print { 
+                body { padding: 40px; margin: 0 auto; -webkit-print-color-adjust: exact; } 
+                .no-print { display: none; } 
+            }
         </style>
     </head>
     <body>
@@ -244,5 +292,20 @@ function generatePrintLayout(data) {
     </body>
     </html>`;
 
-    printDocument(`RNC-${data.id}`, htmlContent);
+    // ✅ CORREÇÃO: Abre a janela diretamente, sem passar pelo wrapper do utils.js
+    // Isso evita que o cabeçalho seja duplicado.
+    const printWindow = window.open('', '_blank');
+    
+    if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close(); // Importante para o navegador saber que terminou de carregar
+
+        // Aguarda um momento para carregar estilos e imagens antes de imprimir
+        printWindow.setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 500);
+    } else {
+        showToast("Popup bloqueado! Permita popups para imprimir.", "error");
+    }
 }

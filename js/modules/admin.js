@@ -152,6 +152,59 @@ export function initAdminModule(db, clientsCollection) {
         if(auditSection) auditSection.classList.remove('hidden');
         loadInitialAuditLogs(db);
     }
+    // ✅ 6. CLONAR DADOS (Apenas do Dia Atual)
+    safeBind('btn-sync-prod-to-test', 'click', () => {
+        openConfirmModal(
+            "Clonar Ocorrências de Hoje?", 
+            "Isso criará um arquivo JSON com todas as ocorrências registradas HOJE (desde a 00:00) para importação no ambiente de teste.", 
+            async () => {
+                try {
+                    // 1. Define o início do dia atual (00:00:00)
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    // 2. Consulta filtrando por data (createdAt >= hoje)
+                    const q = query(
+                        collection(db, PATHS.occurrences), 
+                        where('createdAt', '>=', today),
+                        orderBy('createdAt', 'desc')
+                    );
+
+                    const snapshot = await getDocs(q);
+                    const exportData = [];
+
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        // Tratamento de Timestamps para JSON
+                        if(data.createdAt?.toDate) data.createdAt = data.createdAt.toDate().toISOString();
+                        
+                        // Adiciona ao array de exportação
+                        exportData.push({ 
+                            original_id: doc.id, 
+                            ...data 
+                        });
+                    });
+
+                    if (exportData.length === 0) {
+                        showToast("Nenhuma ocorrência encontrada hoje.", "warning");
+                    } else {
+                        // Gera o download
+                        const fileName = `CLONE_DIA_${new Date().toISOString().slice(0,10)}.json`;
+                        downloadJSON(exportData, fileName);
+                        
+                        showToast(`${exportData.length} registros do dia exportados!`);
+                        registerLog('CLONE_EXPORT', 'Sistema', `Exportou ${exportData.length} itens do dia para teste`);
+                    }
+
+                } catch (e) {
+                    console.error("Erro ao clonar:", e);
+                    // Dica: Se der erro de índice, o console do navegador mostrará o link para criar
+                    showToast("Erro ao buscar dados. Verifique o console (Índices).", "error");
+                }
+                closeConfirmModal();
+            }
+        );
+    });
 }
 
 // =========================================================

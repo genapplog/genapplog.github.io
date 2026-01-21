@@ -5,7 +5,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
     initializeFirestore, 
     persistentLocalCache, 
@@ -21,7 +21,7 @@ import { safeBind, showToast } from './utils.js';
 // Módulos
 import { initAuth } from './modules/auth.js';
 import { initLabelsModule } from './modules/labels.js';
-import { initClientsModule } from './modules/clients.js';
+import { initClientsModule, refreshClientList } from './modules/clients.js';
 import { initRncModule } from './modules/rnc.js';
 import { initAdminModule } from './modules/admin.js';
 import { initDashboard, startTVMode } from './modules/dashboard.js';
@@ -68,6 +68,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Inicia Módulos Independentes
     initLabelsModule();
     initAuth(auth); 
+
+    // ✅ CORREÇÃO: Força a lista de clientes a atualizar as permissões após o login
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // Aguarda 1 segundo para garantir que o perfil de Admin foi carregado na memória
+            setTimeout(() => {
+                console.log("🔄 Recarregando lista de clientes com permissões de Admin...");
+                refreshClientList();
+            }, 1000);
+        }
+    });
 
     // Inicia Módulos Conectados ao DB
     const clientsCollection = collection(db, PATHS.clients);
@@ -167,9 +178,14 @@ function setupEnvironmentUI() {
     const strip = document.getElementById('test-mode-strip');
     const warning = document.getElementById('dash-env-warning');
     const logoBg = document.getElementById('logo-bg');
+    const switchArea = document.getElementById('env-switch-area');
+
+    // CONFIGURE AQUI OS LINKS REAIS DOS SEUS AMBIENTES
+    const URL_PRODUCAO = "https://applog-producao.web.app"; // Coloque o link real
+    const URL_TESTE = "https://applog-teste.web.app";       // Coloque o link real (ou localhost)
 
     if (IS_DEV) {
-        // Modo Teste/Dev
+        // --- ESTAMOS EM MODO TESTE ---
         if(badge) {
             badge.innerText = "Teste";
             badge.className = "text-[10px] uppercase tracking-wider font-bold text-amber-400 bg-amber-900/30 px-1.5 rounded border border-amber-800";
@@ -179,8 +195,22 @@ function setupEnvironmentUI() {
         if(logoBg) logoBg.classList.add('bg-amber-600');
         
         document.getElementById('test-tools-section')?.classList.remove('hidden');
+
+        // Botão para ir para PRODUÇÃO
+        if(switchArea) {
+            switchArea.innerHTML = `
+                <a href="${URL_PRODUCAO}" class="flex items-center gap-3 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold transition shadow-lg border border-emerald-500/50 group">
+                    <div class="bg-white/20 p-1.5 rounded-full group-hover:scale-110 transition-transform">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </div>
+                    Ir para Ambiente de Produção
+                </a>
+                <p class="text-[10px] text-amber-500/80 mt-3 font-mono">⚠️ Você está no ambiente de TESTES</p>
+            `;
+        }
+
     } else {
-        // Modo Produção
+        // --- ESTAMOS EM PRODUÇÃO ---
         if(badge) {
             badge.innerText = "Produção";
             badge.className = "text-[10px] uppercase tracking-wider font-bold text-emerald-400 bg-emerald-900/30 px-1.5 rounded border border-emerald-800";
@@ -190,10 +220,20 @@ function setupEnvironmentUI() {
         if(logoBg) logoBg.classList.remove('bg-amber-600');
         
         document.getElementById('test-tools-section')?.classList.add('hidden');
-    }
 
-    const toggleContainer = document.getElementById('env-toggle')?.closest('div');
-    if(toggleContainer) toggleContainer.style.display = 'none';
+        // Botão para ir para TESTE
+        if(switchArea) {
+            switchArea.innerHTML = `
+                <a href="${URL_TESTE}" class="flex items-center gap-3 px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold transition shadow-lg border border-amber-500/50 group">
+                    <div class="bg-white/20 p-1.5 rounded-full group-hover:scale-110 transition-transform">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                    </div>
+                    Ir para Ambiente de Testes
+                </a>
+                <p class="text-[10px] text-emerald-500/80 mt-3 font-mono">🔒 Você está no ambiente de PRODUÇÃO</p>
+            `;
+        }
+    }
 }
 
 // =========================================================
