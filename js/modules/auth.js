@@ -1,14 +1,15 @@
 /**
  * ARQUIVO: js/modules/auth.js
- * DESCRIÇÃO: Autenticação, Controle de Acesso (RBAC) e Resiliência a Falhas.
+ * DESCRIÇÃO: Autenticação, Controle de Acesso (RBAC) Hierárquico e Segurança de Interface.
  */
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { ADMIN_IDS } from '../config.js';
 import { showToast, safeBind, copyToClipboard } from '../utils.js';
 
+// --- ESTADO GLOBAL ---
 let currentUser = null;
-let currentUserRole = ['OPERADOR']; // ✅ IMPORTANTE: Começa sempre como Array!
+let currentUserRole = ['OPERADOR']; // Padrão seguro
 let currentUserName = ''; 
 
 const GENERIC_EMAIL = "operador@applog.com"; 
@@ -18,7 +19,7 @@ export function initAuth(auth, initialToken, callbackEnv) {
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            document.getElementById('login-modal').classList.add('hidden');
+            document.getElementById('login-modal')?.classList.add('hidden');
             await handleUserLoaded(user, db, callbackEnv);
         } else {
             showLoginModal(true);
@@ -26,8 +27,10 @@ export function initAuth(auth, initialToken, callbackEnv) {
     });
 
     setupLoginUI(auth);
+    setupPinAndPassUI(auth);
 }
 
+// --- CARREGAMENTO DE PERFIL ---
 async function handleUserLoaded(user, db, callbackEnv) {
     currentUser = user;
     const displayEl = document.getElementById('userIdDisplay');
@@ -38,66 +41,146 @@ async function handleUserLoaded(user, db, callbackEnv) {
     try {
         if (user.email === GENERIC_EMAIL) {
             currentUserRole = ['OPERADOR'];
-            currentUserName = ''; 
+            currentUserName = 'Operador de Piso'; 
         } else {
-            // Tenta ler do banco
+            // Busca Perfil no Firestore
             const userSnap = await getDoc(doc(db, 'users', user.uid));
             
             if (userSnap.exists()) {
                 const data = userSnap.data();
                 
-                // Normalização robusta de Perfil
+                // Normalização Robusta de Cargos (Array Maiúsculo)
                 let rawRole = data.role || 'OPERADOR';
                 const roleArray = Array.isArray(rawRole) ? rawRole : [rawRole];
                 
                 currentUserRole = roleArray.map(r => 
-                    String(r).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                    String(r).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
                 );
 
                 currentUserName = data.name || '';
                 
-                // Ajuste de ID para bater com o novo HTML
+                // Preenche PIN no formulário de conta (se existir)
                 const pinField = document.getElementById('account-pin');
                 if (pinField) pinField.value = data.pin || '';
             } else {
-                // Usuário não existe no banco, mas logou
+                // Sem cadastro no banco, define pelo config ou padrão
                 currentUserRole = isAdminConfig ? ['ADMIN'] : ['OPERADOR'];
                 currentUserName = isAdminConfig ? 'Administrador' : '';
             }
         }
     } catch (e) { 
-        // ✅ PROTEÇÃO CONTRA ERRO DE APP CHECK
-        console.warn("Aviso: Não foi possível carregar perfil do banco (AppCheck ou Offline). Usando perfil local.", e);
+        console.warn("⚠️ Perfil offline ou erro AppCheck. Usando padrão local.", e);
         currentUserRole = isAdminConfig ? ['ADMIN'] : ['OPERADOR']; 
     }
 
-    // Garante Admin do config.js
+    // Garante Admin Hardcoded
     if (isAdminConfig && !currentUserRole.includes('ADMIN')) {
         currentUserRole.push('ADMIN');
     }
 
-    // Atualiza UI
+    // Atualiza Label Visual
     const roleLabel = document.getElementById('user-role-label');
     if(roleLabel) {
         roleLabel.innerText = user.email === GENERIC_EMAIL 
             ? "Operação (Genérico)" 
-            : `Logado (${currentUserRole.join(', ')})`;
+            : `Logado: ${currentUserName || 'Usuário'} (${currentUserRole.join(', ')})`;
     }
     
-    const btnLogout = document.getElementById('btn-logout');
-    if(btnLogout) btnLogout.classList.remove('hidden');
+    document.getElementById('btn-logout')?.classList.remove('hidden');
 
-    updateUIForRole(currentUserRole);
+    // 🔥 APLICA AS PERMISSÕES NA TELA
+    applyPermissions();
     
+    // ... (código anterior da função) ...
+
+    // 🔥 APLICA AS PERMISSÕES NA TELA
+    applyPermissions();
+    
+    // Callback de Ambiente (Dev/Prod)
     const savedEnv = localStorage.getItem('appLog_env') || 'prod';
     if (callbackEnv) callbackEnv(savedEnv);
+
+    // ✅ NOVO: AVISA PARA TODO O SISTEMA QUE O PERFIL CARREGOU
+    document.dispatchEvent(new CustomEvent('user-profile-ready'));
 }
 
+// Adicione esta nova função exportada no final do arquivo também:
+export function isProfileLoaded() {
+    return currentUser !== null; // Retorna true se já tiver usuário logado
+}
+
+// --- A MÁGICA DAS PERMISSÕES (RBAC) ---
+function applyPermissions() {
+    // 1. Definição de Níveis
+    // Nível Gestão: Líder, Inventário ou Admin (Pode ver Dashboard)
+    const isGestao = currentUserRole.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
+    
+    // 2. Controle de Navegação (Sidebar)
+    // Páginas proibidas para Operador Comum
+    const restrictedPages = ['dashboard', 'configuracoes', 'perfil'];
+    
+    if (!isGestao) {
+        // --- MODO OPERADOR ---
+        
+        // Esconde links proibidos
+        restrictedPages.forEach(page => {
+            const el = document.querySelector(`[data-page="${page}"]`);
+            if(el) el.classList.add('hidden');
+        });
+
+        // Redirecionamento de Segurança:
+        // Se estiver no Dashboard ou Configurações, chuta para Etiquetas
+        const currentPage = localStorage.getItem('appLog_lastPage');
+        if (restrictedPages.includes(currentPage) || !currentPage || currentPage === 'dashboard') {
+            console.warn("🚫 Acesso restrito. Redirecionando Operador...");
+            const safeTab = document.querySelector('[data-page="etiquetas"]');
+            if(safeTab) safeTab.click();
+        }
+
+    } else {
+        // --- MODO GESTÃO ---
+        // Mostra tudo
+        restrictedPages.forEach(page => {
+            const el = document.querySelector(`[data-page="${page}"]`);
+            if(el) el.classList.remove('hidden');
+        });
+    }
+
+    // 3. Controle Granular de Botões (Via HTML)
+    // Procura elementos com data-allowed="ADMIN,LIDER" e decide se mostra
+    const protectedElements = document.querySelectorAll('[data-allowed]');
+    
+    protectedElements.forEach(el => {
+        const allowedRoles = el.dataset.allowed.split(',').map(r => r.trim().toUpperCase());
+        
+        // Verifica se o usuário tem ALGUMA das roles necessárias
+        const hasAccess = allowedRoles.some(role => currentUserRole.includes(role));
+        
+        if (hasAccess) {
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+        }
+    });
+
+    // 4. Exceções Legadas (Mantendo compatibilidade com IDs antigos se necessário)
+    toggleById('admin-danger-zone', currentUserRole.includes('ADMIN'));
+    toggleById('add-client-btn', isGestao);
+}
+
+function toggleById(id, condition) {
+    const el = document.getElementById(id);
+    if(el) condition ? el.classList.remove('hidden') : el.classList.add('hidden');
+}
+
+// --- UI LOGIN ---
 function showLoginModal(forced = false) {
     const modal = document.getElementById('login-modal');
     const btnClose = document.getElementById('btn-close-login');
     if(modal) modal.classList.remove('hidden');
     if (btnClose) btnClose.classList.toggle('hidden', forced);
+    
+    if(forced) document.getElementById('sidebar-content')?.classList.add('hidden');
 }
 
 function setupLoginUI(auth) {
@@ -109,6 +192,7 @@ function setupLoginUI(auth) {
     safeBind('btn-close-login', 'click', (e) => {
         e.preventDefault();
         document.getElementById('login-modal').classList.add('hidden');
+        document.getElementById('sidebar-content')?.classList.remove('hidden');
     });
 
     safeBind('login-form', 'submit', async (e) => {
@@ -128,28 +212,20 @@ function setupLoginUI(auth) {
     });
 
     safeBind('btn-logout', 'click', async () => {
-        try { await signOut(auth); } catch (e) { console.error(e); }
+        try { await signOut(auth); window.location.reload(); } catch (e) { console.error(e); }
     });
-
-    // ... (O restante das funções de senha e PIN mantêm-se iguais, se quiser posso reenviar, mas o principal é o handleUserLoaded acima)
-    setupPinAndPassUI(auth);
 }
 
 function setupPinAndPassUI(auth) {
-    // 1. Salvar PIN (Novo Layout)
+    // 1. Salvar PIN
     safeBind('btn-save-pin', 'click', async () => {
         if (!currentUser) return;
-        
         const pinInput = document.getElementById('account-pin');
         const btn = document.getElementById('btn-save-pin');
         const pinVal = pinInput.value.trim();
 
-        if (pinVal.length !== 4 || isNaN(pinVal)) {
-            showToast("O PIN deve ter 4 números.", "warning");
-            return;
-        }
+        if (pinVal.length !== 4 || isNaN(pinVal)) return showToast("O PIN deve ter 4 números.", "warning");
 
-        // Feedback Visual no Botão
         const originalText = btn.innerHTML;
         btn.disabled = true; 
         btn.innerHTML = `<span class="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent inline-block mr-2"></span>Salvando...`;
@@ -162,90 +238,46 @@ function setupPinAndPassUI(auth) {
             console.error(e);
             showToast("Erro ao salvar PIN.", "error");
         } finally {
-            btn.disabled = false; 
-            btn.innerHTML = originalText;
+            btn.disabled = false; btn.innerHTML = originalText;
         }
     });
 
-    // 2. Atualizar Senha (Novo Layout)
+    // 2. Atualizar Senha
     safeBind('btn-update-pass', 'click', async () => {
         const currentPass = document.getElementById('account-pass-current').value;
         const newPass = document.getElementById('account-pass-new').value;
         const confirmPass = document.getElementById('account-pass-confirm').value;
         const btn = document.getElementById('btn-update-pass');
 
-        if (!currentPass || !newPass || !confirmPass) {
-            showToast("Preencha todos os campos de senha.", "warning");
-            return;
-        }
-        if (newPass.length < 6) return showToast("A nova senha deve ter no mínimo 6 caracteres.", "error");
-        if (newPass !== confirmPass) return showToast("A confirmação da senha não confere.", "error");
+        if (!currentPass || !newPass || !confirmPass) return showToast("Preencha todos os campos.", "warning");
+        if (newPass.length < 6) return showToast("Mínimo 6 caracteres.", "error");
+        if (newPass !== confirmPass) return showToast("Confirmação incorreta.", "error");
         if (!currentUser) return;
 
-        btn.disabled = true; btn.innerText = "Validando e Atualizando...";
+        btn.disabled = true; btn.innerText = "Atualizando...";
 
         try {
-            // Reautenticação necessária para operações sensíveis
             const credential = EmailAuthProvider.credential(currentUser.email, currentPass);
             await reauthenticateWithCredential(currentUser, credential);
-            
             await updatePassword(currentUser, newPass);
             
-            showToast("Senha atualizada com sucesso! Faça login novamente.");
-            
-            // Limpa campos
-            document.getElementById('account-pass-current').value = "";
-            document.getElementById('account-pass-new').value = "";
-            document.getElementById('account-pass-confirm').value = "";
-
-            // Desloga para forçar novo acesso com segurança
-            setTimeout(() => {
-                signOut(auth).then(() => window.location.reload());
-            }, 2000);
+            showToast("Senha atualizada! Faça login novamente.");
+            setTimeout(() => { signOut(auth).then(() => window.location.reload()); }, 2000);
 
         } catch (error) {
             console.error("Erro Senha:", error);
-            if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-                showToast("Senha atual incorreta.", "error");
-            } else {
-                showToast("Erro ao atualizar senha. Tente novamente.", "error");
-            }
-        } finally {
-            btn.disabled = false; btn.innerText = "Atualizar Senha de Acesso";
+            showToast(error.code === 'auth/wrong-password' ? "Senha atual incorreta." : "Erro ao atualizar.", "error");
+            btn.disabled = false; btn.innerText = "Atualizar Senha";
         }
     });
 }
 
-function updateUIForRole(roles) {
-    const safeRoles = Array.isArray(roles) ? roles : [];
-    const isAdmin = safeRoles.includes('ADMIN');
-    const canAccessConfig = safeRoles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
-
-    const adminEls = {
-        indicator: document.getElementById('admin-indicator'), 
-        dangerZone: document.getElementById('admin-danger-zone'),
-        cfgClients: document.getElementById('cfg-section-clients'),
-        cfgTeam: document.getElementById('cfg-section-team'),
-        cfgProds: document.getElementById('cfg-section-products')
-    };
-    
-    const adminAction = isAdmin ? 'remove' : 'add';
-    Object.values(adminEls).forEach(el => { if(el) el.classList[adminAction]('hidden'); });
-
-    const navConfig = document.getElementById('nav-link-config');
-    if (navConfig) navConfig.classList.toggle('hidden', !canAccessConfig);
-
-    const navProfile = document.querySelector('a[data-page="perfil"]');
-    if (navProfile) navProfile.classList.toggle('hidden', !canAccessConfig);
-
-    const btnAddClient = document.getElementById('add-client-btn');
-    if (btnAddClient) btnAddClient.classList.toggle('hidden', !canAccessConfig);
-}
-
+// --- EXPORTS ---
 export function getUserRole() { return currentUserRole; }
 export function getCurrentUserName() { return currentUserName; }
-export function checkIsAdmin() { return Array.isArray(currentUserRole) && currentUserRole.includes('ADMIN'); }
-export async function updateAccountUI(user) {
-    // Função placeholder
-    return;
+export function checkIsAdmin() { return currentUserRole.includes('ADMIN'); }
+// Helper para verificar permissão em qualquer lugar do código
+export function checkPermission(allowedRoles) {
+    if (currentUserRole.includes('ADMIN')) return true; 
+    return allowedRoles.some(role => currentUserRole.includes(role));
 }

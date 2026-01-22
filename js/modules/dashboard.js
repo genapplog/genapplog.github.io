@@ -1,13 +1,14 @@
 /**
  * ARQUIVO: js/modules/dashboard.js
- * DESCRIÇÃO: Dashboard Operacional, Relatórios, Impressão e Modo TV (Wallboard).
+ * DESCRIÇÃO: Dashboard Operacional, Relatórios e Wallboard (Modo TV).
  */
 
 import { getFirestore, collection, query, where, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { safeBind, escapeHtml } from '../utils.js';
-import { PATHS } from '../config.js'; // Importar PATHS para saber o nome da coleção
+import { PATHS } from '../config.js'; 
 import { exportRncToXlsx, exportPalletToXlsx, printRncById } from './reports.js';
 import { CHART_COLORS, COMMON_OPTIONS, DOUGHNUT_OPTIONS } from './charts-config.js';
+import { getUserRole, isProfileLoaded } from './auth.js'; // ✅ Importação ÚNICA e CORRETA
 
 // --- ESTADO GERAL ---
 let localAllData = [];
@@ -34,67 +35,100 @@ async function loadChartLib() {
 }
 
 // =========================================================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO (COM PROTEÇÃO DE ACESSO)
 // =========================================================
 export function initDashboard() {
-    console.log("Iniciando Módulo Dashboard...");
+    // Função interna que executa a carga real
+    const startLoading = () => {
+        // 🔒 VERIFICAÇÃO DE SEGURANÇA
+        const roles = getUserRole() || [];
+        const canViewDashboard = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
 
-    // ✅ DEFINIR FILTRO PADRÃO: MÊS VIGENTE
-    // Isso garante que ao abrir, mostre apenas o mês atual (zerando o anterior)
-    const date = new Date();
-    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        if (!canViewDashboard) {
+            console.log("🔒 Perfil Operacional: Dashboard bloqueado.");
+            const dashContainer = document.getElementById('dashboard-content');
+            if(dashContainer) {
+                dashContainer.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-64 text-slate-400">
+                        <svg class="w-16 h-16 mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        <p class="text-lg font-medium">Acesso Restrito</p>
+                        <p class="text-sm opacity-70">Utilize o menu lateral para acessar suas funções.</p>
+                    </div>`;
+            }
+            return; // ⛔ PARA AQUI se for operador
+        }
 
-    // Função auxiliar para formatar YYYY-MM-DD (Corrigindo fuso horário)
-    const toInputDate = (d) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        console.log("📊 Permissão confirmada. Iniciando Dashboard...");
+
+        // Configuração de Datas (Mês Vigente)
+        const date = new Date();
+        const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+        const toInputDate = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const iStart = document.getElementById('dash-filter-start');
+        const iEnd = document.getElementById('dash-filter-end');
+
+        if(iStart && !iStart.value) iStart.value = toInputDate(firstDay);
+        if(iEnd && !iEnd.value) iEnd.value = toInputDate(lastDay);
+
+        // Bindings dos Filtros
+        safeBind('btn-dash-filter-apply', 'click', () => applyDashboardFilters());
+        safeBind('btn-dash-filter-clear', 'click', () => { 
+            if(iStart) iStart.value = ''; 
+            if(iEnd) iEnd.value = '';
+            applyDashboardFilters(); 
+        });
+
+        // Exportação
+        safeBind('btn-dash-export', 'click', () => {
+            const { start, end } = getFilterDates();
+            exportRncToXlsx(start, end);
+        });
+        
+        safeBind('btn-dash-export-pallet', 'click', () => {
+            const { start, end } = getFilterDates();
+            exportPalletToXlsx(start, end);
+        });
+        
+        // Histórico
+        safeBind('history-search-input', 'input', () => renderHistoryTable());
+        safeBind('history-search-clear', 'click', () => { 
+            const i = document.getElementById('history-search-input'); 
+            if(i){ i.value=''; renderHistoryTable(); } 
+        });
+
+        // TV Mode
+        safeBind('btn-exit-tv', 'click', exitTVMode);
+
+        // Carga Inicial dos Dados
+        applyDashboardFilters();
     };
 
-    const iStart = document.getElementById('dash-filter-start');
-    const iEnd = document.getElementById('dash-filter-end');
-
-   if(iStart && !iStart.value) iStart.value = toInputDate(firstDay);
-    if(iEnd && !iEnd.value) iEnd.value = toInputDate(lastDay);
-
-    // Filtros
-    safeBind('btn-dash-filter-apply', 'click', () => applyDashboardFilters());
-    
-    // ✅ Dispara a primeira busca automática para preencher os gráficos
-    applyDashboardFilters();
-    safeBind('btn-dash-filter-clear', 'click', () => { 
-        const i1 = document.getElementById('dash-filter-start');
-        const i2 = document.getElementById('dash-filter-end');
-        if(i1) i1.value = ''; if(i2) i2.value = '';
-        applyDashboardFilters(); 
-    });
-
-    // Exportação (VIA MÓDULO REPORTS)
-    safeBind('btn-dash-export', 'click', () => {
-        const { start, end } = getFilterDates();
-        exportRncToXlsx(start, end);
-    });
-    
-    safeBind('btn-dash-export-pallet', 'click', () => {
-        const { start, end } = getFilterDates();
-        exportPalletToXlsx(start, end);
-    });
-    
-    // Busca Histórico
-    safeBind('history-search-input', 'input', () => renderHistoryTable());
-    safeBind('history-search-clear', 'click', () => { 
-        const i = document.getElementById('history-search-input'); 
-        if(i){ i.value=''; renderHistoryTable(); } 
-    });
-
-    // TV Mode
-    safeBind('btn-exit-tv', 'click', exitTVMode);
+    // ⏳ LÓGICA DE ESPERA (Race Condition Fix)
+    // Garante que o auth.js terminou de carregar o perfil antes de decidir
+    if (isProfileLoaded()) {
+        startLoading();
+    } else {
+        console.log("⏳ Dashboard aguardando perfil...");
+        document.addEventListener('user-profile-ready', startLoading, { once: true });
+    }
 }
 
 // Chamado pelo rnc.js quando os dados mudam
 export function updateDashboardView(allData) {
+    // Só atualiza se tiver permissão
+    const roles = getUserRole() || [];
+    if (!roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r))) return;
+
     localAllData = allData;
     applyDashboardFilters(); 
     
@@ -203,10 +237,9 @@ async function updateTVView() {
         datasets: [{ data: [locals.ARMAZENAGEM, locals.ESTOQUE, locals.CHECKOUT, locals.SEPARAÇÃO], backgroundColor: CHART_COLORS.sobra, borderRadius: 6 }] 
     }, COMMON_OPTIONS);
 
-    // Opções visuais otimizadas para TV (Barras Horizontais + Fontes Maiores)
     const tvChartOptions = {
         ...COMMON_OPTIONS,
-        indexAxis: 'y', // Barra Horizontal
+        indexAxis: 'y',
         maintainAspectRatio: false,
         scales: {
             x: { 
@@ -219,13 +252,11 @@ async function updateTVView() {
                 ticks: { 
                     color: '#ffffff',
                     autoSkip: false,
-                    font: { size: 14, weight: 'bold' } // Nome em destaque e maior
+                    font: { size: 14, weight: 'bold' }
                 } 
             }
         },
-        plugins: {
-            legend: { display: false }
-        }
+        plugins: { legend: { display: false } }
     };
 
     const sortedCaus = Object.entries(causadores).sort((a,b) => b[1] - a[1]).slice(0, 5);
@@ -247,20 +278,18 @@ async function updateTVView() {
 // DASHBOARD PADRÃO (CONSULTA ECONÔMICA)
 // =========================================================
 async function applyDashboardFilters() {
+    // 🔒 Proteção Extra: Se não for gestão, nem tenta buscar
+    const roles = getUserRole() || [];
+    if (!roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r))) return;
+
     const iStart = document.getElementById('dash-filter-start'); 
     const iEnd = document.getElementById('dash-filter-end');
     if(!iStart || !iEnd) return;
 
     const btn = document.getElementById('btn-dash-filter-apply');
-
-    // ✅ CORREÇÃO DE SEGURANÇA:
-    // Se o botão já estiver desabilitado, significa que já existe uma busca em andamento.
-    // Aborta esta nova chamada para não sobrepor o texto "Buscando..." como original.
     if (btn && btn.disabled) return;
     
-    // Salva o estado original (Texto + Ícone)
     const originalContent = btn ? btn.innerHTML : 'Filtrar'; 
-    
     if(btn) {
         btn.disabled = true; 
         btn.innerHTML = `<span class="animate-pulse">Buscando...</span>`; 
@@ -268,11 +297,9 @@ async function applyDashboardFilters() {
 
     try {
         const db = getFirestore();
-        // Garante datas válidas
         let startDate = iStart.value ? new Date(iStart.value + 'T00:00:00') : new Date();
         let endDate = iEnd.value ? new Date(iEnd.value + 'T23:59:59') : new Date();
 
-        // Query direto no banco (Traz apenas o necessário)
         const q = query(
             collection(db, PATHS.occurrences),
             where('createdAt', '>=', startDate),
@@ -288,23 +315,18 @@ async function applyDashboardFilters() {
             d.id = doc.id;
             d.jsDate = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
             
-            // Aplica filtros de tipo e status
             if (d.type !== 'pallet_label_request' && d.status === 'concluido') {
                 fetchedData.push(d);
             }
         });
 
-        // Atualiza a memória e a tela
         localAllData = fetchedData; 
-        
         updateChartsAndStats(fetchedData);
         renderHistoryTable(fetchedData);
 
     } catch (error) {
         console.error("Erro ao buscar dados:", error);
-        // Opcional: alert("Erro ao carregar dados. Verifique sua conexão.");
     } finally {
-        // ✅ GARANTIA: Isso roda sempre, restaurando o botão
         if(btn) {
             btn.innerHTML = originalContent;
             btn.disabled = false;
@@ -331,7 +353,6 @@ async function updateChartsAndStats(data) {
 
     updateKPIsOnly(data);
 
-    // Fábrica de Gráficos (Reutilizável)
     const createOrUpdateChart = (id, config, inst) => { 
         const ctx = document.getElementById(id); 
         if (!ctx) return null; 
@@ -361,25 +382,13 @@ async function updateChartsAndStats(data) {
         options: COMMON_OPTIONS 
     }, chartLocalInstance);
     
-    // Configuração Visual Específica para Barras Horizontais (Top 10)
     const horizOptions = {
         ...COMMON_OPTIONS,
         indexAxis: 'y',
         maintainAspectRatio: false,
         scales: {
-            x: { 
-                beginAtZero: true, 
-                grid: { color: 'rgba(255, 255, 255, 0.05)' }, // Grade vertical suave
-                ticks: { color: '#94a3b8' } 
-            },
-            y: { 
-                grid: { display: false }, // Remove grade horizontal (em cima dos nomes)
-                ticks: { 
-                    color: '#e2e8f0',
-                    autoSkip: false, // Garante que TODOS os nomes apareçam
-                    font: { size: 10 }
-                } 
-            }
+            x: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8' } },
+            y: { grid: { display: false }, ticks: { color: '#e2e8f0', autoSkip: false, font: { size: 10 } } }
         }
     };
 
@@ -436,11 +445,9 @@ function renderHistoryTable(dataToRender) {
       tr.innerHTML = `<td class="px-4 py-3 font-mono text-slate-300 text-xs"><span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>${item.jsDate.toLocaleDateString('pt-BR')}</td><td class="px-4 py-3 text-white font-medium text-sm">${escapeHtml(item.embarque || '-')}<br><span class="text-slate-500 text-[10px] font-normal">${escapeHtml(item.nf || '-')}</span></td><td class="px-4 py-3 text-slate-300 text-xs">${escapeHtml(item.tipo)}</td><td class="px-4 py-3 text-right"><button class="text-slate-400 hover:text-white bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition btn-print-history flex items-center gap-2 ml-auto text-xs" data-id="${item.id}">Imprimir</button></td>`;
         tbody.appendChild(tr);
     });
-    // Usa a função do módulo reports
     tbody.querySelectorAll('.btn-print-history').forEach(btn => btn.addEventListener('click', (e) => printRncById(e.currentTarget.dataset.id)));
 }
 
-// Helper para obter datas do filtro
 function getFilterDates() {
     const iStart = document.getElementById('dash-filter-start'); 
     const iEnd = document.getElementById('dash-filter-end');
