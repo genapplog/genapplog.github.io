@@ -180,12 +180,12 @@ function setupEnvironmentUI() {
     const logoBg = document.getElementById('logo-bg');
     const switchArea = document.getElementById('env-switch-area');
 
-    // CONFIGURE AQUI OS LINKS REAIS DOS SEUS AMBIENTES
-    const URL_PRODUCAO = "https://applog-producao.web.app"; // Coloque o link real
-    const URL_TESTE = "https://applog-teste.web.app";       // Coloque o link real (ou localhost)
+    // ✅ LINKS REAIS CONFIGURADOS
+    const URL_PRODUCAO = "https://applog.app.br"; 
+    const URL_TESTE = "https://teste.applog.app.br";       
 
     if (IS_DEV) {
-        // --- ESTAMOS EM MODO TESTE ---
+        // --- ESTAMOS EM MODO TESTE (Subdomínio) ---
         if(badge) {
             badge.innerText = "Teste";
             badge.className = "text-[10px] uppercase tracking-wider font-bold text-amber-400 bg-amber-900/30 px-1.5 rounded border border-amber-800";
@@ -210,7 +210,7 @@ function setupEnvironmentUI() {
         }
 
     } else {
-        // --- ESTAMOS EM PRODUÇÃO ---
+        // --- ESTAMOS EM PRODUÇÃO (Domínio Principal) ---
         if(badge) {
             badge.innerText = "Produção";
             badge.className = "text-[10px] uppercase tracking-wider font-bold text-emerald-400 bg-emerald-900/30 px-1.5 rounded border border-emerald-800";
