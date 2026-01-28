@@ -11,7 +11,7 @@ import {
 
 import { safeBind, showToast, openConfirmModal, closeConfirmModal, sendDesktopNotification, requestNotificationPermission, escapeHtml } from '../utils.js';
 import { PATHS } from '../config.js';
-import { getUserRole, getCurrentUserName } from './auth.js';
+import { getUserRole, getCurrentUserName, isProfileLoaded } from './auth.js';
 import { initDashboard, updateDashboardView } from './dashboard.js';
 import { updateAdminList, registerLog } from './admin.js';
 import { getClientNames } from './clients.js'; // ✅ Importando nomes dos clientes
@@ -34,11 +34,58 @@ let unsubscribeOccurrences = null;
 // =========================================================
 // INICIALIZAÇÃO
 // =========================================================
+
+// =========================================================
+// INICIALIZAÇÃO
+// =========================================================
 export async function initRncModule(db, isTest) {
     console.log("Iniciando Módulo RNC (Refatorado)...");
     globalDb = db; 
     currentCollectionRef = collection(db, PATHS.occurrences);
 
+    // 1. Configurações que não dependem de dados (Botões, Dashboard, Notificações)
+    if (!bindingsInitialized) { 
+        setupRncBindings(); 
+        initDashboard(db); 
+        requestNotificationPermission(); 
+        bindingsInitialized = true; 
+    }
+
+    // 2. Função interna que decide se carrega a lista ou bloqueia
+    const startListListener = () => {
+        const roles = getUserRole() || [];
+        // Quem pode ver a lista? (Admin, Líder, Inventário)
+        const canViewList = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
+
+        if (canViewList) {
+            console.log("📋 Permissão confirmada. Carregando lista de RNC...");
+            setupRealtimeListener(); // <--- CHAMA A FUNÇÃO NOVA ABAIXO
+        } else {
+            console.log("🔒 Perfil Operacional: Lista bloqueada.");
+            const tbody = document.getElementById('pending-list-tbody');
+            if(tbody) {
+                tbody.innerHTML = `<tr><td colspan="100%" class="text-center p-8 text-slate-400">
+                    <div class="flex flex-col items-center gap-2">
+                        <svg class="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        <span>A visualização da lista é restrita à Liderança.</span>
+                    </div>
+                </td></tr>`;
+            }
+            // Mesmo bloqueado, carrega nomes de usuários para o formulário funcionar
+            loadUserSuggestions(db);
+        }
+    };
+
+    // 3. Lógica de Espera (Aguarda o Auth terminar de carregar o perfil)
+    if (isProfileLoaded && isProfileLoaded()) {
+        startListListener();
+    } else {
+        document.addEventListener('user-profile-ready', startListListener, { once: true });
+    }
+}
+
+// ✅ NOVA FUNÇÃO: SÓ É CHAMADA SE TIVER PERMISSÃO
+function setupRealtimeListener() {
     if (unsubscribeOccurrences) unsubscribeOccurrences();
 
     const startOfMonth = new Date();
@@ -55,15 +102,13 @@ export async function initRncModule(db, isTest) {
         allOccurrencesData = []; 
         pendingOccurrencesData = [];
         
-        if (bindingsInitialized) {
-            snapshot.docChanges().forEach(change => {
-                if (change.type === "added" || change.type === "modified") {
-                    const data = change.doc.data();
-                    const isRecent = data.createdAt?.toDate ? (new Date() - data.createdAt.toDate()) < 3600000 : true;
-                    if(isRecent) checkAndNotify(data);
-                }
-            });
-        }
+        snapshot.docChanges().forEach(change => {
+            if (change.type === "added" || change.type === "modified") {
+                const data = change.doc.data();
+                const isRecent = data.createdAt?.toDate ? (new Date() - data.createdAt.toDate()) < 3600000 : true;
+                if(isRecent) checkAndNotify(data);
+            }
+        });
         
         snapshot.forEach(docSnap => {
             const d = docSnap.data(); 
@@ -81,26 +126,64 @@ export async function initRncModule(db, isTest) {
         updateAdminList([...pendingOccurrencesData, ...allOccurrencesData]);
         updatePendingList(); 
         
-        // ✅ ADICIONE ISSO: Carrega a lista de usuários assim que os dados chegarem
-        loadUserSuggestions(db);
+        loadUserSuggestions(globalDb);
     });
 
-    const myCurrentRole = getUserRole() || [];
-    if (myCurrentRole.includes('ADMIN') || myCurrentRole.includes('LIDER')) {
-        const notificationsRef = collection(db, `artifacts/${globalDb.app.options.appId}/public/data/notifications`);
-        const recentTime = new Date(Date.now() - 2 * 60 * 1000); 
-        onSnapshot(query(notificationsRef, where('createdAt', '>', recentTime)), {
-            next: (snapshot) => { snapshot.docChanges().forEach(change => { if (change.type === "added") { const n = change.doc.data(); if (n.requesterEmail !== getAuth().currentUser?.email) { sendDesktopNotification("📢 Chamado", `Operador ${n.requesterName} no ${n.local || 'Local'}.`); showToast(`📢 ${n.requesterName} chamando!`, "warning"); } } }); }, error: () => {}
-        });
-    }
-
-    if (!bindingsInitialized) { 
-        setupRncBindings(); 
-        initDashboard(db); 
-        requestNotificationPermission(); 
-        bindingsInitialized = true; 
-    }
+    // Listener de notificações (Exclusivo da liderança)
+    const notificationsRef = collection(globalDb, `artifacts/${globalDb.app.options.appId}/public/data/notifications`);
+    const recentTime = new Date(Date.now() - 2 * 60 * 1000); 
+    onSnapshot(query(notificationsRef, where('createdAt', '>', recentTime)), {
+        next: (snapshot) => { 
+            snapshot.docChanges().forEach(change => { 
+                if (change.type === "added") { 
+                    const n = change.doc.data(); 
+                    if (n.requesterEmail !== getAuth().currentUser?.email) { 
+                        sendDesktopNotification("📢 Chamado", `Operador ${n.requesterName} no ${n.local || 'Local'}.`); 
+                        showToast(`📢 ${n.requesterName} chamando!`, "warning"); 
+                    } 
+                } 
+            }); 
+        }, 
+        error: () => {}
+    });
 }
+
+// Função auxiliar para os botões estáticos (Extrai do código antigo para organizar)
+function setupStaticListeners() {
+    safeBind('btn-new-rnc', 'click', () => {
+        document.getElementById('rnc-modal').classList.remove('hidden');
+        document.getElementById('rnc-form').reset();
+        document.getElementById('rnc-id').value = '';
+        
+        // Define data/hora atual
+        const now = new Date();
+        const localIsoString = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+        document.getElementById('rnc-date').value = localIsoString;
+        
+        // Reset visual das abas
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active', 'border-blue-600', 'text-blue-600'));
+        document.querySelector('[data-tab="tab-details"]').classList.add('active', 'border-blue-600', 'text-blue-600');
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.getElementById('tab-details').classList.remove('hidden');
+
+        // Esconde seções de Gestão se for novo
+        document.getElementById('section-validation').classList.add('hidden');
+        document.getElementById('section-conclusion').classList.add('hidden');
+        
+        // Mostra botão Salvar Rascunho
+        const btnSave = document.getElementById('btn-save-rnc');
+        if(btnSave) {
+            btnSave.classList.remove('hidden');
+            btnSave.innerText = "Salvar Rascunho";
+        }
+    });
+
+    safeBind('btn-close-rnc', 'click', () => {
+        document.getElementById('rnc-modal').classList.add('hidden');
+    });
+}
+
+// ... (Mantenha o resto das funções: setupRealtimeListener, loadUserSuggestions, etc.) ...
 
 function checkAndNotify(data) {
     // Implementação simples de notificação para não quebrar
