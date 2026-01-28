@@ -58,8 +58,68 @@ const db = initializeFirestore(app, {
 // =========================================================
 // 2. CICLO DE VIDA DA APLICAÇÃO
 // =========================================================
+
+// Função para carregar HTMLs externos (Modularização)
+async function loadViews() {
+    const views = [
+        { file: './pages/home.html' },
+        { file: './pages/dashboard.html' },
+        { file: './pages/checklist.html' },
+        { file: './pages/labels.html' },
+        { file: './pages/rnc.html' },
+        { file: './pages/profile.html' },
+        { file: './pages/settings.html' }
+    ];
+
+    try {
+        // Tenta encontrar o container interno (aquele com padding)
+        let container = document.querySelector('#main-content > div');
+
+        // ROBUSTEZ: Se o container interno não existir (foi apagado), nós o criamos agora
+        if (!container) {
+            const mainContent = document.getElementById('main-content');
+            if (!mainContent) {
+                console.error("❌ ERRO CRÍTICO: Elemento #main-content não encontrado no index.html");
+                return;
+            }
+            console.warn("⚠️ Recriando container de visualização...");
+            
+            // Cria a div com as classes de espaçamento originais
+            container = document.createElement('div');
+            container.className = "p-4 md:p-10 pb-20"; 
+            mainContent.appendChild(container);
+        }
+
+        // Carrega todos os arquivos HTML em paralelo
+        const responses = await Promise.all(views.map(v => fetch(v.file)));
+        
+        // Verifica se algum arquivo falhou (ex: 404)
+        for (const [index, response] of responses.entries()) {
+            if (!response.ok) throw new Error(`Falha ao carregar ${views[index].file} (Status: ${response.status})`);
+        }
+
+        const htmls = await Promise.all(responses.map(r => r.text()));
+
+        // Injeta o conteúdo. 
+        // Usamos innerHTML += para somar ao que já existe (caso o container tenha sido recriado ou não)
+        const viewsHTML = htmls.join('');
+        container.innerHTML = viewsHTML + container.innerHTML; 
+        
+        console.log("📦 Views carregadas e injetadas com sucesso.");
+        
+    } catch (error) {
+        console.error("Erro ao carregar views:", error);
+        // Mostra um erro visual na tela para facilitar o diagnóstico
+        const main = document.getElementById('main-content');
+        if (main) main.innerHTML = `<div class="p-10 text-red-500 font-bold">Erro de Carregamento: ${error.message}<br>Verifique se a pasta /pages e os arquivos existem.</div>`;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log(`🚀 AppLog Iniciando... Ambiente: ${IS_DEV ? 'DESENVOLVIMENTO' : 'PRODUÇÃO'}`);
+
+    // 1. Carrega a interface HTML separada
+    await loadViews();
 
     // Configurações Iniciais
     setupEnvironmentUI();
@@ -82,14 +142,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Inicia Módulos Conectados ao DB
     const clientsCollection = collection(db, PATHS.clients);
-    
-    // Inicialização Paralela para performance
-    await Promise.all([
-        initClientsModule(clientsCollection),
-        // Passamos IS_DEV para o módulo RNC saber como se comportar
-        initRncModule(db, IS_DEV), 
-        initAdminModule(db, clientsCollection)
-    ]);
+
+    // ✅ CORREÇÃO: Inicia os módulos APENAS após confirmar a autenticação
+    let modulesInitialized = false;
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            console.log("🔓 Usuário autenticado: " + user.email);
+            
+            // Evita reinicializar os módulos se o auth state mudar (ex: token refresh)
+            if (!modulesInitialized) {
+                console.log("🚀 Iniciando módulos de dados...");
+                
+                initClientsModule(clientsCollection);
+                initRncModule(db, IS_DEV);
+                initAdminModule(db, clientsCollection);
+                
+                modulesInitialized = true;
+            }
+
+            // Atualização de permissões admin (seu código existente)
+            setTimeout(() => {
+                console.log("🔄 Recarregando lista de clientes com permissões de Admin...");
+                refreshClientList();
+            }, 1000);
+            
+        } else {
+            console.log("🔒 Usuário não autenticado. Dados protegidos.");
+            // Aqui você poderia limpar a tela ou redirecionar para login se necessário
+            modulesInitialized = false;
+        }
+    });
 
     // Funcionalidades Globais de Estabilidade
     // Executa imediatamente e depois a cada 2s para pegar modais novos

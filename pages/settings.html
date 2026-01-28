@@ -1,0 +1,144 @@
+<div id="configuracoes" class="page-content hidden fade-in max-w-4xl mx-auto">
+                    <header class="mb-8"><h1 class="text-2xl md:text-3xl font-bold text-white">Configurações</h1></header>
+                    <div class="bg-slate-800 p-12 rounded-xl shadow-lg border border-slate-700 text-center">
+                        <div class="max-w-2xl mx-auto mb-12 p-6 bg-slate-900/50 rounded-xl border border-slate-700">
+                            <h3 class="text-lg font-bold text-white mb-4 flex items-center justify-center gap-2">Ambiente de Execução</h3>
+                            <div id="env-switch-area" class="flex flex-col items-center justify-center mb-8 min-h-[60px]">
+                            </div>
+                            <div id="test-tools-section" class="hidden border-t border-slate-700 pt-6 flex flex-col gap-3">
+                                <p class="text-xs text-slate-400 mb-2">Ferramentas de Ambiente de Teste</p>
+                                <button id="btn-sync-prod-to-test" class="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold shadow-lg transition flex items-center justify-center gap-2 mx-auto w-full md:w-auto">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                                    Clonar Produção para Testes
+                                </button>
+                                <p class="text-[10px] text-slate-500 text-center italic mt-1">Ao clonar, todos os dados atuais de teste serão apagados.</p>
+                            </div>
+                        </div>
+                        
+                        <div id="cfg-section-clients" class="max-w-2xl mx-auto mb-12 border-b border-slate-700 pb-12">
+                            <div class="mb-8"><h2 class="text-2xl font-bold text-white mb-2">Gestão Checklist</h2><p class="text-slate-400 text-sm">Atualize a lista de clientes e checklist de carregamento.</p></div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8"><button id="download-template-btn" class="px-4 py-3 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition border border-slate-600">Baixar Modelo Carregamento</button><label for="file-upload" class="cursor-pointer px-4 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-500 transition shadow-lg flex items-center justify-center">Importar Carregamento<input id="file-upload" type="file" class="hidden" accept=".json"></label></div>
+                            <div id="import-status" class="hidden p-4 rounded-lg bg-slate-900 border border-slate-700 text-left"><p class="text-sm text-indigo-400 font-mono" id="import-status-text"></p></div>
+                        </div>
+                        
+                        <div id="cfg-section-team" class="max-w-2xl mx-auto mb-12 border-b border-slate-700 pb-12">
+                            <div class="mb-8"><h2 class="text-2xl font-bold text-white mb-2">Gestão de Equipe</h2><p class="text-slate-400 text-sm">Atualize a lista de usuários e seus cargos.</p></div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8"><button id="download-users-template-btn" class="px-4 py-3 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition border border-slate-600">Baixar Modelo Equipe</button><label for="users-upload" class="cursor-pointer px-4 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-500 transition shadow-lg flex items-center justify-center">Importar Equipe<input id="users-upload" type="file" class="hidden" accept=".json"></label></div>
+                            <div id="users-import-status" class="hidden p-4 rounded-lg bg-slate-900 border border-slate-700 text-left"><p class="text-sm text-indigo-400 font-mono" id="users-import-status-text"></p></div>
+                        </div>
+                        
+                        <div id="cfg-section-products" class="max-w-2xl mx-auto mb-12 border-b border-slate-700 pb-12">
+                            <div class="mb-8">
+                                <h2 class="text-2xl font-bold text-white mb-2">Base de Produtos</h2>
+                                <p class="text-slate-400 text-sm">Atualize a lista ou gerencie itens individuais.</p>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <button id="download-products-template-btn" class="px-4 py-3 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition border border-slate-600">Baixar Modelo</button>
+                                <label for="products-upload" class="cursor-pointer px-4 py-3 bg-cyan-600 text-white rounded-lg font-medium hover:bg-cyan-500 transition shadow-lg flex items-center justify-center">Importar JSON<input id="products-upload" type="file" class="hidden" accept=".json"></label>
+                            </div>
+                            <div id="products-import-status" class="hidden p-4 rounded-lg bg-slate-900 border border-slate-700 text-left mb-8"><p class="text-sm text-indigo-400 font-mono" id="products-import-status-text"></p></div>
+                            <div class="bg-slate-900 p-4 rounded-lg border border-slate-700">
+                                <div class="flex items-center gap-2 mb-4"><svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg><h4 class="text-sm font-bold text-white uppercase">Consultar / Excluir Item</h4></div>
+                                <div class="flex gap-2 mb-2"><input type="text" id="product-search-input" placeholder="Digite o DUN, Código ou Descrição" class="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-xs text-white focus:border-cyan-500 outline-none transition"><button id="btn-search-product" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-xs font-bold transition">Buscar</button></div>
+                                <div class="overflow-hidden rounded border border-slate-700 hidden" id="product-list-container"><table class="w-full text-left text-xs"><thead class="bg-slate-950 text-slate-400 font-medium"><tr><th class="p-2">DUN (ID)</th><th class="p-2">Descrição</th><th class="p-2 text-right">Ação</th></tr></thead><tbody id="product-list-tbody" class="divide-y divide-slate-800 text-indigo-400"></tbody></table></div>
+                                <p id="product-search-msg" class="text-xs text-slate-500 mt-2 text-center hidden">Nenhum produto encontrado.</p>
+                            </div>
+                        </div>
+                        
+                        <div id="admin-danger-zone" class="mt-12 pt-8 border-t border-slate-700 hidden">
+                            <div class="flex justify-between items-center mb-8">
+                                <h3 class="text-red-400 font-bold uppercase text-xs tracking-wider">Área de Perigo (Admin)</h3>
+                                <div class="flex gap-3">
+                                    <button id="btn-reset-db" class="px-4 py-2 bg-red-900/20 text-red-200 border border-red-800 rounded-lg text-xs font-bold hover:bg-red-900 transition">
+                                        Restaurar Padrões
+                                    </button>
+                                    <button id="btn-refresh-admin-list" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-500 transition shadow-lg flex items-center gap-2">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                        Atualizar Tudo
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg mb-8">
+                                <div class="flex flex-col md:flex-row justify-between items-end border-b border-slate-700 pb-4 mb-4 gap-4">
+                                    <h5 class="text-amber-400 text-sm font-bold uppercase flex items-center gap-2">
+                                        <span class="p-1 bg-amber-500/10 rounded"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></span>
+                                        Gestão de Divergências (RNC)
+                                    </h5>
+                                    <input type="text" id="admin-search-rnc" placeholder="🔍 Buscar por Embarque, NF ou Tipo..." class="bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-xs text-white focus:border-amber-500 outline-none w-full md:w-64 transition-all">
+                                </div>
+                                <div class="overflow-hidden rounded-lg border border-slate-700 max-h-60 overflow-y-auto bg-slate-900">
+                                    <table class="min-w-full text-xs text-left">
+                                        <thead class="bg-slate-950 text-slate-400 font-medium sticky top-0 z-10">
+                                            <tr><th class="px-4 py-3">Data/Tipo</th><th class="px-4 py-3">Referência</th><th class="px-4 py-3 text-right">Ações</th></tr>
+                                        </thead>
+                                        <tbody id="admin-oc-list-tbody" class="divide-y divide-slate-800 text-indigo-400">
+                                            <tr><td colspan="3" class="px-4 py-4 text-center text-slate-600 italic">Carregando...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg mb-8">
+                                <div class="flex flex-col md:flex-row justify-between items-end border-b border-slate-700 pb-4 mb-4 gap-4">
+                                    <h5 class="text-cyan-400 text-sm font-bold uppercase flex items-center gap-2">
+                                        <span class="p-1 bg-cyan-500/10 rounded"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg></span>
+                                        Solicitações de Etiquetas
+                                    </h5>
+                                    <input type="text" id="admin-search-label" placeholder="🔍 Buscar por Item ou Lote..." class="bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-xs text-white focus:border-cyan-500 outline-none w-full md:w-64 transition-all">
+                                </div>
+                                <div class="overflow-hidden rounded-lg border border-slate-700 max-h-60 overflow-y-auto bg-slate-900">
+                                    <table class="min-w-full text-xs text-left">
+                                        <thead class="bg-slate-950 text-slate-400 font-medium sticky top-0 z-10">
+                                            <tr><th class="px-4 py-3">Data Solicitação</th><th class="px-4 py-3">Item / Detalhes</th><th class="px-4 py-3 text-right">Ações</th></tr>
+                                        </thead>
+                                        <tbody id="admin-label-list-tbody" class="divide-y divide-slate-800 text-indigo-400">
+                                            <tr><td colspan="3" class="px-4 py-4 text-center text-slate-600 italic">Carregando...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div id="admin-audit-section" class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg hidden">
+                                <div class="flex flex-col md:flex-row justify-between items-center border-b border-slate-700 pb-4 mb-4 gap-4">
+                                    <h5 class="text-indigo-400 text-sm font-bold uppercase flex items-center gap-2">
+                                        <span class="p-1 bg-indigo-500/10 rounded"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></span>
+                                        Auditoria do Sistema
+                                    </h5>
+                                    
+                                    <div class="flex flex-wrap gap-2 items-center justify-end w-full md:w-auto">
+                                        <input type="date" id="audit-filter-start" class="bg-slate-900 border border-slate-600 rounded px-3 py-1.5 text-xs text-white focus:border-indigo-500 outline-none [color-scheme:dark]">
+                                        <span class="text-slate-500 text-xs">até</span>
+                                        <input type="date" id="audit-filter-end" class="bg-slate-900 border border-slate-600 rounded px-3 py-1.5 text-xs text-white focus:border-indigo-500 outline-none [color-scheme:dark]">
+                                        
+                                        <button id="btn-audit-filter" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                            Filtrar
+                                        </button>
+                                        <button id="btn-audit-export" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded text-xs font-bold transition flex items-center gap-1" title="Exportar Excel">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                            Exportar
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="overflow-hidden rounded-lg border border-slate-700 max-h-80 overflow-y-auto bg-slate-900">
+                                    <table class="min-w-full text-xs text-left">
+                                        <thead class="bg-slate-950 text-slate-400 font-medium sticky top-0 z-10 shadow-md">
+                                            <tr>
+                                                <th class="px-4 py-3 border-b border-slate-800">Data/Hora</th>
+                                                <th class="px-4 py-3 border-b border-slate-800">Usuário</th>
+                                                <th class="px-4 py-3 border-b border-slate-800">Ação</th>
+                                                <th class="px-4 py-3 border-b border-slate-800">Detalhes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="audit-list-tbody" class="divide-y divide-slate-800 text-slate-300">
+                                            <tr><td colspan="4" class="px-4 py-8 text-center text-slate-600 italic">Carregando últimos 10 registros...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p class="text-[10px] text-slate-500 mt-2 text-right italic">* Exibindo os últimos 10 registros por padrão. Use os filtros para ver mais.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>

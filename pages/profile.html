@@ -1,0 +1,63 @@
+<div id="perfil" class="page-content hidden fade-in max-w-lg mx-auto">
+                    <header class="mb-8 text-center">
+                        <h1 class="text-2xl md:text-3xl font-bold text-white">Minha Conta</h1>
+                        <p class="text-slate-400 mt-1">Gerencie suas credenciais de acesso.</p>
+                    </header>
+
+                    <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-2xl relative">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-indigo-600"></div>
+
+                        <div class="p-8 border-b border-slate-700 bg-slate-800/50 flex flex-col items-center text-center">
+                            <div class="mb-4 relative">
+                                <div class="w-16 h-16 rounded-full bg-slate-900 border border-amber-500/30 flex items-center justify-center text-amber-500 shadow-lg shadow-amber-900/10">
+                                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                </div>
+                            </div>
+                            <h2 class="text-xl font-bold text-white mb-2">Visto Eletrônico</h2>
+                            <p class="text-sm text-slate-400 mb-6 max-w-xs">Este PIN de 4 dígitos é sua assinatura digital para validar ocorrências presencialmente.</p>
+
+                            <div class="w-full max-w-xs space-y-4">
+                                <div>
+                                    <label class="block text-[10px] uppercase font-bold text-amber-500 mb-2 tracking-wider">Seu PIN Atual</label>
+                                    <input type="password" id="account-pin" maxlength="4" class="w-full bg-slate-900 border border-slate-600 rounded-lg py-3 text-center text-3xl text-white tracking-[1em] focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition font-mono placeholder-slate-700" placeholder="••••">
+                                </div>
+                                <button id="btn-save-pin" class="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg shadow-lg shadow-amber-900/20 transition flex items-center justify-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    Salvar PIN
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="p-8 bg-slate-800">
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="p-3 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-white">Senha de Login</h3>
+                                    <p class="text-xs text-slate-400">Credenciais para acessar o AppLog.</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1 uppercase">Senha Atual</label>
+                                    <input type="password" id="account-pass-current" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-indigo-500 outline-none transition" placeholder="••••••">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-400 mb-1 uppercase">Nova Senha</label>
+                                        <input type="password" id="account-pass-new" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-indigo-500 outline-none transition" placeholder="Mín 6 caracteres">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-slate-400 mb-1 uppercase">Confirmar</label>
+                                        <input type="password" id="account-pass-confirm" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-indigo-500 outline-none transition" placeholder="Repita a nova senha">
+                                    </div>
+                                </div>
+                                <button id="btn-update-pass" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg shadow-lg shadow-indigo-900/20 transition mt-2">
+                                    Atualizar Senha de Acesso
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
