@@ -11,6 +11,7 @@ import { showToast, safeBind, copyToClipboard } from '../utils.js';
 let currentUser = null;
 let currentUserRole = ['OPERADOR']; // Padrão seguro
 let currentUserName = ''; 
+let profileReady = false; // NOVA TRAVA DE SEGURANÇA
 
 const GENERIC_EMAIL = "operador@applog.com"; 
 
@@ -101,12 +102,13 @@ async function handleUserLoaded(user, db, callbackEnv) {
     if (callbackEnv) callbackEnv(savedEnv);
 
     // ✅ NOVO: AVISA PARA TODO O SISTEMA QUE O PERFIL CARREGOU
+    profileReady = true; // Libera a trava
     document.dispatchEvent(new CustomEvent('user-profile-ready'));
 }
 
 // Adicione esta nova função exportada no final do arquivo também:
 export function isProfileLoaded() {
-    return currentUser !== null; // Retorna true se já tiver usuário logado
+    return profileReady; // Só retorna true se as permissões já foram processadas
 }
 
 // --- A MÁGICA DAS PERMISSÕES (RBAC) ---
