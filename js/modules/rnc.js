@@ -54,8 +54,8 @@ export async function initRncModule(db, isTest) {
     // 2. Função interna que decide se carrega a lista ou bloqueia
     const startListListener = () => {
         const roles = getUserRole() || [];
-        // Quem pode ver a lista? (Admin, Líder, Inventário)
-        const canViewList = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
+        // ✅ ATUALIZADO: Operador também pode VER a lista (mas não editar)
+        const canViewList = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO', 'OPERADOR'].includes(r));
 
         if (canViewList) {
             console.log("📋 Permissão confirmada. Carregando lista de RNC...");
@@ -195,6 +195,10 @@ function checkReminders() {
 }
 
 function setupRncBindings() {
+    // ✅ MELHORIA: Vincula a lista de usuários (datalist) também ao campo Infrator/Origem
+    const inputInfrator = document.getElementById('form-infrator');
+    if (inputInfrator) inputInfrator.setAttribute('list', 'rnc-users-list');
+
     document.querySelectorAll('.data-input, #smart-scanner-input, #req-smart-scanner').forEach(input => {
         if(input.type === 'text' || input.tagName === 'TEXTAREA') {
             input.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
@@ -238,6 +242,18 @@ function setupRncBindings() {
     
     safeBind('btn-cancel-leader-auth', 'click', () => { document.getElementById('leader-auth-modal').classList.add('hidden'); document.getElementById('auth-leader-pin').value = ''; });
     safeBind('btn-confirm-leader-auth', 'click', () => submitLeaderAuth());
+    
+    // ✅ MELHORIA: Permite validar com ENTER no campo de PIN
+    const pinInput = document.getElementById('auth-leader-pin');
+    if(pinInput) {
+        pinInput.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') {
+                e.preventDefault(); // Evita comportamentos padrão de form
+                submitLeaderAuth();
+            }
+        });
+    }
+
     safeBind('btn-call-leader-remote', 'click', callLeaderRemote);
 }
 
@@ -564,6 +580,10 @@ function updatePendingList() {
     const rncItems = pendingOccurrencesData.filter(item => item.type !== 'pallet_label_request');
     const palletItems = pendingOccurrencesData.filter(item => item.type === 'pallet_label_request');
 
+    // ✅ Verifica se é estritamente Operador (Visualização somente leitura)
+    const roles = getUserRole() || [];
+    const isOnlyOperador = roles.includes('OPERADOR') && !roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
+
     if (tbodyRNC) {
         tbodyRNC.innerHTML = '';
         if (rncItems.length === 0) { 
@@ -597,13 +617,18 @@ function updatePendingList() {
                     descDisplay = `<span class="text-xs text-slate-400">Vários Itens no Lote</span>`;
                 }
 
+                // ✅ Se for Operador, exibe texto "Aguardando". Se não, exibe botão de ação.
+                const actionContent = isOnlyOperador 
+                    ? `<span class="text-[10px] text-slate-500 italic flex items-center justify-end gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Aguardando...</span>`
+                    : `<button class="text-indigo-400 hover:text-white text-xs font-bold uppercase tracking-wide bg-indigo-900/30 px-3 py-1.5 rounded border border-indigo-500/30 hover:bg-indigo-600 transition-all btn-open-occurrence" data-id="${item.id}">${btnText}</button>`;
+
                 tr.innerHTML = `
                     <td class="px-4 py-3 text-slate-300 font-mono text-xs">${item.jsDate.toLocaleDateString('pt-BR')}</td>
                     <td class="px-4 py-3 text-white font-medium">${item.embarque || '-'} <br> <span class="text-[10px] text-slate-500">${item.nf || ''}</span></td>
                     <td class="px-4 py-3 text-slate-300 text-xs">${tipoDisplay}<br>${descDisplay}</td>
                     <td class="px-4 py-3">${badge}</td>
                     <td class="px-4 py-3 text-right">
-                        <button class="text-indigo-400 hover:text-white text-xs font-bold uppercase tracking-wide bg-indigo-900/30 px-3 py-1.5 rounded border border-indigo-500/30 hover:bg-indigo-600 transition-all btn-open-occurrence" data-id="${item.id}">${btnText}</button>
+                        ${actionContent}
                     </td>`;
                 tbodyRNC.appendChild(tr);
             });

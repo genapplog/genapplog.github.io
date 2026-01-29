@@ -40,7 +40,10 @@ async function loadChartLib() {
 export function initDashboard() {
     // Função interna que executa a carga real
     const startLoading = () => {
-        // 🔒 VERIFICAÇÃO DE SEGURANÇA
+        // ✅ 1. Bindings Globais (TV): Executa ANTES da trava de segurança
+        safeBind('btn-exit-tv', 'click', exitTVMode);
+
+        // 🔒 2. VERIFICAÇÃO DE SEGURANÇA (Para os Gráficos)
         const roles = getUserRole() || [];
         const canViewDashboard = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
 

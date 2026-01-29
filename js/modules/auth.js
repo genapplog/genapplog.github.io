@@ -119,6 +119,7 @@ function applyPermissions() {
     
     // 2. Controle de Navegação (Sidebar)
     // Páginas proibidas para Operador Comum
+    // Mantém visível apenas: Início, Checklist, Etiquetas, Divergências e TV
     const restrictedPages = ['dashboard', 'configuracoes', 'perfil'];
     
     if (!isGestao) {

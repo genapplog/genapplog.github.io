@@ -125,13 +125,13 @@ export async function exportPalletToXlsx(startDate, endDate) {
         if (rawData.length === 0) { showToast("Nenhuma etiqueta no período.", "info"); return; }
         
         const exportData = rawData.map(d => ({ 
-            "Item": d.item || '-', 
-            "Lote": d.lote || '-', 
-            "Qtd": d.qtd || 0, 
-            "Embarque": d.embarque || '-',
-            "Box/Chk": d.box || d.checkout || '-',
-            "Data": d.jsDate.toLocaleString('pt-BR'), 
-            "Status": "CONCLUÍDO" 
+            "ITEM": d.item || '-', 
+            "LOTE": d.lote || '-', 
+            "QTD": d.qtd || 0, 
+            "EMBARQUE": d.embarque || '-',
+            "CHK": d.box || d.checkout || '-',
+            "DATA": d.jsDate.toLocaleString('pt-BR'), 
+            "STATUS": "CONCLUÍDO" 
         }));
         
         generateXlsx(exportData, "Etiquetas_Palete");
@@ -277,7 +277,7 @@ function generatePrintLayout(data) {
     </head>
     <body>
         <div class="header">
-            <div class="logo"><h1>AppLog</h1><p>Gestão de Qualidade & Estoque</p></div>
+            <div class="logo"><h1>AppLog</h1><p>Gestão de Estoque</p></div>
             <div class="meta">ID: ${data.id}<br>Emissão: ${new Date().toLocaleString('pt-BR')}<br>REF: ${(data.embarque || 'N/A')}</div>
         </div>
         <div class="title-box"><h2>Relatório de Divergência</h2><div class="status-badge">${statusText}</div></div>

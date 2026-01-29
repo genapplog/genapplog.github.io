@@ -43,6 +43,24 @@ export function initAdminModule(db, clientsCollection) {
     console.log("Iniciando Módulo Admin...");
     globalDbForAdmin = db;
 
+    // ✅ NOVO: Controle de Visibilidade dos Blocos de Configuração
+    // Garante que apenas ADMIN veja os blocos de gestão crítica
+    const roles = getUserRole() || [];
+    const isAdmin = roles.includes('ADMIN');
+
+    const restrictedBlocks = ['cfg-team', 'cfg-checklist', 'cfg-products'];
+
+    restrictedBlocks.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (!isAdmin) {
+                el.classList.add('hidden'); // Oculta para Líder/Inventário/Operador
+            } else {
+                el.classList.remove('hidden'); // Exibe para Admin
+            }
+        }
+    });
+
     // 1. Restaurar Padrões (Perigo!)
     safeBind('btn-reset-db', 'click', () => {
         openConfirmModal("Restaurar Padrões?", "PERIGO: Todos os checklists voltarão ao padrão de fábrica.", async () => {
@@ -145,9 +163,9 @@ export function initAdminModule(db, clientsCollection) {
     safeBind('btn-audit-filter', 'click', () => filterAuditLogs(db));
     safeBind('btn-audit-export', 'click', () => exportAuditLogs());
 
-    // Se for admin, carrega logs automaticamente
-    const roles = getUserRole() || [];
-    if(roles.includes('ADMIN')) {
+   // Se for admin, carrega logs automaticamente
+    // (Usa a variável 'isAdmin' que já definimos no topo da função)
+    if(isAdmin) {
         const auditSection = document.getElementById('admin-audit-section');
         if(auditSection) auditSection.classList.remove('hidden');
         loadInitialAuditLogs(db);
