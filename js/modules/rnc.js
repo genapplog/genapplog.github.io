@@ -131,7 +131,7 @@ function setupRealtimeListener() {
 
     // Listener de notificações (Exclusivo da liderança)
     const notificationsRef = collection(globalDb, `artifacts/${globalDb.app.options.appId}/public/data/notifications`);
-    const recentTime = new Date(Date.now() - 2 * 60 * 1000); 
+    const recentTime = new Date(Date.now() - 5 * 60 * 1000); 
     onSnapshot(query(notificationsRef, where('createdAt', '>', recentTime)), {
         next: (snapshot) => { 
             snapshot.docChanges().forEach(change => { 
@@ -279,8 +279,21 @@ async function handleSaveReq(e) {
 
     try {
         btn.disabled = true; btn.innerText = "Enviando..."; 
-        await addDoc(currentCollectionRef, data); 
-        showToast("Solicitação enviada!"); closeReqForm(); 
+        const docRef = await addDoc(currentCollectionRef, data); 
+        
+        // ✅ Notifica o Inventário sobre a nova etiqueta solicitada
+        const notificationsRef = collection(globalDb, `artifacts/${globalDb.app.options.appId}/public/data/notifications`);
+        await addDoc(notificationsRef, {
+            type: 'pallet_req_alert',
+            title: '🏷️ Nova Etiqueta Palete',
+            message: `Item: ${item} - Qtd: ${qtd}`,
+            requesterName: getCurrentUserName() || "Operador",
+            createdAt: new Date(),
+            roles: ['ADMIN', 'INVENTARIO'] 
+        });
+
+        showToast("Solicitação enviada e Inventário notificado!"); 
+        closeReqForm(); 
     } catch (err) { console.error(err); showToast("Erro ao enviar.", "error"); } finally { btn.disabled = false; btn.innerText = "Enviar Solicitação"; }
 }
 
@@ -563,10 +576,25 @@ async function processSaveData(itemsToSave) {
             item_desc: itemsToSave.length > 1 ? `LOTE DE ${itemsToSave.length} ITENS` : itemsToSave[0]?.item_desc
         };
 
-        if (currentOccurrenceId) await updateDoc(doc(currentCollectionRef, currentOccurrenceId), docPayload);
-        else await addDoc(currentCollectionRef, docPayload);
+        if (currentOccurrenceId) {
+            await updateDoc(doc(currentCollectionRef, currentOccurrenceId), docPayload);
+        } else {
+            const docRef = await addDoc(currentCollectionRef, docPayload);
+            
+            // ✅ Notifica o Inventário sobre a nova RNC registrada
+            const notificationsRef = collection(globalDb, `artifacts/${globalDb.app.options.appId}/public/data/notifications`);
+            await addDoc(notificationsRef, {
+                type: 'rnc_new_alert',
+                title: '🚨 Nova RNC Registrada',
+                message: `Embarque: ${headerData.embarque} - Item: ${itemsToSave[0]?.item_cod || 'Múltiplos'}`,
+                requesterName: getCurrentUserName() || "Operador",
+                occurrenceId: docRef.id,
+                createdAt: new Date(),
+                roles: ['ADMIN', 'INVENTARIO'] 
+            });
+        }
 
-        showToast("Salvo!"); 
+        showToast("Salvo e Inventário notificado!"); 
         closeMainForm();
 
     } catch(e) { console.error(e); showToast(e.message, "error"); } 

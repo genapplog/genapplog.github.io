@@ -65,41 +65,27 @@ service cloud.firestore {
 
     // --- OCORRÊNCIAS / RNC ---
     match /occurrences/{docId} {
-      // ✅ GET: Permite abrir um item específico (Link direto)
       allow get: if isAuth();
-      
-      // ✅ LIST: ALTERADO! Agora incluímos 'OPERADOR' para que eles possam ver a lista de acompanhamento
       allow list: if hasRole(['ADMIN', 'LIDER', 'INVENTARIO', 'OPERADOR']);
-      
       allow create: if isAuth();
-      
-      // Edição: Apenas se for rascunho (próprio) ou se for Gestão (Líder/Inventário)
       allow update: if isAuth() && (resource.data.status == 'draft' || canManage());
-      
-      allow delete: if hasRole(['ADMIN']);
+      // ✅ Inventário agora pode excluir RNCs
+      allow delete: if hasRole(['ADMIN', 'INVENTARIO']);
     }
 
-    // Caminho de Artifacts (Ocorrências)
     match /artifacts/{document=**}/occurrences/{docId} {
       allow get: if isAuth();
-      // ✅ LIST: Liberado para Operador acompanhar
-      allow list: if hasRole(['ADMIN', 'LIDER', 'INVENTARIO', 'OPERADOR']); 
+      allow list: if hasRole(['ADMIN', 'LIDER', 'INVENTARIO', 'OPERADOR']);
       allow create: if isAuth();
       allow update: if isAuth() && (resource.data.status == 'draft' || canManage());
-      allow delete: if hasRole(['ADMIN']);
+      // ✅ Inventário agora pode excluir RNCs
+      allow delete: if hasRole(['ADMIN', 'INVENTARIO']);
     }
     
-    // --- NOTIFICAÇÕES (Chamado de Líder) ---
     match /artifacts/{document=**}/notifications/{docId} {
-        allow create: if isAuth(); 
-        allow read, delete: if hasRole(['ADMIN', 'LIDER']);
-    }
-
-    // ==========================================================
-    // 4. REGRA FINAL (BLOQUEIO PADRÃO)
-    // ==========================================================
-    match /{document=**} {
-      allow read, write: if false;
+        allow create: if isAuth();
+        // ✅ Inventário incluído para visualizar alertas de chamados e etiquetas
+        allow read, delete: if hasRole(['ADMIN', 'LIDER', 'INVENTARIO']);
     }
   }
 }
