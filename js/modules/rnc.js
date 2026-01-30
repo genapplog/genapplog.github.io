@@ -617,11 +617,16 @@ function updatePendingList() {
                     descDisplay = `<span class="text-xs text-slate-400">Vários Itens no Lote</span>`;
                 }
 
-                // ✅ Se for Operador, exibe texto "Aguardando". Se não, exibe botão de ação.
-                const actionContent = isOnlyOperador 
+                // ✅ CORREÇÃO: Operador pode editar SE for Rascunho/Correção ('draft')
+                // Se for outro status (ex: pendente_lider), aí sim mostra "Aguardando".
+                let canEdit = true;
+                if (isOnlyOperador && item.status !== 'draft') {
+                    canEdit = false;
+                }
+
+                const actionContent = !canEdit 
                     ? `<span class="text-[10px] text-slate-500 italic flex items-center justify-end gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Aguardando...</span>`
                     : `<button class="text-indigo-400 hover:text-white text-xs font-bold uppercase tracking-wide bg-indigo-900/30 px-3 py-1.5 rounded border border-indigo-500/30 hover:bg-indigo-600 transition-all btn-open-occurrence" data-id="${item.id}">${btnText}</button>`;
-
                 tr.innerHTML = `
                     <td class="px-4 py-3 text-slate-300 font-mono text-xs">${item.jsDate.toLocaleDateString('pt-BR')}</td>
                     <td class="px-4 py-3 text-white font-medium">${item.embarque || '-'} <br> <span class="text-[10px] text-slate-500">${item.nf || ''}</span></td>
@@ -681,6 +686,12 @@ function updateFormStateUI() {
     
     const myRole = getUserRole() || [];
     const isInventory = myRole.includes('INVENTARIO') || myRole.includes('ADMIN');
+    const isLeader = myRole.includes('LIDER') || myRole.includes('ADMIN');
+
+    // ✅ CORREÇÃO: Botão Excluir aparece SEMPRE para Admin/Inventário ou Dono do Rascunho se a RNC existir
+    if (currentOccurrenceId && (isInventory || (currentFormStatus === 'draft'))) {
+        btnDelete.classList.remove('hidden');
+    }
     
     // Controle do Botão Adicionar (Só pode editar itens no rascunho ou se for inventário corrigindo)
     const canEditItems = (currentFormStatus === 'draft' || isInventory);

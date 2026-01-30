@@ -4,7 +4,7 @@
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
     initializeFirestore, 
@@ -34,11 +34,12 @@ const app = initializeApp(firebaseConfig);
 // ✅ LÓGICA DO APP CHECK: Desativa em Localhost (IS_DEV)
 if (!IS_DEV) {
     try {
+        // Usa o provedor Enterprise (Padrão atual do Firebase)
         initializeAppCheck(app, {
-            provider: new ReCaptchaV3Provider('6LcIwEosAAAAAO2Ph6II8msIeZnBa9wr6JV3Kut7'),
+            provider: new ReCaptchaEnterpriseProvider('6LewvygsAAAAAFh2REyS-NyO3FI9KG6J0SjfrIoz'),
             isTokenAutoRefreshEnabled: true
         });
-        console.log("🛡️ App Check ativado (Produção).");
+        console.log("🛡️ App Check ativado (Produção - Enterprise).");
     } catch (e) {
         console.warn("Aviso App Check:", e);
     }
