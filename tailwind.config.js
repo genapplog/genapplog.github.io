@@ -3,7 +3,7 @@ export default {
   content: [
     "./index.html",
     "./js/**/*.js",
-    "./pages/**/*.html"  // <--- ADICIONAMOS ESSA LINHA
+    "./public/pages/**/*.html"  // ✅ ESSA É A LINHA QUE SALVA O LAYOUT
   ],
   theme: {
     extend: {},
