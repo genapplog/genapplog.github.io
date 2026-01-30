@@ -1,0 +1,105 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================================
+    // 1. FUNÇÕES DE AJUDA
+    // ==========================================================
+
+    function isAuth() { return request.auth != null; }
+
+    function getUserRoles() {
+      // Seus IDs de Super Admin (Adicione o seu novo UID aqui se necessário)
+      return (request.auth.uid == "lssiHZQUGEMF9E2OPnv3iqIyjRW2" || 
+              request.auth.uid == "19m1eURrgyNU0NOB4hyl70RxQbD2") ? ['ADMIN'] : 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function hasRole(allowedRoles) {
+      return isAuth() && (getUserRoles().hasAny(['ADMIN']) || getUserRoles().hasAny(allowedRoles));
+    }
+    
+    // Define quem tem acesso total de gestão (Admin, Líder, Inventário)
+    function canManage() {
+      return hasRole(['ADMIN', 'LIDER', 'INVENTARIO']);
+    }
+
+    // ==========================================================
+    // 2. REGRAS DE USUÁRIOS E PRODUTOS (BASE)
+    // ==========================================================
+
+    match /users/{userId} {
+      allow read: if isAuth(); // Necessário para o autocomplete de assinaturas
+      allow write: if isAuth() && (hasRole(['ADMIN']) || (request.auth.uid == userId)); 
+    }
+
+    match /products/{productId} {
+      allow read: if isAuth(); // Necessário para o Scanner funcionar para todos
+      allow write: if hasRole(['ADMIN', 'INVENTARIO']);
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if hasRole(['ADMIN']);
+      allow create: if isAuth(); 
+      allow update, delete: if false; 
+    }
+
+    // ==========================================================
+    // 3. CAMINHOS DE DADOS (CLIENTES E OCORRÊNCIAS)
+    // ==========================================================
+
+    // --- CLIENTES (Checklist e Dropdowns) ---
+    // ✅ Melhoria: Leitura pública (autenticada) para o Checklist do Operador funcionar
+    match /clients/{docId} {
+      allow read: if isAuth(); 
+      allow create, update: if canManage();
+      allow delete: if hasRole(['ADMIN']);
+    }
+    
+    // Caminho de Artifacts (Clientes)
+    match /artifacts/{document=**}/clients/{docId} {
+      allow read: if isAuth();
+      allow create, update: if canManage();
+      allow delete: if hasRole(['ADMIN']);
+    }
+
+    // --- OCORRÊNCIAS / RNC ---
+    match /occurrences/{docId} {
+      // ✅ GET: Permite abrir um item específico (Link direto)
+      allow get: if isAuth();
+      
+      // ✅ LIST: ALTERADO! Agora incluímos 'OPERADOR' para que eles possam ver a lista de acompanhamento
+      allow list: if hasRole(['ADMIN', 'LIDER', 'INVENTARIO', 'OPERADOR']);
+      
+      allow create: if isAuth();
+      
+      // Edição: Apenas se for rascunho (próprio) ou se for Gestão (Líder/Inventário)
+      allow update: if isAuth() && (resource.data.status == 'draft' || canManage());
+      
+      allow delete: if hasRole(['ADMIN']);
+    }
+
+    // Caminho de Artifacts (Ocorrências)
+    match /artifacts/{document=**}/occurrences/{docId} {
+      allow get: if isAuth();
+      // ✅ LIST: Liberado para Operador acompanhar
+      allow list: if hasRole(['ADMIN', 'LIDER', 'INVENTARIO', 'OPERADOR']); 
+      allow create: if isAuth();
+      allow update: if isAuth() && (resource.data.status == 'draft' || canManage());
+      allow delete: if hasRole(['ADMIN']);
+    }
+    
+    // --- NOTIFICAÇÕES (Chamado de Líder) ---
+    match /artifacts/{document=**}/notifications/{docId} {
+        allow create: if isAuth(); 
+        allow read, delete: if hasRole(['ADMIN', 'LIDER']);
+    }
+
+    // ==========================================================
+    // 4. REGRA FINAL (BLOQUEIO PADRÃO)
+    // ==========================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
