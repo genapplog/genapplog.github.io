@@ -162,10 +162,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 modulesInitialized = true;
             }
 
-            // Atualização de permissões admin (seu código existente)
+            // Atualização de permissões admin
             setTimeout(() => {
                 console.log("🔄 Recarregando lista de clientes com permissões de Admin...");
                 refreshClientList();
+                
+                // Ativar Notificações para Gestão
+                const { getUserRole } = require('./modules/auth.js'); // Verifique se o import está disponível ou use a variável global se existir
+                const roles = getUserRole();
+                const isGestao = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
+                
+                if (isGestao) {
+                    ativarNotificacoesGestao();
+                }
             }, 1000);
             
         } else {
@@ -426,4 +435,18 @@ function blindarInputsExcetoLogin() {
         // Marca como blindado para não adicionar listeners repetidos
         el.dataset.blindado = 'true';
     });
+}
+async function ativarNotificacoesGestao() {
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission === "default") {
+        console.log("🔔 Solicitando permissão de notificação para Gestão...");
+        const permission = await Notification.requestPermission();
+        if (permission === "granted") {
+            showToast("Notificações ativadas com sucesso!", "success");
+        }
+    }
+    
+    // Registrar Token de Push (FCM)
+    // Se você usa Firebase Cloud Messaging, aqui deve entrar o código de getToken()
 }

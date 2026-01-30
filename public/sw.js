@@ -101,3 +101,36 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 });
+
+// --- 4. TRATAMENTO DE NOTIFICAÇÕES PUSH ---
+self.addEventListener('push', (event) => {
+    let data = { title: 'AppLog', body: 'Nova atualização no sistema.' };
+    
+    if (event.data) {
+        try {
+            data = event.data.json();
+        } catch (e) {
+            data.body = event.data.text();
+        }
+    }
+
+    const options = {
+        body: data.body,
+        icon: '/img/icon-192.png',
+        badge: '/img/icon-192.png',
+        vibrate: [100, 50, 100],
+        data: { url: data.url || '/' }
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(data.title, options)
+    );
+});
+
+// Abre o app ao clicar na notificação
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    event.waitUntil(
+        clients.openWindow(event.notification.data.url)
+    );
+});
