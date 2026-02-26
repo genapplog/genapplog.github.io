@@ -168,13 +168,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 refreshClientList();
                 
                 // Ativar Notificações para Gestão
-                const { getUserRole } = require('./modules/auth.js'); // Verifique se o import está disponível ou use a variável global se existir
-                const roles = getUserRole();
-                const isGestao = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
-                
-                if (isGestao) {
-                    ativarNotificacoesGestao();
-                }
+                // Importamos dinamicamente ou usamos a função exportada do módulo auth
+                import('./modules/auth.js').then(authModule => {
+                    const roles = authModule.getUserRole();
+                    const isGestao = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
+                    
+                    if (isGestao) {
+                        ativarNotificacoesGestao();
+                    }
+                });
             }, 1000);
             
         } else {
