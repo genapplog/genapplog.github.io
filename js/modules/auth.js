@@ -61,7 +61,7 @@ async function handleUserLoaded(user, db, callbackEnv) {
                 currentUserName = data.name || '';
                 
                 // Preenche PIN no formulário de conta (se existir)
-                const pinField = document.getElementById('account-pin');
+                const pinField = document.getElementById('perfil-input-pin');
                 if (pinField) pinField.value = data.pin || '';
             } else {
                 // Sem cadastro no banco, define pelo config ou padrão
@@ -167,7 +167,7 @@ function applyPermissions() {
     });
 
     // 4. Exceções Legadas (Mantendo compatibilidade com IDs antigos se necessário)
-    toggleById('admin-danger-zone', currentUserRole.includes('ADMIN'));
+    toggleById('cfg-admin-danger-zone', currentUserRole.includes('ADMIN'));
     toggleById('add-client-btn', isGestao);
 }
 
@@ -221,10 +221,10 @@ function setupLoginUI(auth) {
 
 function setupPinAndPassUI(auth) {
     // 1. Salvar PIN
-    safeBind('btn-save-pin', 'click', async () => {
+    safeBind('perfil-btn-save-pin', 'click', async () => {
         if (!currentUser) return;
-        const pinInput = document.getElementById('account-pin');
-        const btn = document.getElementById('btn-save-pin');
+        const pinInput = document.getElementById('perfil-input-pin');
+        const btn = document.getElementById('perfil-btn-save-pin');
         const pinVal = pinInput.value.trim();
 
         if (pinVal.length !== 4 || isNaN(pinVal)) return showToast("O PIN deve ter 4 números.", "warning");
@@ -246,11 +246,11 @@ function setupPinAndPassUI(auth) {
     });
 
     // 2. Atualizar Senha
-    safeBind('btn-update-pass', 'click', async () => {
-        const currentPass = document.getElementById('account-pass-current').value;
-        const newPass = document.getElementById('account-pass-new').value;
-        const confirmPass = document.getElementById('account-pass-confirm').value;
-        const btn = document.getElementById('btn-update-pass');
+    safeBind('perfil-btn-update-pass', 'click', async () => {
+        const currentPass = document.getElementById('perfil-input-pass-current').value;
+        const newPass = document.getElementById('perfil-input-pass-new').value;
+        const confirmPass = document.getElementById('perfil-input-pass-confirm').value;
+        const btn = document.getElementById('perfil-btn-update-pass');
 
         if (!currentPass || !newPass || !confirmPass) return showToast("Preencha todos os campos.", "warning");
         if (newPass.length < 6) return showToast("Mínimo 6 caracteres.", "error");

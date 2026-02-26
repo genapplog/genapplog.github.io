@@ -80,9 +80,9 @@ export function initAdminModule(db, clientsCollection) {
     });
 
     // 2. Importação de Clientes
-    safeBind('download-template-btn', 'click', () => downloadJSON([{ "name": "CLIENTE EXEMPLO", "checklist": defaultChecklistData }], "modelo_clientes.json"));
+    safeBind('cfg-btn-download-checklist', 'click', () => downloadJSON([{ "name": "CLIENTE EXEMPLO", "checklist": defaultChecklistData }], "modelo_clientes.json"));
     
-    safeBind('file-upload', 'change', (e) => handleImport(e, db, PATHS.clients, async (data, batch) => {
+    safeBind('cfg-upload-checklist', 'change', (e) => handleImport(e, db, PATHS.clients, async (data, batch) => {
         const clientsRef = collection(db, PATHS.clients);
         const existingNames = new Map();
         (await getDocs(clientsRef)).forEach(d => existingNames.set(d.data().name.toUpperCase().trim(), d.id));
@@ -102,12 +102,12 @@ export function initAdminModule(db, clientsCollection) {
             }
         });
         return count;
-    }, 'import-status'));
+    }, 'cfg-status-checklist'));
 
     // 3. Importação de Usuários
-    safeBind('download-users-template-btn', 'click', () => downloadJSON([{ "id": "UID_FIREBASE", "name": "Nome", "role": "OPERADOR, LIDER" }], "modelo_equipe.json"));
+    safeBind('cfg-btn-download-users', 'click', () => downloadJSON([{ "id": "UID_FIREBASE", "name": "Nome", "role": "OPERADOR, LIDER" }], "modelo_equipe.json"));
     
-    safeBind('users-upload', 'change', (e) => handleImport(e, db, 'users', async (data, batch) => {
+    safeBind('cfg-upload-users', 'change', (e) => handleImport(e, db, 'users', async (data, batch) => {
         let count = 0;
         data.forEach(u => {
             if(u.id && u.name) {
@@ -127,12 +127,12 @@ export function initAdminModule(db, clientsCollection) {
             }
         });
         return count;
-    }, 'users-import-status'));
+    }, 'cfg-status-users'));
 
     // 4. Importação de Produtos
-    safeBind('download-products-template-btn', 'click', () => downloadJSON([{ "dun": "17891000123456", "codigo": "200300", "descricao": "SHAMPOO" }], "modelo_produtos.json"));
+    safeBind('cfg-btn-download-products', 'click', () => downloadJSON([{ "dun": "17891000123456", "codigo": "200300", "descricao": "SHAMPOO" }], "modelo_produtos.json"));
     
-    safeBind('products-upload', 'change', (e) => handleImport(e, db, 'products', async (data, batch) => {
+    safeBind('cfg-upload-products', 'change', (e) => handleImport(e, db, 'products', async (data, batch) => {
         let count = 0;
         data.forEach(p => {
             if(p.dun && p.codigo) {
@@ -146,32 +146,31 @@ export function initAdminModule(db, clientsCollection) {
             }
         });
         return count;
-    }, 'products-import-status'));
+    }, 'cfg-status-products'));
 
     // Inicializa busca de produtos
     setupProductSearch(db);
 
     // 5. Botões de Atualização e Filtro
-    safeBind('btn-refresh-admin-list', 'click', () => { 
+    safeBind('cfg-btn-refresh-admin-list', 'click', () => { 
         renderAdminTable(); 
         const roles = getUserRole() || [];
         if(roles.includes('ADMIN')) loadInitialAuditLogs(db); 
     });
     
-    safeBind('admin-search-rnc', 'input', () => renderAdminTable());
-    safeBind('admin-search-label', 'input', () => renderAdminTable());
-    safeBind('btn-audit-filter', 'click', () => filterAuditLogs(db));
-    safeBind('btn-audit-export', 'click', () => exportAuditLogs());
+    safeBind('cfg-input-search-rnc', 'input', () => renderAdminTable());
+    safeBind('cfg-input-search-label', 'input', () => renderAdminTable());
+    safeBind('cfg-btn-audit-filter', 'click', () => filterAuditLogs(db));
+    safeBind('cfg-btn-audit-export', 'click', () => exportAuditLogs());
 
    // Se for admin, carrega logs automaticamente
-    // (Usa a variável 'isAdmin' que já definimos no topo da função)
     if(isAdmin) {
-        const auditSection = document.getElementById('admin-audit-section');
+        const auditSection = document.getElementById('cfg-admin-audit-section');
         if(auditSection) auditSection.classList.remove('hidden');
         loadInitialAuditLogs(db);
     }
     // ✅ 6. CLONAR DADOS (Apenas do Dia Atual)
-    safeBind('btn-sync-prod-to-test', 'click', () => {
+    safeBind('cfg-btn-sync', 'click', () => {
         openConfirmModal(
             "Clonar Ocorrências de Hoje?", 
             "Isso criará um arquivo JSON com todas as ocorrências registradas HOJE (desde a 00:00) para importação no ambiente de teste.", 
@@ -283,7 +282,7 @@ export async function registerLog(action, target, details) {
 }
 
 function loadInitialAuditLogs(db) {
-    const tbody = document.getElementById('audit-list-tbody');
+    const tbody = document.getElementById('cfg-tbody-audit-list');
     if (tbody) renderSkeleton(tbody, 4, 5);
 
     const q = query(collection(db, 'audit_logs'), orderBy('createdAt', 'desc'), limit(10));
@@ -295,9 +294,9 @@ function loadInitialAuditLogs(db) {
 }
 
 async function filterAuditLogs(db) {
-    const startVal = document.getElementById('audit-filter-start').value;
-    const endVal = document.getElementById('audit-filter-end').value;
-    const tbody = document.getElementById('audit-list-tbody');
+    const startVal = document.getElementById('cfg-audit-filter-start').value;
+    const endVal = document.getElementById('cfg-audit-filter-end').value;
+    const tbody = document.getElementById('cfg-tbody-audit-list');
 
     if (!startVal || !endVal) return showToast("Selecione data de início e fim.", "info");
     
@@ -326,9 +325,9 @@ async function filterAuditLogs(db) {
 }
 
 function renderAuditTable(data) {
-    const tbody = document.getElementById('audit-list-tbody');
-    if (!tbody) return;
-    tbody.innerHTML = ''; 
+    const tbody = document.getElementById('cfg-tbody-audit-list');
+    if (!tbody) return;
+    tbody.innerHTML = '';
 
     data.forEach(log => {
         const dateObj = log.createdAt?.toDate ? log.createdAt.toDate() : new Date(log.createdAt);
@@ -390,12 +389,12 @@ export function updateAdminList(data) {
 }
 
 function renderAdminTable() {
-    const tbodyRNC = document.getElementById('admin-oc-list-tbody');
-    const tbodyLabels = document.getElementById('admin-label-list-tbody');
-    const searchRNC = document.getElementById('admin-search-rnc');
-    const searchLabel = document.getElementById('admin-search-label');
+    const tbodyRNC = document.getElementById('cfg-tbody-oc-list');
+    const tbodyLabels = document.getElementById('cfg-tbody-label-list');
+    const searchRNC = document.getElementById('cfg-input-search-rnc');
+    const searchLabel = document.getElementById('cfg-input-search-label');
 
-    if (!tbodyRNC || !tbodyLabels) return;
+    if (!tbodyRNC || !tbodyLabels) return;
 
     const termRNC = searchRNC ? searchRNC.value.toLowerCase().trim() : "";
     const termLabel = searchLabel ? searchLabel.value.toLowerCase().trim() : "";
@@ -514,11 +513,11 @@ function renderAdminTable() {
 // BUSCA E GESTÃO DE PRODUTOS
 // =========================================================
 function setupProductSearch(db) {
-    const btnSearch = document.getElementById('btn-search-product');
-    const inputSearch = document.getElementById('product-search-input');
-    const listContainer = document.getElementById('product-list-container');
-    const tbody = document.getElementById('product-list-tbody');
-    const msg = document.getElementById('product-search-msg');
+    const btnSearch = document.getElementById('cfg-btn-search-product');
+    const inputSearch = document.getElementById('cfg-input-search-product');
+    const listContainer = document.getElementById('cfg-product-list-container');
+    const tbody = document.getElementById('cfg-tbody-product-list');
+    const msg = document.getElementById('cfg-product-search-msg');
 
     const doSearch = async () => {
         const term = inputSearch.value.toUpperCase().trim();

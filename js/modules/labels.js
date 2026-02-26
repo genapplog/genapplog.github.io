@@ -6,6 +6,7 @@ import { safeBind, showToast } from '../utils.js';
 import { LABEL_DIMENSIONS, CD_DATA } from './labels-data.js';
 import { getAmazonTemplate, getManualTemplate } from './zpl-templates.js';
 import { fetchLabelPreview, fetchLabelPdf } from '../services/labelary.js';
+import { PDFDocument } from 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.esm.min.js';
 
 // --- HELPER DE BUSCA DE INPUTS ---
 function getSmartValue(ids, containerId = 'zpl-tool-manual', inputIndex = -1) {
@@ -29,7 +30,7 @@ export function initLabelsModule() {
 
     // Navegação
     const toggleTool = (targetId) => {
-        ['zpl-menu', 'zpl-tool-amazon', 'zpl-tool-manual'].forEach(id => {
+        ['zpl-menu', 'zpl-tool-amazon', 'zpl-tool-manual', 'zpl-tool-validation'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.classList.add('hidden');
         });
@@ -40,6 +41,10 @@ export function initLabelsModule() {
     safeBind('btn-back-zpl', 'click', () => toggleTool('zpl-menu'));
     safeBind('btn-open-manual', 'click', () => toggleTool('zpl-tool-manual'));
     safeBind('btn-back-zpl-manual', 'click', () => toggleTool('zpl-menu'));
+    safeBind('btn-open-validation', 'click', () => toggleTool('zpl-tool-validation'));
+    safeBind('btn-back-zpl-validation', 'click', () => toggleTool('zpl-menu'));
+
+    setupValidationTool();
 
     // Toggle Código (Debug)
     safeBind('btn-toggle-zpl-amazon', 'click', () => document.getElementById('box-zpl-amazon').classList.toggle('hidden'));
@@ -248,12 +253,66 @@ async function handlePrintPDF(zplId, sizeId, btnId, fixedSize) {
     
     if (!zplContent) { showToast("Gere a etiqueta primeiro.", "warning"); return; }
     
-    if(btn) { btn.disabled = true; btn.innerText = "Baixando..."; }
+    if(btn) { btn.disabled = true; btn.innerText = "Processando..."; }
     
     try {
-        const blob = await fetchLabelPdf(zplContent, sizeKey);
-        const pdfUrl = URL.createObjectURL(blob);
-        window.open(pdfUrl, '_blank');
+        // 1. Separa o ZPL em etiquetas individuais (dividindo pela tag final ^XZ)
+        const rawLabels = zplContent.split('^XZ');
+        const validLabels = rawLabels.filter(l => l.trim().length > 0).map(l => l + '^XZ');
+
+        // 2. Cria os lotes de no máximo 50 etiquetas para a API não travar
+        const batches = [];
+        for (let i = 0; i < validLabels.length; i += 50) {
+            batches.push(validLabels.slice(i, i + 50).join('\n'));
+        }
+
+        // 3. Se for só um lote (até 50), processa normal e super rápido
+        if (batches.length === 1) {
+            const blob = await fetchLabelPdf(batches[0], sizeKey);
+            const pdfUrl = URL.createObjectURL(blob);
+            window.open(pdfUrl, '_blank');
+        }
+        // 4. Se tiver mais de um lote, chama a API várias vezes e costura o PDF
+        else {
+            const mergedPdf = await PDFDocument.create();
+
+            for (let i = 0; i < batches.length; i++) {
+                if(btn) { btn.innerText = `Lote ${i + 1} de ${batches.length}...`; }
+                
+                // Pausa de 1.5 segundos entre os lotes para evitar o bloqueio (Erro 429 - Too Many Requests)
+                if (i > 0) await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                let blob = null;
+                let tentativas = 0;
+                let sucesso = false;
+
+                // Tenta baixar o lote até 3 vezes caso a internet pisque
+                while (!sucesso && tentativas < 3) {
+                    try {
+                        blob = await fetchLabelPdf(batches[i], sizeKey);
+                        sucesso = true;
+                    } catch (err) {
+                        tentativas++;
+                        if (tentativas >= 3) throw err; // Se falhar 3 vezes, desiste de vez
+                        console.warn(`Falha na rede (Lote ${i+1}). Tentativa ${tentativas}/3. Reconectando...`);
+                        if(btn) { btn.innerText = `Reconectando lote ${i + 1}...`; }
+                        await new Promise(resolve => setTimeout(resolve, 2000)); // Espera 2 segundos antes de tentar de novo
+                    }
+                }
+                
+                const arrayBuffer = await blob.arrayBuffer();
+                const pdfToMerge = await PDFDocument.load(arrayBuffer);
+                
+                const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
+                copiedPages.forEach((page) => mergedPdf.addPage(page));
+            }
+
+            if(btn) { btn.innerText = "Finalizando..."; }
+            const mergedPdfBytes = await mergedPdf.save();
+            const finalBlob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+            const pdfUrl = URL.createObjectURL(finalBlob);
+            window.open(pdfUrl, '_blank');
+        }
     } catch (e) { 
         console.error(e);
         showToast("Erro na API de PDF.", 'error'); 
@@ -262,5 +321,140 @@ async function handlePrintPDF(zplId, sizeId, btnId, fixedSize) {
             btn.disabled = false; 
             btn.innerHTML = `<svg class="w-5 h-5 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>PDF`; 
         }
+    }
+}
+
+// =========================================================
+// LÓGICA DE VALIDAÇÃO (GS1 ANALYZE)
+// =========================================================
+function setupValidationTool() {
+    const input = document.getElementById('input-barcode-scanner');
+    if (!input) return;
+
+    // Oculta o teclado virtual em tablets/celulares ao clicar no input (foco apenas no biper físico)
+    input.addEventListener('focus', () => { input.setAttribute('readonly', 'readonly'); setTimeout(() => { input.removeAttribute('readonly'); }, 100); });
+
+    // O leitor de código de barras físico envia os números e logo depois aperta "Enter"
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            analyzeScannedBarcode(input.value.trim());
+            input.value = ''; // Limpa o input automaticamente para a próxima leitura
+        }
+    });
+}
+
+function analyzeScannedBarcode(code) {
+    if (!code) return;
+
+    const box = document.getElementById('validation-result-box');
+    const typeEl = document.getElementById('val-type');
+    const rawEl = document.getElementById('val-raw');
+    const detailsContainer = document.getElementById('val-details-container');
+    const detailsList = document.getElementById('val-details-list');
+
+    // Reseta visualização
+    box.classList.remove('hidden');
+    rawEl.textContent = code;
+    detailsList.innerHTML = '';
+    detailsContainer.classList.add('hidden');
+
+    const isNumeric = /^\d+$/.test(code);
+    let type = 'Código Alfanumérico Livre / Code 128';
+    let details = [];
+
+    // Tabela de Identificação Padrão
+    if (isNumeric && code.length === 12) {
+        type = 'UPC-A (GTIN-12)';
+    } else if (isNumeric && code.length === 13) {
+        type = 'EAN-13 (GTIN-13)';
+    } else if (isNumeric && code.length === 14) {
+        type = 'DUN-14 / ITF-14 (GTIN-14)';
+        details.push(`<li class="flex items-start gap-2"><span class="bg-indigo-900/50 text-indigo-300 px-2 py-0.5 rounded text-xs font-bold border border-indigo-700/50">DUN</span> <span class="text-white font-mono">${code}</span></li>`);
+        detailsContainer.classList.remove('hidden');
+    } 
+    // Identificação Avançada do GS1-128
+    else if (code.length > 14 && (code.startsWith('01') || code.startsWith(']C1') || code.includes('(01)'))) {
+        type = 'GS1-128';
+        detailsContainer.classList.remove('hidden');
+        
+        // Limpa formatações e prefixos padrão de leitores
+        let cleanCode = code.replace(/\(|\)/g, ''); 
+        if (cleanCode.startsWith(']C1')) cleanCode = cleanCode.substring(3);
+
+        let currentIndex = 0;
+
+        // Loop inteligente que varre a string inteira separando os "vagões"
+        while (currentIndex < cleanCode.length) {
+            // Pula caracteres invisíveis (FNC1 / Group Separator - ASCII 29) que separam lotes
+            if (cleanCode.charCodeAt(currentIndex) === 29) {
+                currentIndex++;
+                continue;
+            }
+
+            const remaining = cleanCode.substring(currentIndex);
+            let advanced = false;
+
+            // (01) GTIN ou (02) GTIN Contido - Fixo 14 dígitos
+            if (remaining.startsWith('01') || remaining.startsWith('02')) {
+                const ai = remaining.substring(0, 2);
+                const val = remaining.substring(2, 16);
+                const label = ai === '01' ? 'GTIN' : 'GTIN CONTIDO';
+                details.push(`<li class="flex items-start gap-2"><span class="bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-700/50 w-24 text-center">(${ai}) ${label}</span> <span class="text-white font-mono mt-0.5">${val}</span></li>`);
+                currentIndex += 16;
+                advanced = true;
+            }
+            // (00) SSCC Palete - Fixo 18 dígitos
+            else if (remaining.startsWith('00')) {
+                const val = remaining.substring(2, 20);
+                details.push(`<li class="flex items-start gap-2"><span class="bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded text-[10px] font-bold border border-purple-700/50 w-24 text-center">(00) SSCC</span> <span class="text-white font-mono mt-0.5">${val}</span></li>`);
+                currentIndex += 20;
+                advanced = true;
+            }
+            // Datas (11 Fab, 13 Emb, 15 Melhor, 17 Validade) - Fixo 6 dígitos
+            else if (/^(11|13|15|17)/.test(remaining)) {
+                const ai = remaining.substring(0, 2);
+                const val = remaining.substring(2, 8);
+                const labels = {'11': 'FABRICAÇÃO', '13': 'EMBALAGEM', '15': 'MELHOR ANTES', '17': 'VALIDADE'};
+                details.push(`<li class="flex items-start gap-2"><span class="bg-cyan-900/50 text-cyan-300 px-2 py-0.5 rounded text-[10px] font-bold border border-cyan-700/50 w-24 text-center">(${ai}) ${labels[ai]}</span> <span class="text-white font-mono mt-0.5">${val} (AAMMDD)</span></li>`);
+                currentIndex += 8;
+                advanced = true;
+            }
+            // (310X) Peso Líquido em KG - Fixo 6 dígitos
+            else if (/^310[0-9]/.test(remaining)) {
+                const ai = remaining.substring(0, 4);
+                const val = remaining.substring(4, 10);
+                details.push(`<li class="flex items-start gap-2"><span class="bg-pink-900/50 text-pink-300 px-2 py-0.5 rounded text-[10px] font-bold border border-pink-700/50 w-24 text-center">(${ai}) PESO</span> <span class="text-white font-mono mt-0.5">${val} kg</span></li>`);
+                currentIndex += 10;
+                advanced = true;
+            }
+            // Variáveis: (10) Lote, (21) Série, (37) Quantidade
+            else if (/^(10|21|37)/.test(remaining)) {
+                const ai = remaining.substring(0, 2);
+                const labels = {'10': 'LOTE', '21': 'SÉRIE', '37': 'QTD'};
+                
+                let val = "";
+                let i = 2;
+                // Lê o valor até o final da string OU até encontrar um separador de lote invisível (ASCII 29)
+                while (i < remaining.length && remaining.charCodeAt(i) !== 29) {
+                    val += remaining[i];
+                    i++;
+                }
+                details.push(`<li class="flex items-start gap-2"><span class="bg-amber-900/50 text-amber-300 px-2 py-0.5 rounded text-[10px] font-bold border border-amber-700/50 w-24 text-center">(${ai}) ${labels[ai]}</span> <span class="text-white font-mono mt-0.5 break-all">${val}</span></li>`);
+                currentIndex += i; 
+                advanced = true;
+            }
+
+            // Se achou um código maluco da indústria que não conhecemos, joga em "Outros" e encerra
+            if (!advanced) {
+                details.push(`<li class="flex items-start gap-2 mt-2"><span class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-600 w-24 text-center">OUTROS (AIs)</span> <span class="text-white font-mono mt-0.5 break-all">${remaining}</span></li>`);
+                break; 
+            }
+        }
+    }
+
+    typeEl.textContent = type;
+    if (details.length > 0) {
+        detailsList.innerHTML = details.join('');
     }
 }

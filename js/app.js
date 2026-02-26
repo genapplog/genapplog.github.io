@@ -130,17 +130,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     initLabelsModule();
     initAuth(auth); 
 
-    // ✅ CORREÇÃO: Força a lista de clientes a atualizar as permissões após o login
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            // Aguarda 1 segundo para garantir que o perfil de Admin foi carregado na memória
-            setTimeout(() => {
-                console.log("🔄 Recarregando lista de clientes com permissões de Admin...");
-                refreshClientList();
-            }, 1000);
-        }
-    });
-
     // Inicia Módulos Conectados ao DB
     const clientsCollection = collection(db, PATHS.clients);
 
@@ -187,9 +176,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Funcionalidades Globais de Estabilidade
-    // Executa imediatamente e depois a cada 2s para pegar modais novos
+    // Executa imediatamente e usa MutationObserver para pegar modais novos com alta performance
     blindarInputsExcetoLogin();
-    setInterval(blindarInputsExcetoLogin, 2000);
+    
+    const observer = new MutationObserver(() => {
+        blindarInputsExcetoLogin();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
 
     setupConnectionMonitoring();
     setupGlobalErrorLogging(db);

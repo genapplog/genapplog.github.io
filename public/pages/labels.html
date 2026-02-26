@@ -5,12 +5,15 @@
                                 <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">Impressão de Etiquetas</h1>
                                 <p class="text-indigo-400 max-w-2xl text-sm md:text-base">Selecione o modelo desejado para iniciar a impressão.</p>
                             </header>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <button id="btn-open-amazon" class="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-indigo-500 transition-all p-8 rounded-2xl flex flex-col items-center text-center group shadow-lg w-full">
                                     <h3 class="text-2xl font-bold text-white mb-2 group-hover:text-indigo-400 transition-colors">Modelo Amazon</h3>
                                 </button>
                                 <button id="btn-open-manual" class="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-indigo-500 transition-all p-8 rounded-2xl flex flex-col items-center text-center group shadow-lg w-full">
                                     <h3 class="text-2xl font-bold text-white mb-2 group-hover:text-indigo-400 transition-colors">Modelo Manual</h3>
+                                </button>
+                                <button id="btn-open-validation" class="bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-emerald-500 transition-all p-8 rounded-2xl flex flex-col items-center text-center group shadow-lg w-full">
+                                    <h3 class="text-2xl font-bold text-white mb-2 group-hover:text-emerald-400 transition-colors">Validação (GS1)</h3>
                                 </button>
                             </div>
                         </div>
@@ -123,5 +126,54 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div id="zpl-tool-validation" class="hidden">
+                            <button id="btn-back-zpl-validation" class="text-emerald-400 hover:text-white flex items-center gap-2 mb-6 transition group">
+                                <span class="bg-slate-800 p-2 rounded-full group-hover:bg-slate-700 transition-colors">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                                </span>
+                                <span class="font-medium">Voltar para modelos</span>
+                            </button>
+                            <div class="bg-slate-800 rounded-xl border border-slate-700 p-6 md:p-8 shadow-lg">
+                                <div class="flex items-center gap-3 mb-8 pb-6 border-b border-slate-700">
+                                    <div class="bg-emerald-500 p-2 rounded-lg text-white">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                                    </div>
+                                    <h2 class="text-xl font-bold text-white">Leitor e Validação (GS1)</h2>
+                                </div>
+                                
+                                <div class="max-w-2xl mx-auto">
+                                    <div class="mb-8 bg-slate-900/50 p-6 rounded-xl border border-slate-700/50">
+                                        <label class="block text-xs font-bold text-emerald-400 uppercase tracking-wide mb-3 text-center">Posicione o cursor abaixo e utilize o Biper</label>
+                                        <input type="text" id="input-barcode-scanner" placeholder="Aguardando leitura..." class="w-full bg-slate-950 border-2 border-slate-600 text-white rounded-xl p-4 text-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 outline-none transition text-center font-mono placeholder-slate-600 shadow-inner" autocomplete="off">
+                                        <p class="text-[10px] text-slate-500 text-center mt-3 uppercase tracking-wider">A análise ocorre automaticamente após o bip (Enter)</p>
+                                    </div>
+
+                                    <div id="validation-result-box" class="hidden bg-slate-900 border border-emerald-900/50 rounded-xl p-6 shadow-2xl relative overflow-hidden">
+                                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-400"></div>
+                                        <h4 class="text-sm font-bold text-white mb-4 uppercase tracking-wider border-b border-slate-700 pb-3 flex items-center gap-2">
+                                            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            Resultado da Análise
+                                        </h4>
+                                        <div class="space-y-5">
+                                            <div>
+                                                <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider block mb-1">Padrão Identificado</span>
+                                                <div id="val-type" class="text-2xl font-black text-emerald-400">GS1-128</div>
+                                            </div>
+                                            <div class="bg-slate-950 p-4 rounded-lg border border-slate-800">
+                                                <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider block mb-2">Conteúdo Bruto do Leitor</span>
+                                                <div id="val-raw" class="text-sm text-slate-300 font-mono break-all leading-relaxed"></div>
+                                            </div>
+                                            <div id="val-details-container" class="hidden pt-2">
+                                                <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider block mb-3 border-b border-slate-800 pb-2">Detalhes Extraídos</span>
+                                                <ul id="val-details-list" class="space-y-3 text-sm">
+                                                    </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
