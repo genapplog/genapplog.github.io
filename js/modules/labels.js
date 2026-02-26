@@ -329,19 +329,94 @@ async function handlePrintPDF(zplId, sizeId, btnId, fixedSize) {
 // =========================================================
 function setupValidationTool() {
     const input = document.getElementById('input-barcode-scanner');
+    const btnCam = document.getElementById('btn-start-camera');
+    const btnStop = document.getElementById('btn-stop-camera');
+    const camContainer = document.getElementById('camera-container');
+    let html5QrCode = null;
+
     if (!input) return;
 
-    // Oculta o teclado virtual em tablets/celulares ao clicar no input (foco apenas no biper físico)
+    // --- LEITURA VIA BIPER FÍSICO ---
     input.addEventListener('focus', () => { input.setAttribute('readonly', 'readonly'); setTimeout(() => { input.removeAttribute('readonly'); }, 100); });
-
-    // O leitor de código de barras físico envia os números e logo depois aperta "Enter"
     input.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             analyzeScannedBarcode(input.value.trim());
-            input.value = ''; // Limpa o input automaticamente para a próxima leitura
+            input.value = ''; 
         }
     });
+
+    // --- LEITURA VIA CÂMARA DO TELEMÓVEL ---
+    if (btnCam) {
+        btnCam.addEventListener('click', () => {
+            if (!window.Html5Qrcode) {
+                btnCam.innerHTML = '<span class="animate-spin h-5 w-5 border-2 border-emerald-500 rounded-full border-t-transparent"></span><span class="font-bold">A carregar módulo...</span>';
+                const script = document.createElement('script');
+                script.src = "https://unpkg.com/html5-qrcode";
+                script.onload = () => startCamera();
+                document.head.appendChild(script);
+            } else {
+                startCamera();
+            }
+        });
+    }
+
+    if (btnStop) {
+        btnStop.addEventListener('click', () => stopCamera());
+    }
+
+    let isCameraStarting = false;
+
+    function startCamera() {
+        // Proteção 1: Impede múltiplos cliques enquanto a câmara já está a iniciar ou a ler
+        if ((html5QrCode && html5QrCode.isScanning) || isCameraStarting) return;
+        isCameraStarting = true;
+
+        btnCam.innerHTML = '<span class="font-bold text-emerald-400">Câmara a iniciar...</span>';
+        camContainer.classList.remove('hidden');
+        btnStop.classList.remove('hidden');
+
+        if (!html5QrCode) {
+            html5QrCode = new window.Html5Qrcode("qr-reader");
+        }
+
+        html5QrCode.start(
+            { facingMode: "environment" }, // Força a câmara traseira (ou webam no PC)
+            {
+                fps: 10,
+                qrbox: { width: 300, height: 100 } // Retângulo ideal para códigos de barras logísticos
+            },
+            (decodedText) => {
+                // Sucesso!
+                stopCamera();
+                analyzeScannedBarcode(decodedText);
+                showToast("Código detetado com sucesso!", "success");
+            },
+            (errorMessage) => {
+                // A biblioteca emite erros a cada frame que não lê nada. Ignoramos em silêncio.
+            }
+        ).then(() => {
+            isCameraStarting = false; // Liberta a trava se iniciar corretamente
+        }).catch(err => {
+            isCameraStarting = false; // Liberta a trava mesmo se der erro
+            console.error("Erro na câmara:", err);
+            showToast("Acesso à câmara bloqueado ou indisponível.", "error");
+            stopCamera();
+        });
+    }
+
+    function stopCamera() {
+        camContainer.classList.add('hidden');
+        btnStop.classList.add('hidden');
+        btnCam.innerHTML = '<svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span class="font-bold">Ler com Câmara do Telemóvel</span>';
+        
+        // Proteção 2: Para a câmera com segurança e limpa o HTML residual
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+                html5QrCode.clear(); // Previne o erro "Cannot clear while scan is ongoing" na próxima vez
+            }).catch(err => console.error(err));
+        }
+    }
 }
 
 function analyzeScannedBarcode(code) {
