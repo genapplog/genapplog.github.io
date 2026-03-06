@@ -1,0 +1,126 @@
+<div id="agendamento" class="page-content hidden max-w-5xl mx-auto h-full fade-in">
+    
+    <header class="mb-6 flex flex-col md:flex-row justify-between items-end gap-4 print:hidden">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-white">Capa de Agendamento</h1>
+            <p class="text-indigo-400 mt-1">Preenchimento automático via Excel.</p>
+        </div>
+        <div class="flex gap-2">
+            <button id="btn-download-modelo" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-medium transition text-sm flex items-center gap-2 border border-slate-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Baixar Modelo
+            </button>
+            
+            <label class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition text-sm flex items-center gap-2 cursor-pointer shadow-lg shadow-indigo-500/30">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                Upload Dados
+                <input type="file" id="input-upload-excel" accept=".xlsx, .xls" class="hidden">
+            </label>
+
+            <button id="btn-imprimir-capa" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium transition text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/30">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                Imprimir
+            </button>
+        </div>
+    </header>
+
+    <div id="capa-print-area" class="bg-white text-black p-8 md:p-12 rounded-xl shadow-2xl mx-auto print:shadow-none print:p-0 print:m-0 print:w-full max-w-4xl border border-slate-700 print:border-none">
+        
+        <div class="border-b-2 border-black pb-4 mb-6 flex justify-between items-center">
+            <div>
+                <h2 class="text-3xl font-bold uppercase tracking-widest">Capa de Agendamento</h2>
+                <p class="text-sm font-bold text-gray-600 mt-1">APPLOG - CONTROLE DE RECEBIMENTO/EXPEDIÇÃO</p>
+            </div>
+            <div class="text-right">
+                <div class="w-24 h-24 border-2 border-black border-dashed flex items-center justify-center text-xs font-bold text-gray-400 text-center">CARIMBO/<br>VISTO</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 text-sm font-bold uppercase">
+            
+            <div class="border border-black p-2 bg-gray-100 col-span-2 md:col-span-1">
+                <span class="text-xs text-gray-500 block mb-1">Nome Fornecedor</span>
+                <span id="capa-fornecedor" class="text-lg">-</span>
+            </div>
+            <div class="border border-black p-2 bg-gray-100 col-span-2 md:col-span-1">
+                <span class="text-xs text-gray-500 block mb-1">Transportadora</span>
+                <span id="capa-transportadora" class="text-lg">-</span>
+            </div>
+
+            <div class="border border-black p-2">
+                <span class="text-xs text-gray-500 block mb-1">Nº DO PEDIDO</span>
+                <span id="capa-pedido" class="text-base">-</span>
+            </div>
+            <div class="border border-black p-2">
+                <span class="text-xs text-gray-500 block mb-1">CD</span>
+                <span id="capa-cd" class="text-base">-</span>
+            </div>
+
+            <div class="border border-black p-2">
+                <span class="text-xs text-gray-500 block mb-1">Nota Fiscal</span>
+                <span id="capa-nf" class="text-base">-</span>
+            </div>
+            <div class="border border-black p-2">
+                <span class="text-xs text-gray-500 block mb-1">Série</span>
+                <span id="capa-serie" class="text-base">-</span>
+            </div>
+
+            <div class="border border-black p-2">
+                <span class="text-xs text-gray-500 block mb-1">Data Emissão</span>
+                <span id="capa-emissao" class="text-base">-</span>
+            </div>
+            <div class="border border-black p-2">
+                <span class="text-xs text-gray-500 block mb-1">Data Agendamento</span>
+                <span id="capa-data" class="text-base">-</span>
+            </div>
+
+            <div class="border border-black p-2">
+                <span class="text-xs text-gray-500 block mb-1">Tipo Agendamento</span>
+                <span id="capa-tipo" class="text-base">-</span>
+            </div>
+            <div class="border border-black p-2">
+                <span class="text-xs text-gray-500 block mb-1">Remessa</span>
+                <span id="capa-remessa" class="text-base">-</span>
+            </div>
+
+            <div class="border border-black p-2">
+                <span class="text-xs text-gray-500 block mb-1">Itens por NF</span>
+                <span id="capa-itens" class="text-base">-</span>
+            </div>
+            <div class="border border-black p-2">
+                <span class="text-xs text-gray-500 block mb-1">Qtd Volume</span>
+                <span id="capa-volume" class="text-base">-</span>
+            </div>
+
+            <div class="border border-black p-2">
+                <span class="text-xs text-gray-500 block mb-1">Peso Total NF</span>
+                <span id="capa-peso" class="text-base">-</span>
+            </div>
+            <div class="border border-black p-2">
+                <span class="text-xs text-gray-500 block mb-1">Palet</span>
+                <span id="capa-palet" class="text-base">-</span>
+            </div>
+
+            <div class="border border-black p-3 bg-gray-200 col-span-2 flex justify-between items-center">
+                <span class="text-sm text-gray-600 block">Valor Total NF:</span>
+                <span id="capa-valor" class="text-2xl">-</span>
+            </div>
+        </div>
+        
+        <div class="mt-8 pt-4 border-t border-dashed border-gray-400 text-center text-xs text-gray-500 print:block">
+            Documento gerado digitalmente pelo sistema AppLog.
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        @page { margin: 10mm; size: A4 portrait; }
+        body * { visibility: hidden; }
+        #capa-print-area, #capa-print-area * { visibility: visible; }
+        #capa-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+        /* Garante que o fundo cinza claro das caixas seja impresso */
+        .bg-gray-100 { background-color: #f3f4f6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .bg-gray-200 { background-color: #e5e7eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+</style>

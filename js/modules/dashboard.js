@@ -133,7 +133,9 @@ export function updateDashboardView(allData) {
     if (!roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r))) return;
 
     localAllData = allData;
-    applyDashboardFilters(); 
+    // Otimização: Usa os dados que já vieram do rnc.js em vez de refazer o getDocs() no Firebase
+    updateChartsAndStats(localAllData);
+    renderHistoryTable(localAllData);
     
     const tvEl = document.getElementById('tv-mode');
     if (tvEl && !tvEl.classList.contains('hidden')) updateTVView();

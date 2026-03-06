@@ -25,6 +25,7 @@ import { initClientsModule, refreshClientList } from './modules/clients.js';
 import { initRncModule } from './modules/rnc.js';
 import { initAdminModule } from './modules/admin.js';
 import { initDashboard, startTVMode } from './modules/dashboard.js';
+import { initAgendamentoModule } from './modules/agendamento.js'; // Novo Módulo
 
 // =========================================================
 // 1. INICIALIZAÇÃO FIREBASE (CORE)
@@ -69,7 +70,8 @@ async function loadViews() {
         { file: './pages/labels.html' },
         { file: './pages/rnc.html' },
         { file: './pages/profile.html' },
-        { file: './pages/settings.html' }
+        { file: './pages/settings.html' },
+        { file: './pages/agendamento.html' } // Nova Tela de Agendamento
     ];
 
     try {
@@ -101,10 +103,9 @@ async function loadViews() {
 
         const htmls = await Promise.all(responses.map(r => r.text()));
 
-        // Injeta o conteúdo. 
-        // Usamos innerHTML += para somar ao que já existe (caso o container tenha sido recriado ou não)
+        // Injeta o conteúdo de forma otimizada sem destruir os nós DOM existentes
         const viewsHTML = htmls.join('');
-        container.innerHTML = viewsHTML + container.innerHTML; 
+        container.insertAdjacentHTML('afterbegin', viewsHTML); 
         
         console.log("📦 Views carregadas e injetadas com sucesso.");
         
@@ -128,7 +129,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Inicia Módulos Independentes
     initLabelsModule();
-    initAuth(auth); 
+    initAgendamentoModule(); // Inicializa o Agendamento
+    initAuth(auth);
 
     // Inicia Módulos Conectados ao DB
     const clientsCollection = collection(db, PATHS.clients);
@@ -176,11 +178,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Funcionalidades Globais de Estabilidade
-    // Executa imediatamente e usa MutationObserver para pegar modais novos com alta performance
     blindarInputsExcetoLogin();
     
+    // Otimização: Debounce no MutationObserver para evitar travamento de CPU e lentidão
+    let blindarTimeout;
     const observer = new MutationObserver(() => {
-        blindarInputsExcetoLogin();
+        clearTimeout(blindarTimeout);
+        blindarTimeout = setTimeout(() => {
+            blindarInputsExcetoLogin();
+        }, 300); // Aguarda o DOM estabilizar (300ms) antes de varrer os inputs
     });
     observer.observe(document.body, { childList: true, subtree: true });
 

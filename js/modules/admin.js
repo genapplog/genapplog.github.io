@@ -43,23 +43,35 @@ export function initAdminModule(db, clientsCollection) {
     console.log("Iniciando Módulo Admin...");
     globalDbForAdmin = db;
 
-    // ✅ NOVO: Controle de Visibilidade dos Blocos de Configuração
-    // Garante que apenas ADMIN veja os blocos de gestão crítica
-    const roles = getUserRole() || [];
-    const isAdmin = roles.includes('ADMIN');
+    // ✅ CORREÇÃO: Aguarda o Firebase confirmar o perfil antes de exibir as opções
+    const applyAdminVisibility = () => {
+        const roles = getUserRole() || [];
+        const isAdmin = roles.includes('ADMIN');
+        
+        const restrictedBlocks = ['cfg-team', 'cfg-checklist', 'cfg-products', 'cfg-admin-danger-zone'];
 
-    const restrictedBlocks = ['cfg-team', 'cfg-checklist', 'cfg-products'];
-
-    restrictedBlocks.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            if (!isAdmin) {
-                el.classList.add('hidden'); // Oculta para Líder/Inventário/Operador
-            } else {
-                el.classList.remove('hidden'); // Exibe para Admin
+        restrictedBlocks.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (!isAdmin) {
+                    el.classList.add('hidden');
+                } else {
+                    el.classList.remove('hidden');
+                }
             }
+        });
+
+        // Traz a checagem da auditoria para cá, garantindo que o Admin foi carregado!
+        if(isAdmin) {
+            const auditSection = document.getElementById('cfg-admin-audit-section');
+            if(auditSection) auditSection.classList.remove('hidden');
+            loadInitialAuditLogs(db);
         }
-    });
+    };
+
+    // Executa imediatamente e aguarda a confirmação do perfil
+    applyAdminVisibility();
+    document.addEventListener('user-profile-ready', applyAdminVisibility);
 
     // 1. Restaurar Padrões (Perigo!)
     safeBind('btn-reset-db', 'click', () => {
@@ -163,13 +175,7 @@ export function initAdminModule(db, clientsCollection) {
     safeBind('cfg-btn-audit-filter', 'click', () => filterAuditLogs(db));
     safeBind('cfg-btn-audit-export', 'click', () => exportAuditLogs());
 
-   // Se for admin, carrega logs automaticamente
-    if(isAdmin) {
-        const auditSection = document.getElementById('cfg-admin-audit-section');
-        if(auditSection) auditSection.classList.remove('hidden');
-        loadInitialAuditLogs(db);
-    }
-    // ✅ 6. CLONAR DADOS (Apenas do Dia Atual)
+   // ✅ 6. CLONAR DADOS (Apenas do Dia Atual)
     safeBind('cfg-btn-sync', 'click', () => {
         openConfirmModal(
             "Clonar Ocorrências de Hoje?", 
@@ -325,9 +331,9 @@ async function filterAuditLogs(db) {
 }
 
 function renderAuditTable(data) {
-    const tbody = document.getElementById('cfg-tbody-audit-list');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+    const tbody = document.getElementById('cfg-tbody-audit-list');
+    if (!tbody) return;
+    tbody.innerHTML = '';
 
     data.forEach(log => {
         const dateObj = log.createdAt?.toDate ? log.createdAt.toDate() : new Date(log.createdAt);
@@ -389,12 +395,12 @@ export function updateAdminList(data) {
 }
 
 function renderAdminTable() {
-    const tbodyRNC = document.getElementById('cfg-tbody-oc-list');
-    const tbodyLabels = document.getElementById('cfg-tbody-label-list');
-    const searchRNC = document.getElementById('cfg-input-search-rnc');
-    const searchLabel = document.getElementById('cfg-input-search-label');
+    const tbodyRNC = document.getElementById('cfg-tbody-oc-list');
+    const tbodyLabels = document.getElementById('cfg-tbody-label-list');
+    const searchRNC = document.getElementById('cfg-input-search-rnc');
+    const searchLabel = document.getElementById('cfg-input-search-label');
 
-    if (!tbodyRNC || !tbodyLabels) return;
+    if (!tbodyRNC || !tbodyLabels) return;
 
     const termRNC = searchRNC ? searchRNC.value.toLowerCase().trim() : "";
     const termLabel = searchLabel ? searchLabel.value.toLowerCase().trim() : "";
