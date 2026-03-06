@@ -1,0 +1,91 @@
+<div id="cadastros" class="page-content hidden fade-in max-w-5xl mx-auto h-full flex flex-col">
+    <header class="mb-6 shrink-0">
+        <h1 class="text-2xl md:text-3xl font-bold text-white">Gestão de Cadastros</h1>
+        <p class="text-slate-400 text-sm mt-1">Adicione ou edite produtos e usuários individualmente.</p>
+    </header>
+
+    <div class="flex gap-4 border-b border-slate-700 mb-6 shrink-0">
+        <button id="tab-btn-produtos" class="pb-3 px-2 text-sm font-bold border-b-2 border-indigo-500 text-indigo-400 transition-colors">📦 Produtos</button>
+        <button id="tab-btn-equipe" class="pb-3 px-2 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-300 transition-colors">👥 Equipe</button>
+    </div>
+
+    <div id="tab-produtos" class="flex-1 overflow-y-auto pb-10 custom-scrollbar">
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg mb-8">
+            <h3 class="text-indigo-400 font-bold uppercase text-xs tracking-wider mb-4 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                Cadastrar Novo Produto
+            </h3>
+            
+            <form id="form-cad-produto" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">DUN (Código de Barras)</label>
+                    <input type="text" id="cad-prod-dun" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none">
+                </div>
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Código SAP/Interno</label>
+                    <input type="text" id="cad-prod-cod" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none">
+                </div>
+                <div class="md:col-span-2 flex gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Descrição do Produto</label>
+                        <input type="text" id="cad-prod-desc" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none uppercase">
+                    </div>
+                    <button type="submit" id="btn-salvar-produto" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold shadow-lg transition h-[38px] shrink-0">Salvar</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="cadastros-busca-produto-container"></div>
+    </div>
+
+    <div id="tab-equipe" class="hidden flex-1 overflow-y-auto pb-10 custom-scrollbar">
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg mb-8">
+            <h3 class="text-emerald-400 font-bold uppercase text-xs tracking-wider mb-4 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                Cadastrar Novo Usuário
+            </h3>
+            
+            <form id="form-cad-user" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">ID (E-mail ou Matrícula)</label>
+                    <input type="text" id="cad-user-id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none">
+                </div>
+                <div class="md:col-span-1 flex-1">
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Nome Completo</label>
+                    <input type="text" id="cad-user-nome" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none">
+                </div>
+                <div class="md:col-span-1 flex gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Cargo / Permissão</label>
+                        <select id="cad-user-role" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none">
+                            <option value="OPERADOR">Operador (Apenas Tela)</option>
+                            <option value="INVENTARIO">Inventário (Validação)</option>
+                            <option value="LIDER">Líder (Gestão Básica)</option>
+                            <option value="ADMIN">Administrador (Tudo)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="md:col-span-1 text-right">
+                    <button type="submit" id="btn-salvar-user" class="w-full md:w-auto px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold shadow-lg transition h-[38px]">Salvar Usuário</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-slate-900 p-4 rounded-lg border border-slate-700">
+            <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
+                <h4 class="text-sm font-bold text-white uppercase">Usuários Cadastrados</h4>
+                <input type="text" id="busca-user-input" placeholder="Buscar por nome ou ID..." class="bg-slate-800 border border-slate-600 rounded px-3 py-2 text-xs text-white focus:border-emerald-500 outline-none">
+            </div>
+            <div class="overflow-hidden rounded border border-slate-700">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-950 text-slate-400 font-medium">
+                        <tr><th class="p-3">Nome</th><th class="p-3">Identificação (ID)</th><th class="p-3">Cargo</th><th class="p-3 text-right">Ação</th></tr>
+                    </thead>
+                    <tbody id="tbody-users-list" class="divide-y divide-slate-800 text-slate-300">
+                        <tr><td colspan="4" class="p-4 text-center italic text-slate-500">Carregando usuários...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

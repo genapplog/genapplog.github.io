@@ -26,6 +26,7 @@ import { initRncModule } from './modules/rnc.js';
 import { initAdminModule } from './modules/admin.js';
 import { initDashboard, startTVMode } from './modules/dashboard.js';
 import { initAgendamentoModule } from './modules/agendamento.js'; // Novo Módulo
+import { initCadastrosModule } from './modules/cadastros.js'; // Módulo de Cadastros Manuais
 
 // =========================================================
 // 1. INICIALIZAÇÃO FIREBASE (CORE)
@@ -71,7 +72,8 @@ async function loadViews() {
         { file: './pages/rnc.html' },
         { file: './pages/profile.html' },
         { file: './pages/settings.html' },
-        { file: './pages/agendamento.html' } // Nova Tela de Agendamento
+        { file: './pages/agendamento.html' }, // Nova Tela de Agendamento
+        { file: './pages/cadastros.html' } // Nova Tela de Cadastros
     ];
 
     try {
@@ -149,24 +151,37 @@ document.addEventListener('DOMContentLoaded', async () => {
                 initClientsModule(clientsCollection);
                 initRncModule(db, IS_DEV);
                 initAdminModule(db, clientsCollection);
+                initCadastrosModule(db); // Inicia gestão de equipes e produtos
                 
                 modulesInitialized = true;
             }
 
-            // Atualização de permissões admin
+            // Atualização de permissões admin e Segurança de Menus
             setTimeout(() => {
-                console.log("🔄 Recarregando lista de clientes com permissões de Admin...");
+                console.log("🔄 Atualizando interface e permissões...");
                 refreshClientList();
                 
-                // Ativar Notificações para Gestão
-                // Importamos dinamicamente ou usamos a função exportada do módulo auth
                 import('./modules/auth.js').then(authModule => {
-                    const roles = authModule.getUserRole();
+                    const roles = authModule.getUserRole() || [];
                     const isGestao = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
-                    
+                    const isAdmin = roles.includes('ADMIN');
+                    const isLider = roles.includes('LIDER');
+
                     if (isGestao) {
                         ativarNotificacoesGestao();
                     }
+
+                    // PROTEÇÃO DE TELA: Oculta links restritos do menu lateral
+                    document.querySelectorAll('.nav-link[data-allowed]').forEach(link => {
+                        const allowedRoles = link.dataset.allowed.split(',');
+                        // Se o usuário tem algum dos papeis permitidos, mostra o link
+                        const canSee = allowedRoles.some(role => roles.includes(role));
+                        if (canSee) {
+                            link.classList.remove('hidden');
+                        } else {
+                            link.classList.add('hidden');
+                        }
+                    });
                 });
             }, 1000);
             
