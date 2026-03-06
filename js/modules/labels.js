@@ -381,26 +381,28 @@ function setupValidationTool() {
         }
 
         html5QrCode.start(
-            { facingMode: "environment" }, // Força a câmara traseira (ou webam no PC)
+            { facingMode: "environment" }, // A configuração mais segura e à prova de falhas
             {
-                fps: 10,
-                qrbox: { width: 300, height: 100 } // Retângulo ideal para códigos de barras logísticos
+                fps: 10, // Uma taxa menor dá mais tempo para o celular focar sozinho
+                // Um retângulo estreito obriga o foco de processamento em uma área bem pequena, agilizando a leitura
+                qrbox: { width: 250, height: 100 }
             },
             (decodedText) => {
                 // Sucesso!
                 stopCamera();
                 analyzeScannedBarcode(decodedText);
-                showToast("Código detetado com sucesso!", "success");
+                showToast("Código lido com sucesso!", "success");
             },
             (errorMessage) => {
-                // A biblioteca emite erros a cada frame que não lê nada. Ignoramos em silêncio.
+                // Ignora erros de frame vazio
             }
         ).then(() => {
-            isCameraStarting = false; // Liberta a trava se iniciar corretamente
+            isCameraStarting = false; 
         }).catch(err => {
-            isCameraStarting = false; // Liberta a trava mesmo se der erro
-            console.error("Erro na câmara:", err);
-            showToast("Acesso à câmara bloqueado ou indisponível.", "error");
+            isCameraStarting = false; 
+            console.error("Erro detalhado da câmara:", err);
+            const msgErro = err.name || err.message || "Erro desconhecido";
+            showToast(`Falha na Câmera: ${msgErro}`, "error");
             stopCamera();
         });
     }
