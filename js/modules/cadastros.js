@@ -21,6 +21,12 @@ import { getUserRole } from './auth.js'; // Importando para checar quem está sa
 let dbInstance = null;
 let currentUsersList = [];
 
+// Controle de Ordenação
+let userSortConfig = {
+    key: 'name',
+    direction: 'asc' // 'asc' ou 'desc'
+};
+
 export function initCadastrosModule(db) {
     console.log("Iniciando Módulo de Cadastros Manuais...");
     dbInstance = db;
@@ -30,6 +36,7 @@ export function initCadastrosModule(db) {
     setupProductSearchUI();
     setupUserForm();
     listenToUsers();
+    setupUserSorting(); // Inicializa os cliques nas colunas
     
     // Oculta a option Admin para Líderes
     setTimeout(() => {
@@ -205,7 +212,8 @@ function setupProductSearchUI() {
             
             const tdDesc = document.createElement('td'); 
             tdDesc.className = "p-3";
-            tdDesc.innerHTML = `<div class="font-bold text-white">${item.descricao}</div><div class="text-[10px] text-slate-400 font-mono">SAP: ${item.codigo}</div>`;
+            // Adicionado classe 'uppercase' para padronização visual
+            tdDesc.innerHTML = `<div class="font-bold text-white uppercase">${item.descricao}</div><div class="text-[10px] text-slate-400 font-mono">SAP: ${item.codigo}</div>`;
 
             const tdAct = document.createElement('td'); 
             tdAct.className = "p-3 text-right";
@@ -248,8 +256,8 @@ function setupUserForm() {
         const roleInput = document.getElementById('cad-user-role');
         const btn = document.getElementById('btn-salvar-user');
 
-        const uid = idInput.value.trim().toLowerCase(); // Usar minúsculo para ID/Email
-        const nome = nomeInput.value.trim();
+        const uid = idInput.value.trim().toLowerCase(); // ID/Email permanece minúsculo por padrão de sistema
+        const nome = nomeInput.value.trim().toUpperCase(); // Nome em MAIÚSCULO
         const role = roleInput.value.toUpperCase();
 
         if (uid.length < 3) return showToast("ID muito curto.", "warning");
@@ -307,15 +315,37 @@ function listenToUsers() {
     }
 }
 
+function setupUserSorting() {
+    const config = [
+        { id: 'sort-user-name', key: 'name' },
+        { id: 'sort-user-id', key: 'id' },
+        { id: 'sort-user-role', key: 'role' }
+    ];
+
+    config.forEach(item => {
+        safeBind(item.id, 'click', () => {
+            if (userSortConfig.key === item.key) {
+                userSortConfig.direction = userSortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                userSortConfig.key = item.key;
+                userSortConfig.direction = 'asc';
+            }
+            renderUsersTable();
+        });
+    });
+}
+
 function renderUsersTable() {
     const tbody = document.getElementById('tbody-users-list');
     const searchInput = document.getElementById('busca-user-input');
     if (!tbody) return;
 
     const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
-    
-    // Filtra e ordena (Alfabético)
-    let filtered = currentUsersList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    const myRoles = getUserRole() || [];
+    const isMeAdmin = myRoles.includes('ADMIN');
+
+    // 1. Filtragem por busca
+    let filtered = [...currentUsersList];
     if (term) {
         filtered = filtered.filter(u => 
             (u.name && u.name.toLowerCase().includes(term)) || 
@@ -323,31 +353,65 @@ function renderUsersTable() {
         );
     }
 
+    // 2. Ordenação Dinâmica
+    filtered.sort((a, b) => {
+        let valA = a[userSortConfig.key] || '';
+        let valB = b[userSortConfig.key] || '';
+
+        // Tratamento especial para Array de Roles (pega o primeiro)
+        if (userSortConfig.key === 'role') {
+            valA = Array.isArray(valA) ? valA[0] : valA;
+            valB = Array.isArray(valB) ? valB[0] : valB;
+        }
+
+        if (userSortConfig.direction === 'asc') {
+            return valA.toString().localeCompare(valB.toString());
+        } else {
+            return valB.toString().localeCompare(valA.toString());
+        }
+    });
+
+    // 3. Atualiza Ícones Visuais de Ordenação
+    ['name', 'id', 'role'].forEach(k => {
+        const icon = document.getElementById(`icon-sort-${k}`);
+        if (icon) {
+            if (userSortConfig.key === k) {
+                icon.textContent = userSortConfig.direction === 'asc' ? '▲' : '▼';
+                icon.classList.remove('opacity-0');
+                icon.classList.add('text-indigo-400');
+            } else {
+                icon.textContent = '↕';
+                icon.classList.add('opacity-0');
+                icon.classList.remove('text-indigo-400');
+            }
+        }
+    });
+
     tbody.innerHTML = '';
     if (filtered.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center italic text-slate-500">Nenhum usuário encontrado.</td></tr>';
         return;
     }
 
+    // 4. Renderização das linhas (Mantendo sua lógica de botões)
     filtered.forEach(user => {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-800/50 transition-colors";
         
         const tdName = document.createElement('td'); 
-        tdName.className = "p-3 font-bold text-white"; 
+        tdName.className = "p-3 font-bold text-white uppercase"; // 🔠 Força visualmente Maiúsculas
         tdName.textContent = user.name || 'Sem Nome';
 
-        const tdId = document.createElement('td'); 
-        tdId.className = "p-3 text-slate-400 font-mono"; 
+        const tdId = document.createElement('td');
+        tdId.className = "p-3 text-slate-400 font-mono text-xs"; 
         tdId.textContent = user.id;
 
-        // Monta visual dos cargos
         const tdRole = document.createElement('td'); 
         tdRole.className = "p-3";
         let rolesArray = Array.isArray(user.role) ? user.role : [user.role || 'LEITOR'];
         
         rolesArray.forEach(r => {
-            let colorClass = "bg-slate-700 text-slate-300"; // Default
+            let colorClass = "bg-slate-700 text-slate-300";
             if (r === 'ADMIN') colorClass = "bg-red-900/30 text-red-400 border border-red-800";
             else if (r === 'LIDER') colorClass = "bg-amber-900/30 text-amber-400 border border-amber-800";
             else if (r === 'INVENTARIO') colorClass = "bg-indigo-900/30 text-indigo-400 border border-indigo-800";
@@ -360,25 +424,33 @@ function renderUsersTable() {
         });
 
         const tdAct = document.createElement('td'); 
-        tdAct.className = "p-3 text-right";
+        tdAct.className = "p-3 text-right whitespace-nowrap";
         
-        const btnDel = document.createElement('button'); 
-        btnDel.className = "text-slate-500 hover:text-red-400 p-2 rounded transition";
-        btnDel.title = "Remover Acesso";
-        btnDel.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>';
-        
-        btnDel.onclick = () => {
-            openConfirmModal("Remover Usuário?", `Deseja apagar o acesso de ${user.name}?`, async () => {
-                try {
-                    await deleteDoc(doc(dbInstance, 'users', user.id));
-                    showToast("Usuário removido.");
-                    closeConfirmModal();
-                    registerLog('DEL_USER', user.id, 'Acesso removido manualmente');
-                } catch(err) { showToast("Erro ao excluir", "error"); }
-            });
-        };
+        // Permissão para excluir: ADMIN, LIDER e INVENTARIO
+        const canManageUsers = myRoles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
 
-        tdAct.appendChild(btnDel);
+        if (canManageUsers) {
+            const btnDel = document.createElement('button'); 
+            btnDel.className = "text-slate-500 hover:text-red-400 p-2 rounded transition";
+            btnDel.title = "Remover Acesso";
+            btnDel.innerHTML = '<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>';
+            
+            btnDel.onclick = () => {
+                openConfirmModal("Remover Usuário?", `Deseja apagar o acesso de ${user.name.toUpperCase()}?`, async () => {
+                    try {
+                        await deleteDoc(doc(dbInstance, 'users', user.id));
+                        showToast("Usuário removido.");
+                        closeConfirmModal();
+                        registerLog('DEL_USER', user.id, 'Remoção manual via tela de Cadastros');
+                    } catch(err) { 
+                        console.error(err);
+                        showToast("Erro ao excluir", "error"); 
+                    }
+                });
+            };
+            tdAct.appendChild(btnDel);
+        }
+
         tr.append(tdName, tdId, tdRole, tdAct);
         tbody.appendChild(tr);
     });

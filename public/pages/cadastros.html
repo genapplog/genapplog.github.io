@@ -22,7 +22,7 @@
                     <input type="text" id="cad-prod-dun" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none">
                 </div>
                 <div class="md:col-span-1">
-                    <label class="block text-xs font-medium text-slate-400 mb-1">Código SAP/Interno</label>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">Código TOTVS/Interno</label>
                     <input type="text" id="cad-prod-cod" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-indigo-500 outline-none">
                 </div>
                 <div class="md:col-span-2 flex gap-3">
@@ -60,7 +60,7 @@
                         <select id="cad-user-role" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none">
                             <option value="OPERADOR">Operador (Apenas Tela)</option>
                             <option value="INVENTARIO">Inventário (Validação)</option>
-                            <option value="LIDER">Líder (Gestão Básica)</option>
+                            <option value="LIDER">Líder (Gestão)</option>
                             <option value="ADMIN">Administrador (Tudo)</option>
                         </select>
                     </div>
@@ -78,8 +78,19 @@
             </div>
             <div class="overflow-hidden rounded border border-slate-700">
                 <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-950 text-slate-400 font-medium">
-                        <tr><th class="p-3">Nome</th><th class="p-3">Identificação (ID)</th><th class="p-3">Cargo</th><th class="p-3 text-right">Ação</th></tr>
+                    <thead class="bg-slate-950 text-slate-400 font-medium select-none">
+                        <tr>
+                            <th class="p-3 cursor-pointer hover:text-white transition-colors group" id="sort-user-name">
+                                Nome <span class="text-[10px] opacity-0 group-hover:opacity-100" id="icon-sort-name">↕</span>
+                            </th>
+                            <th class="p-3 cursor-pointer hover:text-white transition-colors group" id="sort-user-id">
+                                Identificação (E-mail/ID) <span class="text-[10px] opacity-0 group-hover:opacity-100" id="icon-sort-id">↕</span>
+                            </th>
+                            <th class="p-3 cursor-pointer hover:text-white transition-colors group" id="sort-user-role">
+                                Cargo <span class="text-[10px] opacity-0 group-hover:opacity-100" id="icon-sort-role">↕</span>
+                            </th>
+                            <th class="p-3 text-right">Ação</th>
+                        </tr>
                     </thead>
                     <tbody id="tbody-users-list" class="divide-y divide-slate-800 text-slate-300">
                         <tr><td colspan="4" class="p-4 text-center italic text-slate-500">Carregando usuários...</td></tr>
@@ -89,3 +100,10 @@
         </div>
     </div>
 </div>
+
+<style>
+    /* Força visualmente o texto em maiúsculo nos campos de cadastro */
+    #cad-prod-desc, #cad-user-nome, #cad-prod-cod {
+        text-transform: uppercase;
+    }
+</style>

@@ -166,6 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const isGestao = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
                     const isAdmin = roles.includes('ADMIN');
                     const isLider = roles.includes('LIDER');
+                    const isInventario = roles.includes('INVENTARIO');
 
                     if (isGestao) {
                         ativarNotificacoesGestao();
