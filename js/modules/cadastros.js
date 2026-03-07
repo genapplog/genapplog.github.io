@@ -9,6 +9,7 @@ import {
     deleteDoc, 
     collection, 
     query, 
+    where, 
     getDocs, 
     onSnapshot,
     getDoc
@@ -143,7 +144,7 @@ function setupProductSearchUI() {
             <h4 class="text-sm font-bold text-white uppercase tracking-wider mb-3">Consultar Produtos Cadastrados</h4>
             
             <div class="relative w-full mb-4">
-                <input type="text" id="cad-busca-prod-input" autocomplete="off" placeholder="DIGITE O DUN, SAP OU DESCRIÇÃO PARA BUSCAR..." class="w-full bg-slate-800 border border-slate-600 text-white text-xs p-3 rounded-lg outline-none focus:border-indigo-500 transition-all uppercase placeholder-slate-500 pr-10 shadow-inner">
+                <input type="text" id="cad-busca-prod-input" autocomplete="off" placeholder="DIGITE O CÓDIGO SAP EXATO PARA BUSCAR..." class="w-full bg-slate-800 border border-slate-600 text-white text-xs p-3 rounded-lg outline-none focus:border-indigo-500 transition-all uppercase placeholder-slate-500 pr-10 shadow-inner">
                 <svg class="w-4 h-4 text-slate-400 absolute right-4 top-[14px] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </div>
 
@@ -158,7 +159,7 @@ function setupProductSearchUI() {
                         </tr>
                     </thead>
                     <tbody id="cad-tbody-prod-list" class="divide-y divide-slate-800 text-slate-300">
-                        <tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-slate-500 tracking-widest uppercase">Comece a digitar para pesquisar...</td></tr>
+                        <tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-slate-500 tracking-widest uppercase">Digite o SAP exato para pesquisar...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -169,43 +170,39 @@ function setupProductSearchUI() {
     const tbody = document.getElementById('cad-tbody-prod-list');
     let searchTimeout = null;
 
-    // ✅ Motor de Busca Automática
+    // ✅ Motor de Busca EXATA por Código SAP
     const doSearch = async () => {
         const term = inputSearch.value.toUpperCase().trim();
         
         if (term.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-slate-500 tracking-widest uppercase">Comece a digitar para pesquisar...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-slate-500 tracking-widest uppercase">Digite o SAP exato para pesquisar...</td></tr>';
             return;
         }
 
+        // Se o operador apagar, não faz busca vazia
         if (term.length < 3) {
-            tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-amber-500/50 tracking-widest uppercase">Digite pelo menos 3 caracteres...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-amber-500/50 tracking-widest uppercase">Aguardando código SAP...</td></tr>';
             return; 
         }
         
-        tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-indigo-400 font-bold uppercase tracking-widest"><span class="animate-pulse">Buscando...</span></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-indigo-400 font-bold uppercase tracking-widest"><span class="animate-pulse">Buscando no banco...</span></td></tr>';
 
         try {
             const productsRef = collection(dbInstance, 'products');
             let results = [];
             
-            // 1. Busca direta por ID
-            if (/^\d+$/.test(term)) {
+            // Busca EXATA no campo 'codigo' (SAP)
+            const q = query(productsRef, where("codigo", "==", term));
+            const querySnapshot = await getDocs(q);
+            
+            querySnapshot.forEach((doc) => {
+                results.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // Caso não encontre pelo SAP, tenta buscar se o que ele digitou era o próprio ID (DUN)
+            if (results.length === 0 && /^\d+$/.test(term)) {
                 const docSnap = await getDoc(doc(dbInstance, 'products', term));
                 if (docSnap.exists()) results.push({ id: docSnap.id, ...docSnap.data() });
-            }
-            
-            // 2. Varredura por texto
-            if (results.length === 0) {
-                const q = query(productsRef); 
-                const querySnapshot = await getDocs(q);
-                for (const doc of querySnapshot.docs) {
-                    const d = doc.data();
-                    if (doc.id.includes(term) || d.descricao.includes(term) || d.codigo.includes(term)) {
-                        results.push({ id: doc.id, ...d });
-                        if (results.length >= 15) break; 
-                    }
-                }
             }
             
             renderProdTable(results);
