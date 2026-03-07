@@ -16,7 +16,7 @@ import {
 
 import { safeBind, showToast, openConfirmModal, closeConfirmModal } from '../utils.js';
 import { registerLog } from './admin.js';
-import { getUserRole } from './auth.js'; // Importando para checar quem está salvando
+import { getUserRole } from './auth.js'; 
 
 let dbInstance = null;
 let currentUsersList = [];
@@ -33,19 +33,23 @@ export function initCadastrosModule(db) {
 
     setupTabs();
     setupProductForm();
-    setupProductSearchUI();
+    setupProductSearchUI(); // Interface de busca de produtos atualizada
     setupUserForm();
     listenToUsers();
-    setupUserSorting(); // Inicializa os cliques nas colunas
+    setupUserSorting(); 
     
-    // Oculta a option Admin para Líderes
-    setTimeout(() => {
+    // Escuta o sinal de que o login completou para desenhar os botões
+    document.addEventListener('user-profile-ready', () => {
+        renderUsersTable();
         const roles = getUserRole() || [];
         if (!roles.includes('ADMIN')) {
             const adminOption = document.querySelector('#cad-user-role option[value="ADMIN"]');
             if (adminOption) adminOption.disabled = true;
         }
-    }, 1000);
+    });
+
+    // Fallback: Tenta atualizar após 1.5s caso o evento já tenha passado
+    setTimeout(renderUsersTable, 1500);
 }
 
 // =========================================================
@@ -60,25 +64,21 @@ function setupTabs() {
     if (!btnProd || !btnEquipe) return;
 
     safeBind('tab-btn-produtos', 'click', () => {
-        // Estilo da Aba
         btnProd.classList.replace('border-transparent', 'border-indigo-500');
         btnProd.classList.replace('text-slate-500', 'text-indigo-400');
         btnEquipe.classList.replace('border-indigo-500', 'border-transparent');
         btnEquipe.classList.replace('text-emerald-400', 'text-slate-500');
         
-        // Telas
         tabProd.classList.remove('hidden');
         tabEquipe.classList.add('hidden');
     });
 
     safeBind('tab-btn-equipe', 'click', () => {
-        // Estilo da Aba (Usando emerald para diferenciar Equipe)
         btnEquipe.classList.replace('border-transparent', 'border-indigo-500');
         btnEquipe.classList.replace('text-slate-500', 'text-emerald-400');
         btnProd.classList.replace('border-indigo-500', 'border-transparent');
         btnProd.classList.replace('text-indigo-400', 'text-slate-500');
         
-        // Telas
         tabEquipe.classList.remove('hidden');
         tabProd.classList.add('hidden');
     });
@@ -95,7 +95,7 @@ function setupProductForm() {
         const descInput = document.getElementById('cad-prod-desc');
         const btn = document.getElementById('btn-salvar-produto');
 
-        // Limpa formatação (ex: letras no código de barras)
+        // Limpa formatação
         const cleanDun = dunInput.value.replace(/\D/g, ''); 
         const codigo = codInput.value.trim();
         const descricao = descInput.value.toUpperCase().trim();
@@ -118,6 +118,12 @@ function setupProductForm() {
             dunInput.value = ''; codInput.value = ''; descInput.value = '';
             dunInput.focus();
 
+            // Atualiza a tabela de pesquisa se houver algo digitado
+            const searchInput = document.getElementById('cad-busca-prod-input');
+            if(searchInput && searchInput.value) {
+                searchInput.dispatchEvent(new Event('input'));
+            }
+
         } catch (error) {
             console.error(error);
             showToast("Erro ao salvar produto.", "error");
@@ -131,23 +137,28 @@ function setupProductSearchUI() {
     const container = document.getElementById('cadastros-busca-produto-container');
     if (!container) return;
 
-    // Injeta a interface de busca dinamicamente para não sujar o HTML principal
+    // ✅ Layout Autocomplete Limpo com Coluna SAP Separada (colspan=4)
     container.innerHTML = `
-        <div class="bg-slate-900 p-4 rounded-lg border border-slate-700">
-            <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
-                <h4 class="text-sm font-bold text-white uppercase">Consultar Produtos</h4>
-                <div class="flex gap-2 w-full md:w-auto">
-                    <input type="text" id="cad-busca-prod-input" placeholder="Digite DUN, Cód ou Descrição..." class="w-full md:w-64 bg-slate-800 border border-slate-600 rounded px-3 py-2 text-xs text-white focus:border-indigo-500 outline-none">
-                    <button id="cad-btn-buscar-prod" class="bg-indigo-900/30 text-indigo-400 hover:bg-indigo-600 hover:text-white border border-indigo-500/30 px-4 py-2 rounded transition font-bold text-xs">Buscar</button>
-                </div>
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 shadow-sm relative">
+            <h4 class="text-sm font-bold text-white uppercase tracking-wider mb-3">Consultar Produtos Cadastrados</h4>
+            
+            <div class="relative w-full mb-4">
+                <input type="text" id="cad-busca-prod-input" autocomplete="off" placeholder="DIGITE O DUN, SAP OU DESCRIÇÃO PARA BUSCAR..." class="w-full bg-slate-800 border border-slate-600 text-white text-xs p-3 rounded-lg outline-none focus:border-indigo-500 transition-all uppercase placeholder-slate-500 pr-10 shadow-inner">
+                <svg class="w-4 h-4 text-slate-400 absolute right-4 top-[14px] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             </div>
-            <div class="overflow-hidden rounded border border-slate-700">
+
+            <div class="overflow-hidden rounded-lg border border-slate-700 shadow">
                 <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-950 text-slate-400 font-medium">
-                        <tr><th class="p-3">DUN</th><th class="p-3">Descrição & Código</th><th class="p-3 text-right">Ação</th></tr>
+                    <thead class="bg-slate-950 text-slate-400 font-medium uppercase text-[10px]">
+                        <tr>
+                            <th class="p-3 tracking-wider w-24">Código (SAP)</th>
+                            <th class="p-3 tracking-wider w-36">DUN (Cód. Barras)</th>
+                            <th class="p-3 tracking-wider">Descrição do Produto</th>
+                            <th class="p-3 text-right w-16">Ação</th>
+                        </tr>
                     </thead>
                     <tbody id="cad-tbody-prod-list" class="divide-y divide-slate-800 text-slate-300">
-                        <tr><td colspan="3" class="p-4 text-center italic text-slate-500">Utilize a busca acima.</td></tr>
+                        <tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-slate-500 tracking-widest uppercase">Comece a digitar para pesquisar...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -155,26 +166,36 @@ function setupProductSearchUI() {
     `;
 
     const inputSearch = document.getElementById('cad-busca-prod-input');
-    const btnSearch = document.getElementById('cad-btn-buscar-prod');
     const tbody = document.getElementById('cad-tbody-prod-list');
+    let searchTimeout = null;
 
+    // ✅ Motor de Busca Automática
     const doSearch = async () => {
         const term = inputSearch.value.toUpperCase().trim();
-        if (term.length < 3) return showToast("Digite no mínimo 3 caracteres.", "info");
         
-        tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-indigo-400"><span class="animate-pulse">Buscando no servidor...</span></td></tr>';
+        if (term.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-slate-500 tracking-widest uppercase">Comece a digitar para pesquisar...</td></tr>';
+            return;
+        }
+
+        if (term.length < 3) {
+            tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-amber-500/50 tracking-widest uppercase">Digite pelo menos 3 caracteres...</td></tr>';
+            return; 
+        }
+        
+        tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-indigo-400 font-bold uppercase tracking-widest"><span class="animate-pulse">Buscando...</span></td></tr>';
 
         try {
             const productsRef = collection(dbInstance, 'products');
             let results = [];
             
-            // Busca direta por ID se for só número (Mais rápido)
+            // 1. Busca direta por ID
             if (/^\d+$/.test(term)) {
                 const docSnap = await getDoc(doc(dbInstance, 'products', term));
                 if (docSnap.exists()) results.push({ id: docSnap.id, ...docSnap.data() });
             }
             
-            // Se não achou por ID exato, varre (Limitado aos 15 primeiros para performance)
+            // 2. Varredura por texto
             if (results.length === 0) {
                 const q = query(productsRef); 
                 const querySnapshot = await getDocs(q);
@@ -182,7 +203,7 @@ function setupProductSearchUI() {
                     const d = doc.data();
                     if (doc.id.includes(term) || d.descricao.includes(term) || d.codigo.includes(term)) {
                         results.push({ id: doc.id, ...d });
-                        if (results.length >= 15) break; // Trava de performance
+                        if (results.length >= 15) break; 
                     }
                 }
             }
@@ -191,58 +212,72 @@ function setupProductSearchUI() {
             
         } catch (e) { 
             console.error(e); 
-            tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-red-400">Erro na busca.</td></tr>'; 
+            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-400 font-bold uppercase">Erro na comunicação com o banco.</td></tr>'; 
         }
     };
 
     const renderProdTable = (items) => {
         tbody.innerHTML = '';
         if (items.length === 0) { 
-            tbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center italic text-slate-500">Nenhum produto encontrado.</td></tr>'; 
+            tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-slate-500 tracking-widest uppercase">Nenhum produto compatível encontrado.</td></tr>'; 
             return; 
         }
         
         items.forEach(item => {
             const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-800/50 transition-colors";
+            tr.className = "hover:bg-slate-800 transition-colors group";
             
+            // Coluna 1: Código SAP
+            const tdSap = document.createElement('td'); 
+            tdSap.className = "p-3 font-mono text-slate-400 font-bold"; 
+            tdSap.textContent = item.codigo || '-';
+
+            // Coluna 2: DUN
             const tdId = document.createElement('td'); 
-            tdId.className = "p-3 font-mono text-indigo-300 font-bold tracking-wider"; 
+            tdId.className = "p-3 font-mono text-indigo-400 font-bold tracking-wider"; 
             tdId.textContent = item.id;
             
+            // Coluna 3: Descrição
             const tdDesc = document.createElement('td'); 
-            tdDesc.className = "p-3";
-            // Adicionado classe 'uppercase' para padronização visual
-            tdDesc.innerHTML = `<div class="font-bold text-white uppercase">${item.descricao}</div><div class="text-[10px] text-slate-400 font-mono">SAP: ${item.codigo}</div>`;
+            tdDesc.className = "p-3 font-bold text-white uppercase";
+            tdDesc.textContent = item.descricao || '-';
 
+            // Coluna 4: Ação
             const tdAct = document.createElement('td'); 
             tdAct.className = "p-3 text-right";
             
             const btnDel = document.createElement('button'); 
-            btnDel.className = "text-red-400 hover:text-white bg-red-900/20 hover:bg-red-600 p-2 rounded transition";
+            btnDel.className = "text-slate-600 hover:text-white bg-transparent hover:bg-red-600 p-2 rounded transition opacity-50 group-hover:opacity-100";
             btnDel.title = "Excluir Produto";
             btnDel.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>';
             
             btnDel.onclick = () => {
-                openConfirmModal("Excluir Produto?", `DUN: ${item.id} - ${item.descricao}`, async () => {
+                openConfirmModal("Excluir Produto?", `Remover o item: ${item.descricao}?`, async () => {
                     try {
                         await deleteDoc(doc(dbInstance, 'products', item.id));
-                        showToast("Produto excluído.");
+                        showToast("Produto excluído do banco.");
                         closeConfirmModal();
-                        doSearch(); // Recarrega
-                        registerLog('DEL_PRODUTO', item.id, 'Produto excluído manualmente');
-                    } catch(err) { showToast("Erro ao excluir", "error"); }
+                        document.getElementById('cad-busca-prod-input').dispatchEvent(new Event('input')); // Recarrega
+                        registerLog('DEL_PRODUTO', item.id, 'Produto excluído da base');
+                    } catch(err) { showToast("Falha ao excluir", "error"); }
                 });
             };
 
             tdAct.appendChild(btnDel);
-            tr.append(tdId, tdDesc, tdAct);
+            
+            // Adiciona as 4 colunas na linha
+            tr.append(tdSap, tdId, tdDesc, tdAct);
             tbody.appendChild(tr);
         });
     };
 
-    safeBind('cad-btn-buscar-prod', 'click', doSearch);
-    if(inputSearch) inputSearch.addEventListener('keypress', (e) => { if(e.key === 'Enter') doSearch(); });
+    // ✅ Dispara a busca enquanto o usuário digita (com debounce de 500ms para poupar o banco)
+    if (inputSearch) {
+        inputSearch.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(doSearch, 500); 
+        });
+    }
 }
 
 // =========================================================
@@ -256,13 +291,12 @@ function setupUserForm() {
         const roleInput = document.getElementById('cad-user-role');
         const btn = document.getElementById('btn-salvar-user');
 
-        const uid = idInput.value.trim().toLowerCase(); // ID/Email permanece minúsculo por padrão de sistema
-        const nome = nomeInput.value.trim().toUpperCase(); // Nome em MAIÚSCULO
+        const uid = idInput.value.trim().toLowerCase(); 
+        const nome = nomeInput.value.trim().toUpperCase(); 
         const role = roleInput.value.toUpperCase();
 
         if (uid.length < 3) return showToast("ID muito curto.", "warning");
 
-        // ✅ PROTEÇÃO HIERÁRQUICA
         const myRoles = getUserRole() || [];
         const isMeAdmin = myRoles.includes('ADMIN');
 
@@ -276,9 +310,9 @@ function setupUserForm() {
         try {
             await setDoc(doc(dbInstance, 'users', uid), { 
                 name: nome, 
-                role: [role], // Salvando como array para manter padrão do sistema
+                role: [role], 
                 updatedAt: new Date() 
-            }, { merge: true }); // Merge garante que não apague o PIN se já existir
+            }, { merge: true }); 
             
             showToast("Usuário salvo com sucesso!", "success");
             registerLog('CAD_USER', uid, `Definiu cargo ${role} para ${nome}`);
@@ -300,7 +334,6 @@ function listenToUsers() {
     const searchInput = document.getElementById('busca-user-input');
     if (!tbody) return;
 
-    // Escuta em tempo real a coleção de usuários
     const q = query(collection(dbInstance, 'users'));
     onSnapshot(q, (snapshot) => {
         currentUsersList = [];
@@ -342,9 +375,7 @@ function renderUsersTable() {
 
     const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const myRoles = getUserRole() || [];
-    const isMeAdmin = myRoles.includes('ADMIN');
 
-    // 1. Filtragem por busca
     let filtered = [...currentUsersList];
     if (term) {
         filtered = filtered.filter(u => 
@@ -353,12 +384,10 @@ function renderUsersTable() {
         );
     }
 
-    // 2. Ordenação Dinâmica
     filtered.sort((a, b) => {
         let valA = a[userSortConfig.key] || '';
         let valB = b[userSortConfig.key] || '';
 
-        // Tratamento especial para Array de Roles (pega o primeiro)
         if (userSortConfig.key === 'role') {
             valA = Array.isArray(valA) ? valA[0] : valA;
             valB = Array.isArray(valB) ? valB[0] : valB;
@@ -371,7 +400,6 @@ function renderUsersTable() {
         }
     });
 
-    // 3. Atualiza Ícones Visuais de Ordenação
     ['name', 'id', 'role'].forEach(k => {
         const icon = document.getElementById(`icon-sort-${k}`);
         if (icon) {
@@ -393,14 +421,13 @@ function renderUsersTable() {
         return;
     }
 
-    // 4. Renderização das linhas (Mantendo sua lógica de botões)
     filtered.forEach(user => {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-800/50 transition-colors";
         
         const tdName = document.createElement('td'); 
-        tdName.className = "p-3 font-bold text-white uppercase"; // 🔠 Força visualmente Maiúsculas
-        tdName.textContent = user.name || 'Sem Nome';
+        tdName.className = "p-3 font-bold text-white uppercase"; 
+        tdName.textContent = (user.name || 'Sem Nome').toUpperCase();
 
         const tdId = document.createElement('td');
         tdId.className = "p-3 text-slate-400 font-mono text-xs"; 
@@ -426,7 +453,6 @@ function renderUsersTable() {
         const tdAct = document.createElement('td'); 
         tdAct.className = "p-3 text-right whitespace-nowrap";
         
-        // Permissão para excluir: ADMIN, LIDER e INVENTARIO
         const canManageUsers = myRoles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
 
         if (canManageUsers) {

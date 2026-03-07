@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Inicia Módulos Independentes
     initLabelsModule();
-    initAgendamentoModule(); // Inicializa o Agendamento
+    initAgendamentoModule(db); // Agora passa o DB para carregar clientes
     initAuth(auth);
 
     // Inicia Módulos Conectados ao DB
