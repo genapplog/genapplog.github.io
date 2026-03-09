@@ -65,10 +65,10 @@ export function initDashboard() {
 
         console.log("📊 Permissão confirmada. Iniciando Dashboard...");
 
-        // Configuração de Datas (Mês Vigente)
+        // Configuração de Datas (Padrão: Últimos 7 dias para economizar leituras)
         const date = new Date();
-        const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        const last7Days = new Date(date);
+        last7Days.setDate(date.getDate() - 7);
 
         const toInputDate = (d) => {
             const year = d.getFullYear();
@@ -80,8 +80,9 @@ export function initDashboard() {
         const iStart = document.getElementById('dash-filter-start');
         const iEnd = document.getElementById('dash-filter-end');
 
-        if(iStart && !iStart.value) iStart.value = toInputDate(firstDay);
-        if(iEnd && !iEnd.value) iEnd.value = toInputDate(lastDay);
+        // Preenche com 7 dias atrás até hoje
+        if(iStart && !iStart.value) iStart.value = toInputDate(last7Days);
+        if(iEnd && !iEnd.value) iEnd.value = toInputDate(date);
 
         // Bindings dos Filtros
         safeBind('btn-dash-filter-apply', 'click', () => applyDashboardFilters());
@@ -297,7 +298,7 @@ async function applyDashboardFilters() {
     const originalContent = btn ? btn.innerHTML : 'Filtrar'; 
     if(btn) {
         btn.disabled = true; 
-        btn.innerHTML = `<span class="animate-pulse">Buscando...</span>`; 
+        btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Buscando...`; 
     }
 
     try {

@@ -9,7 +9,7 @@ import {
     query, where, orderBy, writeBatch 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-import { safeBind, showToast, openConfirmModal, closeConfirmModal, sendDesktopNotification, requestNotificationPermission, escapeHtml } from '../utils.js';
+import { safeBind, showToast, openConfirmModal, closeConfirmModal, sendDesktopNotification, requestNotificationPermission, escapeHtml, renderEmptyState } from '../utils.js';
 import { PATHS } from '../config.js';
 import { getUserRole, getCurrentUserName, isProfileLoaded } from './auth.js';
 import { initDashboard, updateDashboardView } from './dashboard.js';
@@ -88,13 +88,16 @@ export async function initRncModule(db, isTest) {
 function setupRealtimeListener() {
     if (unsubscribeOccurrences) unsubscribeOccurrences();
 
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+    // ✅ OTIMIZAÇÃO (Janela Móvel de 30 Dias): 
+    // Garante que pendências antigas continuem na tela, alimenta a TV com os concluídos recentes, 
+    // e acaba com o pico de leituras no final do mês.
+    const dataLimite = new Date();
+    dataLimite.setDate(dataLimite.getDate() - 30);
+    dataLimite.setHours(0, 0, 0, 0);
 
     const qInitial = query(
         currentCollectionRef, 
-        where('createdAt', '>=', startOfMonth),
+        where('createdAt', '>=', dataLimite),
         orderBy('createdAt', 'desc')
     );
 
@@ -278,8 +281,9 @@ async function handleSaveReq(e) {
     };
 
     try {
-        btn.disabled = true; btn.innerText = "Enviando..."; 
-        const docRef = await addDoc(currentCollectionRef, data); 
+        btn.disabled = true; 
+        btn.innerHTML = `<svg class="w-4 h-4 animate-spin inline-block" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Enviando...`; 
+        const docRef = await addDoc(currentCollectionRef, data);
         
         // ✅ Notifica o Inventário sobre a nova etiqueta solicitada
         const notificationsRef = collection(globalDb, `artifacts/${globalDb.app.options.appId}/public/data/notifications`);
@@ -543,7 +547,8 @@ async function processSaveData(itemsToSave) {
     }
 
     try {
-        isSaving = true; btn.disabled = true; btn.innerText = "Salvando...";
+        isSaving = true; btn.disabled = true; 
+        btn.innerHTML = `<svg class="w-4 h-4 animate-spin inline-block" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Salvando...`;
 
         const headerData = {
             updatedAt: new Date(), 
@@ -615,7 +620,7 @@ function updatePendingList() {
     if (tbodyRNC) {
         tbodyRNC.innerHTML = '';
         if (rncItems.length === 0) { 
-            tbodyRNC.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500 italic">Nada pendente.</td></tr>'; 
+            tbodyRNC.innerHTML = renderEmptyState(5, "Sem Pendências", "Nenhum RD pendente de validação.", "check"); 
         } else {
             rncItems.forEach(item => {
                 const tr = document.createElement('tr');
@@ -676,7 +681,7 @@ function updatePendingList() {
         const canFinish = myRole.includes('INVENTARIO') || myRole.includes('ADMIN');
 
         if (palletItems.length === 0) {
-            tbodyPallet.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-slate-500 italic">Nenhuma solicitação pendente.</td></tr>'; 
+            tbodyPallet.innerHTML = renderEmptyState(7, "Sem Pendências", "As solicitações de etiquetas aparecerão aqui.", "inbox"); 
         } else {
             palletItems.forEach(item => { 
                 const tr = document.createElement('tr'); 

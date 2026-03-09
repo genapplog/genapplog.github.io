@@ -1,7 +1,9 @@
-<div id="cadastros" class="page-content hidden fade-in max-w-5xl mx-auto h-full flex flex-col">
-    <header class="mb-6 shrink-0">
-        <h1 class="text-2xl md:text-3xl font-bold text-white">Gestão de Cadastros</h1>
-        <p class="text-slate-400 text-sm mt-1">Adicione ou edite produtos e usuários individualmente.</p>
+<div id="cadastros" class="page-content hidden fade-in max-w-7xl mx-auto h-full flex flex-col">
+    <header class="mb-6 shrink-0 flex flex-col md:flex-row justify-between md:items-end gap-4 print:hidden">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight">Gestão de Cadastros</h1>
+            <p class="text-slate-400 text-sm mt-1">Adicione ou edite produtos e usuários da plataforma.</p>
+        </div>
     </header>
 
     <div class="flex gap-4 border-b border-slate-700 mb-6 shrink-0">
@@ -47,7 +49,7 @@
             
             <form id="form-cad-user" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                 <div class="md:col-span-1">
-                    <label class="block text-xs font-medium text-slate-400 mb-1">ID (E-mail ou Matrícula)</label>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">ID</label>
                     <input type="text" id="cad-user-id" required class="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none">
                 </div>
                 <div class="md:col-span-1 flex-1">
@@ -84,7 +86,7 @@
                                 Nome <span class="text-[10px] opacity-0 group-hover:opacity-100" id="icon-sort-name">↕</span>
                             </th>
                             <th class="p-3 cursor-pointer hover:text-white transition-colors group" id="sort-user-id">
-                                Identificação (E-mail/ID) <span class="text-[10px] opacity-0 group-hover:opacity-100" id="icon-sort-id">↕</span>
+                                Identificação (ID) <span class="text-[10px] opacity-0 group-hover:opacity-100" id="icon-sort-id">↕</span>
                             </th>
                             <th class="p-3 cursor-pointer hover:text-white transition-colors group" id="sort-user-role">
                                 Cargo <span class="text-[10px] opacity-0 group-hover:opacity-100" id="icon-sort-role">↕</span>
@@ -101,9 +103,3 @@
     </div>
 </div>
 
-<style>
-    /* Força visualmente o texto em maiúsculo nos campos de cadastro */
-    #cad-prod-desc, #cad-user-nome, #cad-prod-cod {
-        text-transform: uppercase;
-    }
-</style>

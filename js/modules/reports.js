@@ -100,8 +100,7 @@ export async function exportRncToXlsx(startDate, endDate) {
             }
         });
 
-        generateXlsx(exportData, `Relatorio_RD_${startDate.toLocaleDateString('pt-BR').replace(/\//g,'-')}`);
-        showToast("Download iniciado!");
+        await generateAppLogExcel(exportData, "Divergências", `Relatorio_RD_${startDate.toLocaleDateString('pt-BR').replace(/\//g,'-')}`);
 
     } catch (e) {
         console.error(e);
@@ -134,19 +133,90 @@ export async function exportPalletToXlsx(startDate, endDate) {
             "STATUS": "CONCLUÍDO" 
         }));
         
-        generateXlsx(exportData, "Etiquetas_Palete");
-        showToast("Download iniciado!");
+        await generateAppLogExcel(exportData, "Etiquetas", "Etiquetas_Palete");
 
     } catch (e) { console.error(e); showToast("Erro.", "error"); }
 }
 
-function generateXlsx(data, sheetName) {
-    if(window.XLSX) {
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 30));
-        XLSX.writeFile(wb, `${sheetName}.xlsx`);
-    } else { showToast("Erro: Biblioteca XLSX não carregada.", "error"); }
+// =========================================================
+// NOVO MOTOR DE EXCEL (LAYOUT APPLOG)
+// =========================================================
+let ExcelJSLib = null;
+let FileSaverLib = null;
+
+async function loadExcelJS() {
+    if (ExcelJSLib && FileSaverLib) return true;
+    showToast("Carregando layout da planilha...", "info");
+    try {
+        const scriptExcel = document.createElement('script');
+        scriptExcel.src = "https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js";
+        document.head.appendChild(scriptExcel);
+
+        const scriptSaver = document.createElement('script');
+        scriptSaver.src = "https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js";
+        document.head.appendChild(scriptSaver);
+
+        await Promise.all([
+            new Promise(res => scriptExcel.onload = res),
+            new Promise(res => scriptSaver.onload = res)
+        ]);
+        
+        ExcelJSLib = window.ExcelJS;
+        FileSaverLib = window.saveAs;
+        return true;
+    } catch (e) {
+        showToast("Erro ao carregar formatação Excel.", "error");
+        return false;
+    }
+}
+
+export async function generateAppLogExcel(dataArray, sheetName, fileName) {
+    if (dataArray.length === 0) return;
+    
+    const isLoaded = await loadExcelJS();
+    if (!isLoaded) return;
+
+    const workbook = new ExcelJSLib.Workbook();
+    const worksheet = workbook.addWorksheet(sheetName.substring(0, 30), { views: [{ showGridLines: false }] });
+
+    // Configura Largura Automática das Colunas baseado no Título
+    const colKeys = Object.keys(dataArray[0]);
+    worksheet.columns = colKeys.map(key => {
+        let w = 15;
+        if(key.includes('DESCRIÇÃO') || key.includes('OBS') || key.includes('DETALHE')) w = 35;
+        else if(key.includes('RESPONSÁVEL') || key.includes('IDENTIFICADOR') || key.includes('ORIGEM')) w = 25;
+        else if(key.includes('CLIENTE') || key.includes('EMBARQUE') || key.includes('LOCAL')) w = 22;
+        else if(key.includes('QTD') || key.includes('ANO')) w = 10;
+        return { header: key, key: key, width: w };
+    });
+
+    // Pinta o Cabeçalho (Azul AppLog)
+    const headerRow = worksheet.getRow(1);
+    headerRow.height = 25;
+    headerRow.eachCell((cell) => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10, name: 'Arial' };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } }; 
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        cell.border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'medium'} };
+    });
+
+    // Insere os Dados e Efeito Zebra (Cinza Claro)
+    dataArray.forEach((row, index) => {
+        const addedRow = worksheet.addRow(row);
+        addedRow.eachCell((cell) => {
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+            cell.font = { name: 'Arial', size: 10 };
+            cell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+            if (index % 2 !== 0) {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+            }
+        });
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    FileSaverLib(blob, `${fileName}.xlsx`);
+    showToast("Planilha AppLog baixada com sucesso!", "success");
 }
 
 // =========================================================

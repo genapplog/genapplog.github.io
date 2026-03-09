@@ -176,3 +176,46 @@ export function sanitizeForZpl(text) {
         .replace(/[\^~]/g, "") // Remove comandos de controle ZPL (^ e ~)
         .toUpperCase();
 }
+
+// =================================================================
+// EMPTY STATES (TELAS VAZIAS PADRONIZADAS)
+// =================================================================
+export function renderEmptyState(colspan, title, subtitle = "Nenhum dado disponível no momento.", icon = "inbox") {
+    // Escolhe o ícone SVG com base no tipo
+    let svgIcon = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>`; // Inbox
+
+    if (icon === "search") {
+        svgIcon = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>`;
+    } else if (icon === "check") {
+        svgIcon = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>`;
+    }
+
+    return `
+        <tr>
+            <td colspan="${colspan}" class="p-8 text-center">
+                <div class="flex flex-col items-center justify-center space-y-3 opacity-60 hover:opacity-100 transition-opacity duration-300">
+                    <div class="p-4 bg-slate-800/50 rounded-full border border-slate-700/50 text-indigo-400">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">${svgIcon}</svg>
+                    </div>
+                    <div class="text-slate-300 font-medium text-sm tracking-wide">${title}</div>
+                    <div class="text-slate-500 text-xs">${subtitle}</div>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+// =================================================================
+// BADGES DE CARGOS (COMPONENTIZAÇÃO VISUAL)
+// =================================================================
+export function getRoleBadgeHtml(role) {
+    let colorClass = "bg-slate-700 text-slate-300 border-transparent";
+    const r = String(role || 'LEITOR').toUpperCase();
+
+    if (r === 'ADMIN') colorClass = "bg-red-900/30 text-red-400 border-red-800";
+    else if (r === 'LIDER') colorClass = "bg-amber-900/30 text-amber-400 border-amber-800";
+    else if (r === 'INVENTARIO') colorClass = "bg-indigo-900/30 text-indigo-400 border-indigo-800";
+    else if (r === 'OPERADOR') colorClass = "bg-emerald-900/30 text-emerald-400 border-emerald-800";
+
+    return `<span class="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider mr-1 border ${colorClass} shadow-sm">${r}</span>`;
+}

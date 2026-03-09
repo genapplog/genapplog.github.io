@@ -101,3 +101,66 @@ body:not(:has(#login-modal:not(.hidden))) input:-webkit-autofill:active {
     -webkit-text-fill-color: white !important;
     transition: background-color 5000s ease-in-out 0s;
 }
+
+/* =================================================================
+   SCROLLBAR PREMIUM (Padrão Global AppLog)
+   ================================================================= */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155; /* Tom de ardósia escuro */
+    border-radius: 10px;
+    border: 2px solid #0f172a; /* Fundo do site para criar "margem" */
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #475569; /* Fica mais claro ao passar o rato */
+}
+/* Suporte para Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #334155 transparent;
+}
+
+/* =================================================================
+   ESTILOS MIGRADOS DAS PÁGINAS (Clean Code)
+   ================================================================= */
+/* Força visualmente o texto em maiúsculo nos campos de cadastro */
+#cad-prod-desc, #cad-user-nome, #cad-prod-cod {
+    text-transform: uppercase;
+}
+
+/* Oculta scrollbar nos textareas da capa de agendamento */
+#capa-nf, #capa-pedido {
+    scrollbar-width: none;
+}
+#capa-nf::-webkit-scrollbar, #capa-pedido::-webkit-scrollbar {
+    display: none;
+}
+
+/* Regras Estritas de Impressão (Agendamento) */
+@media print {
+    @page { size: A4 landscape; margin: 10mm; }
+    body { background: white !important; }
+    .page-content { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+    
+    /* Oculta tudo exceto a área da capa */
+    body * { visibility: hidden; }
+    #capa-print-area, #capa-print-area * { visibility: visible; }
+    #capa-print-area { 
+        position: absolute; 
+        left: 0; 
+        top: 0; 
+        width: 100%; 
+        border: none !important;
+        padding: 0 !important;
+    }
+
+    /* Força as cores de fundo na impressão (O navegador precisa respeitar) */
+    .bg-gray-100 { background-color: #f3f4f6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .bg-gray-200 { background-color: #e5e7eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

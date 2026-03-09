@@ -15,7 +15,7 @@ import {
     getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-import { safeBind, showToast, openConfirmModal, closeConfirmModal } from '../utils.js';
+import { safeBind, showToast, openConfirmModal, closeConfirmModal, getRoleBadgeHtml } from '../utils.js';
 import { registerLog } from './admin.js';
 import { getUserRole } from './auth.js'; 
 
@@ -104,7 +104,8 @@ function setupProductForm() {
         if (cleanDun.length < 8) return showToast("DUN inválido.", "warning");
 
         const originalText = btn.innerText;
-        btn.disabled = true; btn.innerText = "Salvando...";
+        btn.disabled = true; 
+        btn.innerHTML = `<svg class="w-4 h-4 animate-spin inline-block mr-1 -mt-0.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Salvando...`;
 
         try {
             await setDoc(doc(dbInstance, 'products', cleanDun), { 
@@ -144,22 +145,27 @@ function setupProductSearchUI() {
             <h4 class="text-sm font-bold text-white uppercase tracking-wider mb-3">Consultar Produtos Cadastrados</h4>
             
             <div class="relative w-full mb-4">
-                <input type="text" id="cad-busca-prod-input" autocomplete="off" placeholder="DIGITE O CÓDIGO SAP EXATO PARA BUSCAR..." class="w-full bg-slate-800 border border-slate-600 text-white text-xs p-3 rounded-lg outline-none focus:border-indigo-500 transition-all uppercase placeholder-slate-500 pr-10 shadow-inner">
-                <svg class="w-4 h-4 text-slate-400 absolute right-4 top-[14px] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input type="text" id="cad-busca-prod-input" autocomplete="off" placeholder="DIGITE O CÓDIGO TOTVS EXATO PARA BUSCAR..." class="w-full bg-slate-800 border border-slate-600 text-white text-xs p-3 rounded-lg outline-none focus:border-indigo-500 transition-all uppercase placeholder-slate-500 pr-10 shadow-inner">
+                
+                <svg id="icon-search-prod" class="w-4 h-4 text-slate-400 absolute right-4 top-[14px] pointer-events-none transition-opacity duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                
+                <button id="btn-clear-prod" class="hidden absolute right-2 top-[8px] text-slate-400 hover:text-red-400 transition-colors p-1.5 rounded-full hover:bg-slate-700 cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
             </div>
 
             <div class="overflow-hidden rounded-lg border border-slate-700 shadow">
                 <table class="w-full text-left text-xs">
                     <thead class="bg-slate-950 text-slate-400 font-medium uppercase text-[10px]">
                         <tr>
-                            <th class="p-3 tracking-wider w-24">Código (SAP)</th>
+                            <th class="p-3 tracking-wider w-24">Código (TOTVS)</th>
                             <th class="p-3 tracking-wider w-36">DUN (Cód. Barras)</th>
                             <th class="p-3 tracking-wider">Descrição do Produto</th>
                             <th class="p-3 text-right w-16">Ação</th>
                         </tr>
                     </thead>
                     <tbody id="cad-tbody-prod-list" class="divide-y divide-slate-800 text-slate-300">
-                        <tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-slate-500 tracking-widest uppercase">Digite o SAP exato para pesquisar...</td></tr>
+                        <tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-slate-500 tracking-widest uppercase">Digite o Código TOTVS exato para pesquisar...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -175,7 +181,7 @@ function setupProductSearchUI() {
         const term = inputSearch.value.toUpperCase().trim();
         
         if (term.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-slate-500 tracking-widest uppercase">Digite o SAP exato para pesquisar...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-[11px] font-bold text-slate-500 tracking-widest uppercase">Digite o Código TOTVS exato para pesquisar...</td></tr>';
             return;
         }
 
@@ -268,11 +274,34 @@ function setupProductSearchUI() {
         });
     };
 
-    // ✅ Dispara a busca enquanto o usuário digita (com debounce de 500ms para poupar o banco)
+    const btnClear = document.getElementById('btn-clear-prod');
+    const iconSearch = document.getElementById('icon-search-prod');
+
+    // ✅ Dispara a busca enquanto o usuário digita e controla os ícones
     if (inputSearch) {
         inputSearch.addEventListener('input', () => {
+            // Troca a Lupa pelo botão de "X" se houver texto
+            if (inputSearch.value.trim().length > 0) {
+                if(btnClear) btnClear.classList.remove('hidden');
+                if(iconSearch) iconSearch.classList.add('hidden');
+            } else {
+                if(btnClear) btnClear.classList.add('hidden');
+                if(iconSearch) iconSearch.classList.remove('hidden');
+            }
+
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(doSearch, 500); 
+        });
+    }
+
+    // ✅ Lógica do Botão Limpar
+    if (btnClear) {
+        btnClear.addEventListener('click', () => {
+            inputSearch.value = ''; // Limpa a caixa
+            btnClear.classList.add('hidden'); // Esconde o X
+            iconSearch.classList.remove('hidden'); // Volta a Lupa
+            inputSearch.focus(); // Mantém o ponteiro na caixa para digitar
+            doSearch(); // Atualiza a tabela (mostrará a tela vazia bonitinha)
         });
     }
 }
@@ -302,7 +331,8 @@ function setupUserForm() {
         }
 
         const originalText = btn.innerText;
-        btn.disabled = true; btn.innerText = "Salvando...";
+        btn.disabled = true; 
+        btn.innerHTML = `<svg class="w-4 h-4 animate-spin inline-block mr-1 -mt-0.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Salvando...`;
 
         try {
             await setDoc(doc(dbInstance, 'users', uid), { 
@@ -434,18 +464,8 @@ function renderUsersTable() {
         tdRole.className = "p-3";
         let rolesArray = Array.isArray(user.role) ? user.role : [user.role || 'LEITOR'];
         
-        rolesArray.forEach(r => {
-            let colorClass = "bg-slate-700 text-slate-300";
-            if (r === 'ADMIN') colorClass = "bg-red-900/30 text-red-400 border border-red-800";
-            else if (r === 'LIDER') colorClass = "bg-amber-900/30 text-amber-400 border border-amber-800";
-            else if (r === 'INVENTARIO') colorClass = "bg-indigo-900/30 text-indigo-400 border border-indigo-800";
-            else if (r === 'OPERADOR') colorClass = "bg-emerald-900/30 text-emerald-400 border border-emerald-800";
-
-            const span = document.createElement('span');
-            span.className = `text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider mr-1 ${colorClass}`;
-            span.textContent = r;
-            tdRole.appendChild(span);
-        });
+        // ✅ Usa o Componente Central do utils.js para desenhar as etiquetas
+        tdRole.innerHTML = rolesArray.map(r => getRoleBadgeHtml(r)).join('');
 
         const tdAct = document.createElement('td'); 
         tdAct.className = "p-3 text-right whitespace-nowrap";

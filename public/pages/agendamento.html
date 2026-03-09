@@ -1,8 +1,10 @@
-<div id="agendamento" class="page-content hidden max-w-6xl mx-auto h-full fade-in">
+<div id="agendamento" class="page-content hidden max-w-7xl mx-auto h-full fade-in">
     
-    <header class="mb-6 print:hidden">
-        <h1 class="text-2xl md:text-3xl font-bold text-white">Consolidador de Agendamento</h1>
-        <p class="text-indigo-400 mt-1">Sincronize sua planilha bruta com os dados oficiais do Checklist.</p>
+    <header class="mb-6 shrink-0 flex flex-col md:flex-row justify-between md:items-end gap-4 print:hidden">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight">Consolidador de Agendamento</h1>
+            <p class="text-slate-400 text-sm mt-1">Sincronize sua planilha bruta com os dados oficiais do sistema.</p>
+        </div>
     </header>
 
     <div class="mb-6 bg-slate-800/50 p-4 rounded-xl border border-slate-700 print:hidden">
@@ -79,8 +81,8 @@
         
         <div class="border-b-4 border-black pb-4 mb-6 flex justify-between items-center">
             <div>
-                <h2 class="text-3xl font-black uppercase tracking-tighter">Capa de Agendamento</h2>
-                <p class="text-sm font-bold text-gray-700 mt-1">SISTEMA APPLOG - CONSOLIDAÇÃO DE CARGA</p>
+                <h2 class="text-3xl font-black uppercase tracking-tighter">Romaneio de Agendamento</h2>
+                <p class="text-sm font-bold text-gray-700 mt-1">CONSOLIDAÇÃO DE CARGA</p>
             </div>
             
             
@@ -157,38 +159,3 @@
     </div>
 </div>
 
-<style>
-    /* Estilo para garantir visualização correta no Navegador */
-    #capa-nf, #capa-pedido {
-        scrollbar-width: none;
-    }
-    #capa-nf::-webkit-scrollbar, #capa-pedido::-webkit-scrollbar {
-        display: none;
-    }
-    /* Estilo para o dropdown de UFs */
-    .custom-scroll::-webkit-scrollbar { width: 4px; }
-    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
-
-    @media print {
-        @page { size: A4 landscape; margin: 10mm; }
-        body { background: white !important; }
-        .page-content { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
-        
-        /* Oculta tudo exceto a área da capa */
-        body * { visibility: hidden; }
-        #capa-print-area, #capa-print-area * { visibility: visible; }
-        #capa-print-area { 
-            position: absolute; 
-            left: 0; 
-            top: 0; 
-            width: 100%; 
-            border: none !important;
-            padding: 0 !important;
-        }
-
-        /* Força as cores de fundo na impressão */
-        .bg-gray-100 { background-color: #f3f4f6 !important; -webkit-print-color-adjust: exact; }
-        .bg-gray-200 { background-color: #e5e7eb !important; -webkit-print-color-adjust: exact; }
-    }
-</style>

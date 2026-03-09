@@ -30,6 +30,7 @@ import {
 
 import { defaultChecklistData, specificClientRules, PATHS } from '../config.js';
 import { getCurrentUserName, getUserRole } from './auth.js';
+import { generateAppLogExcel } from './reports.js';
 
 // --- ESTADO GERAL ---
 let localAdminData = []; 
@@ -366,24 +367,20 @@ function renderAuditTable(data) {
     });
 }
 
-function exportAuditLogs() {
+async function exportAuditLogs() {
     if (currentAuditData.length === 0) return showToast("Sem dados para exportar.", "info");
     
     const exportList = currentAuditData.map(log => ({
-        "Data/Hora": log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString('pt-BR') : '-',
-        "Usuário": log.user, 
-        "Cargo": log.role, 
-        "Ação": log.action, 
-        "Alvo": log.target, 
-        "Detalhes": log.details
+        "DATA / HORA": log.createdAt?.toDate ? log.createdAt.toDate().toLocaleString('pt-BR') : '-',
+        "USUÁRIO": log.user, 
+        "CARGO": log.role, 
+        "AÇÃO": log.action, 
+        "ALVO": log.target, 
+        "DETALHES": log.details
     }));
     
-    if (window.XLSX) {
-        const ws = XLSX.utils.json_to_sheet(exportList);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Auditoria");
-        XLSX.writeFile(wb, `AuditLog_${new Date().toISOString().slice(0,10)}.xlsx`);
-    } else { showToast("Erro: Biblioteca XLSX não carregada.", "error"); }
+    // ✅ Chama o motor inteligente do AppLog
+    await generateAppLogExcel(exportList, "Auditoria", `AuditLog_${new Date().toISOString().slice(0,10)}`);
 }
 
 // =========================================================
