@@ -65,7 +65,8 @@ export function initDashboard() {
 
         console.log("📊 Permissão confirmada. Iniciando Dashboard...");
 
-        // Configuração de Datas (Padrão: Últimos 7 dias para economizar leituras)
+        // ✅ OTIMIZAÇÃO SEGURA: O Dashboard abre com os últimos 7 dias.
+        // Excelente equilíbrio entre visão gerencial da semana e economia de Firebase.
         const date = new Date();
         const last7Days = new Date(date);
         last7Days.setDate(date.getDate() - 7);
@@ -127,16 +128,13 @@ export function initDashboard() {
     }
 }
 
-// Chamado pelo rnc.js quando os dados mudam
-export function updateDashboardView(allData) {
-    // Só atualiza se tiver permissão
+// ✅ NOVA FUNÇÃO: Alimenta APENAS a TV com dados em tempo real
+export function updateTVRealtime(todayData) {
     const roles = getUserRole() || [];
     if (!roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r))) return;
 
-    localAllData = allData;
-    // Otimização: Usa os dados que já vieram do rnc.js em vez de refazer o getDocs() no Firebase
-    updateChartsAndStats(localAllData);
-    renderHistoryTable(localAllData);
+    // Guarda os dados de hoje globalmente para a TV não usar os dados do Dashboard
+    window.tvRealtimeData = todayData; 
     
     const tvEl = document.getElementById('tv-mode');
     if (tvEl && !tvEl.classList.contains('hidden')) updateTVView();
@@ -179,8 +177,9 @@ async function updateTVView() {
     const Chart = await loadChartLib();
     const today = new Date(); today.setHours(0,0,0,0);
     
-    // Filtra dados para TV (apenas hoje e concluídos)
-    const tvData = localAllData.filter(d => d.type !== 'pallet_label_request' && d.status === 'concluido' && d.jsDate >= today);
+    // ✅ Lê APENAS os dados em tempo real enviados pelo rnc.js (Nunca mistura com o Dashboard)
+    const sourceData = window.tvRealtimeData || [];
+    const tvData = sourceData.filter(d => d.type !== 'pallet_label_request' && d.status === 'concluido' && d.jsDate >= today);
 
     // KPIs
     document.getElementById('tv-kpi-total').innerText = tvData.length;

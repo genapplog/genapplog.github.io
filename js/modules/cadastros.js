@@ -18,6 +18,7 @@ import {
 import { safeBind, showToast, openConfirmModal, closeConfirmModal, getRoleBadgeHtml } from '../utils.js';
 import { registerLog } from './admin.js';
 import { getUserRole } from './auth.js'; 
+import { updateLocalProductCache } from './product-cache.js'; // ✅ Injeta no Cache Local
 
 let dbInstance = null;
 let currentUsersList = [];
@@ -113,6 +114,10 @@ function setupProductForm() {
                 descricao: descricao,
                 updatedAt: new Date() 
             });
+            
+            // ✅ Salva no Cache do navegador instantaneamente
+            updateLocalProductCache(cleanDun, codigo, descricao);
+
             showToast("Produto salvo com sucesso!", "success");
             registerLog('CAD_PRODUTO', cleanDun, `Cadastrou/Editou produto: ${descricao}`);
             

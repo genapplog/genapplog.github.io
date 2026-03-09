@@ -26,7 +26,8 @@ import { initRncModule } from './modules/rnc.js';
 import { initAdminModule } from './modules/admin.js';
 import { initDashboard, startTVMode } from './modules/dashboard.js';
 import { initAgendamentoModule } from './modules/agendamento.js'; // Novo Módulo
-import { initCadastrosModule } from './modules/cadastros.js'; // Módulo de Cadastros Manuais
+import { initCadastrosModule } from './modules/cadastros.js';
+import { syncProductsCache } from './modules/product-cache.js'; // ✅ Importa o motor de cache
 
 // =========================================================
 // 1. INICIALIZAÇÃO FIREBASE (CORE)
@@ -147,6 +148,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Evita reinicializar os módulos se o auth state mudar (ex: token refresh)
             if (!modulesInitialized) {
                 console.log("🚀 Iniciando módulos de dados...");
+                
+                syncProductsCache(db); // ✅ Atualiza a base de produtos sem congelar a tela
                 
                 initClientsModule(clientsCollection);
                 initRncModule(db, IS_DEV);

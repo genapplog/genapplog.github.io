@@ -12,11 +12,12 @@ import {
 import { safeBind, showToast, openConfirmModal, closeConfirmModal, sendDesktopNotification, requestNotificationPermission, escapeHtml, renderEmptyState } from '../utils.js';
 import { PATHS } from '../config.js';
 import { getUserRole, getCurrentUserName, isProfileLoaded } from './auth.js';
-import { initDashboard, updateDashboardView } from './dashboard.js';
-import { updateAdminList, registerLog } from './admin.js';
+import { initDashboard, updateTVRealtime } from './dashboard.js';
+import { registerLog } from './admin.js';
 import { getClientNames } from './clients.js'; // ✅ Importando nomes dos clientes
 import { printRncById } from './reports.js';
 import { createItemRow, extractItemsFromTable, validateItems, clearTable } from './item-manager.js';
+import { getProductData } from './product-cache.js'; // ✅ Importa a Busca Local
 
 // --- ESTADO ---
 let currentCollectionRef = null;
@@ -84,55 +85,71 @@ export async function initRncModule(db, isTest) {
     }
 }
 
-// ✅ NOVA FUNÇÃO: SÓ É CHAMADA SE TIVER PERMISSÃO
+// =========================================================
+// ✅ OTIMIZAÇÃO MAXIMA: SEPARAÇÃO TOTAL (PENDENTES vs HOJE)
+// =========================================================
+let unsubscribePendentes = null;
+let unsubscribeHoje = null;
+
 function setupRealtimeListener() {
-    if (unsubscribeOccurrences) unsubscribeOccurrences();
+    if (unsubscribeOccurrences) { unsubscribeOccurrences(); unsubscribeOccurrences = null; }
+    if (unsubscribePendentes) unsubscribePendentes();
+    if (unsubscribeHoje) unsubscribeHoje();
 
-    // ✅ OTIMIZAÇÃO (Janela Móvel de 30 Dias): 
-    // Garante que pendências antigas continuem na tela, alimenta a TV com os concluídos recentes, 
-    // e acaba com o pico de leituras no final do mês.
-    const dataLimite = new Date();
-    dataLimite.setDate(dataLimite.getDate() - 30);
-    dataLimite.setHours(0, 0, 0, 0);
-
-    const qInitial = query(
-        currentCollectionRef, 
-        where('createdAt', '>=', dataLimite),
-        orderBy('createdAt', 'desc')
-    );
-
-    unsubscribeOccurrences = onSnapshot(qInitial, (snapshot) => {
-        allOccurrencesData = []; 
+    // -------------------------------------------------------------
+    // QUERY 1: APENAS PENDENTES (Alimenta a tela inicial e a tabela de RNC)
+    // Custo de Leitura: Quase 0 (Apenas o que falta resolver)
+    // -------------------------------------------------------------
+    const qPendentes = query(currentCollectionRef, where('status', 'in', ['draft', 'pendente_lider', 'pendente_inventario', 'pendente']));
+    
+    unsubscribePendentes = onSnapshot(qPendentes, (snapshot) => {
         pendingOccurrencesData = [];
-        
-        snapshot.docChanges().forEach(change => {
-            if (change.type === "added" || change.type === "modified") {
-                const data = change.doc.data();
-                const isRecent = data.createdAt?.toDate ? (new Date() - data.createdAt.toDate()) < 3600000 : true;
-                if(isRecent) checkAndNotify(data);
-            }
-        });
         
         snapshot.forEach(docSnap => {
             const d = docSnap.data(); 
             d.id = docSnap.id; 
             d.jsDate = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
-            
-            if (d.status === 'concluido') allOccurrencesData.push(d); 
-            else pendingOccurrencesData.push(d);
+            pendingOccurrencesData.push(d);
         });
 
-        allOccurrencesData.sort((a, b) => b.jsDate - a.jsDate); 
         pendingOccurrencesData.sort((a, b) => b.jsDate - a.jsDate);
-
-        updateDashboardView([...pendingOccurrencesData, ...allOccurrencesData]);
-        updateAdminList([...pendingOccurrencesData, ...allOccurrencesData]);
-        updatePendingList(); 
         
+        updatePendingList(); // Desenha a tabela da tela principal
         loadUserSuggestions(globalDb);
     });
 
-    // Listener de notificações (Exclusivo da liderança)
+    // -------------------------------------------------------------
+    // QUERY 2: APENAS HOJE (Alimenta APENAS a TV Wallboard em tempo real)
+    // Custo de Leitura: Baixíssimo (Zera toda meia-noite)
+    // -------------------------------------------------------------
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const qHoje = query(currentCollectionRef, where('createdAt', '>=', startOfToday));
+    
+    unsubscribeHoje = onSnapshot(qHoje, (snapshot) => {
+        const dadosHoje = [];
+        
+        snapshot.forEach(docSnap => {
+            const d = docSnap.data(); 
+            d.id = docSnap.id; 
+            d.jsDate = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
+            dadosHoje.push(d);
+        });
+
+        // Envia os dados de hoje estritamente para a TV (Ignora o Dashboard de 7 dias)
+        updateTVRealtime(dadosHoje);
+
+        // Dispara as notificações de chamados novos
+        snapshot.docChanges().forEach(change => {
+            if (change.type === "added" || change.type === "modified") {
+                const data = change.doc.data();
+                const isRecent = data.createdAt?.toDate ? (new Date() - data.createdAt.toDate()) < 3600000 : true;
+                if(isRecent && data.status !== 'concluido') checkAndNotify(data);
+            }
+        });
+    });
+
+    // Listener de notificações (Exclusivo da liderança - Mantido igual)
     const notificationsRef = collection(globalDb, `artifacts/${globalDb.app.options.appId}/public/data/notifications`);
     const recentTime = new Date(Date.now() - 5 * 60 * 1000); 
     onSnapshot(query(notificationsRef, where('createdAt', '>', recentTime)), {
@@ -415,26 +432,16 @@ async function handleSmartScan(barcode) {
         const elCod = document.getElementById('form-item-cod'); 
         const elDesc = document.getElementById('form-item-desc');
         try {
-            const docRef = doc(globalDb, "products", dun);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) { 
-                const prod = docSnap.data(); 
+            // ✅ Usa o Cache Local (0 Leituras na Nuvem)
+            const prod = await getProductData(globalDb, dun);
+            if (prod) { 
                 elCod.value = (prod.codigo || dun).toUpperCase(); 
                 elDesc.value = (prod.descricao || "").toUpperCase(); 
                 highlightField(elCod); highlightField(elDesc); showToast("Encontrado!"); 
             } else { 
-                const q = query(collection(globalDb, 'products'), where('codigo', '==', dun));
-                const snap = await getDocs(q);
-                if (!snap.empty) {
-                    const prod = snap.docs[0].data();
-                    elCod.value = (prod.codigo || dun).toUpperCase();
-                    elDesc.value = (prod.descricao || "").toUpperCase();
-                    highlightField(elCod); highlightField(elDesc); showToast("Encontrado!");
-                } else {
-                    elCod.value = dun.toUpperCase(); 
-                    if(!elDesc.value) { elDesc.value = ""; elDesc.placeholder = "DIGITE A DESCRIÇÃO"; }
-                    showToast("Novo produto.", "warning"); 
-                }
+                elCod.value = dun.toUpperCase(); 
+                if(!elDesc.value) { elDesc.value = ""; elDesc.placeholder = "DIGITE A DESCRIÇÃO"; }
+                showToast("Novo produto.", "warning"); 
             }
         } catch (e) { console.error(e); } finally { isScanning = false; }
     }
@@ -449,23 +456,14 @@ async function handleReqSmartScan(barcode) {
     if (dun && globalDb) {
         isScanning = true; showToast(`Verificando...`, "info");
         try {
-            const docRef = doc(globalDb, "products", dun);
-            const docSnap = await getDoc(docRef);
+            // ✅ Usa o Cache Local (0 Leituras na Nuvem)
+            const prod = await getProductData(globalDb, dun);
             const elItem = document.getElementById('req-item');
-            if (docSnap.exists()) { 
-                const prod = docSnap.data(); 
+            if (prod) { 
                 elItem.value = `${prod.codigo} - ${prod.descricao}`.toUpperCase(); 
                 highlightField(elItem); showToast("OK!"); 
             } else { 
-                const q = query(collection(globalDb, 'products'), where('codigo', '==', dun));
-                const snap = await getDocs(q);
-                if(!snap.empty) {
-                    const prod = snap.docs[0].data();
-                    elItem.value = `${prod.codigo} - ${prod.descricao}`.toUpperCase();
-                    highlightField(elItem); showToast("OK!");
-                } else {
-                    elItem.value = dun.toUpperCase(); showToast("Não cadastrado.", "error"); 
-                }
+                elItem.value = dun.toUpperCase(); showToast("Não cadastrado.", "error"); 
             }
         } catch (e) { console.error(e); } finally { isScanning = false; }
     }
