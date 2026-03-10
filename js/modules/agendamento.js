@@ -5,7 +5,7 @@
  */
 
 import { safeBind, showToast } from '../utils.js';
-import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { PATHS } from '../config.js';
 
 let SheetJSLib = null;
@@ -367,14 +367,15 @@ function listenToFilters(db) {
     
     let clientesCadastrados = [];
 
-    onSnapshot(collection(db, PATHS.clients), (snapshot) => {
+    // 🔥 MODO SOBREVIVÊNCIA: Busca clientes apenas 1 vez ao iniciar o Agendamento
+    getDocs(collection(db, PATHS.clients)).then((snapshot) => {
         clientesCadastrados = [];
         snapshot.forEach(doc => {
             if (doc.data().name) clientesCadastrados.push(doc.data().name.toUpperCase().trim());
         });
         clientesCadastrados.sort();
         renderizarListaClientes(clientesCadastrados);
-    });
+    }).catch(err => console.error("Falha ao carregar clientes do agendamento", err));
 
     if (searchInput) {
         // Mostra a lista completa ao clicar na caixa

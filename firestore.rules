@@ -30,7 +30,9 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAuth(); // Necessário para o autocomplete de assinaturas
-      allow write: if isAuth() && (hasRole(['ADMIN']) || (request.auth.uid == userId)); 
+      // ✅ CORREÇÃO: Permite que a Gestão (Líder e Inventário) também cadastre/edite a equipe.
+      // (A trava que impede eles de criarem novos Admins já atua no Front-end).
+      allow write: if isAuth() && (canManage() || (request.auth.uid == userId)); 
     }
 
     match /products/{productId} {

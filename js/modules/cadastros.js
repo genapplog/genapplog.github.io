@@ -11,7 +11,6 @@ import {
     query, 
     where, 
     getDocs, 
-    onSnapshot,
     getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -346,6 +345,17 @@ function setupUserForm() {
                 updatedAt: new Date() 
             }, { merge: true }); 
             
+            // ✅ INJEÇÃO LOCAL: Atualiza a lista na tela sem gastar leitura
+            const existingIndex = currentUsersList.findIndex(u => u.id === uid);
+            const newUser = { id: uid, name: nome, role: [role] };
+            
+            if (existingIndex >= 0) {
+                currentUsersList[existingIndex] = newUser; // Atualiza existente
+            } else {
+                currentUsersList.push(newUser); // Adiciona novo
+            }
+            renderUsersTable();
+
             showToast("Usuário salvo com sucesso!", "success");
             registerLog('CAD_USER', uid, `Definiu cargo ${role} para ${nome}`);
             
@@ -367,13 +377,15 @@ function listenToUsers() {
     if (!tbody) return;
 
     const q = query(collection(dbInstance, 'users'));
-    onSnapshot(q, (snapshot) => {
+    
+    // 🔥 MODO SOBREVIVÊNCIA: Faz o download da equipe apenas 1 vez (getDocs)
+    getDocs(q).then((snapshot) => {
         currentUsersList = [];
         snapshot.forEach(doc => {
             currentUsersList.push({ id: doc.id, ...doc.data() });
         });
         renderUsersTable();
-    });
+    }).catch(err => console.error("Falha ao carregar equipe:", err));
 
     if (searchInput) {
         searchInput.addEventListener('input', renderUsersTable);
@@ -487,6 +499,11 @@ function renderUsersTable() {
                 openConfirmModal("Remover Usuário?", `Deseja apagar o acesso de ${user.name.toUpperCase()}?`, async () => {
                     try {
                         await deleteDoc(doc(dbInstance, 'users', user.id));
+                        
+                        // ✅ REMOÇÃO LOCAL: Tira da lista e recarrega a tabela na hora
+                        currentUsersList = currentUsersList.filter(u => u.id !== user.id);
+                        renderUsersTable();
+
                         showToast("Usuário removido.");
                         closeConfirmModal();
                         registerLog('DEL_USER', user.id, 'Remoção manual via tela de Cadastros');

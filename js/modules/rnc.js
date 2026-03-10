@@ -103,6 +103,9 @@ function setupRealtimeListener() {
     const qPendentes = query(currentCollectionRef, where('status', 'in', ['draft', 'pendente_lider', 'pendente_inventario', 'pendente']));
     
     unsubscribePendentes = onSnapshot(qPendentes, (snapshot) => {
+        // 🔥 TRAVA ANTI-LOOP
+        if (snapshot.metadata.hasPendingWrites) return;
+
         pendingOccurrencesData = [];
         
         snapshot.forEach(docSnap => {
@@ -115,7 +118,10 @@ function setupRealtimeListener() {
         pendingOccurrencesData.sort((a, b) => b.jsDate - a.jsDate);
         
         updatePendingList(); // Desenha a tabela da tela principal
-        loadUserSuggestions(globalDb);
+        
+        // 🛑 RETIRADO DAQUI: O loadUserSuggestions(globalDb) faz uma chamada gigante.
+        // Ele deve ser chamado APENAS QUANDO o utilizador abrir o modal de nova RNC,
+        // não em tempo real a cada piscada do firebase!
     });
 
     // -------------------------------------------------------------
@@ -196,6 +202,9 @@ function setupStaticListeners() {
             btnSave.classList.remove('hidden');
             btnSave.innerText = "Salvar Rascunho";
         }
+        
+        // ✅ CHAMA AQUI UMA ÚNICA VEZ
+        loadUserSuggestions(globalDb);
     });
 
     safeBind('btn-close-rnc', 'click', () => {

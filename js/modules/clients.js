@@ -5,7 +5,7 @@
 
 // ✅ 1. IMPORTAÇÕES NO TOPO (Padrão Obrigatório)
 import { 
-    onSnapshot, 
+    getDocs, 
     query, 
     addDoc, 
     deleteDoc, 
@@ -50,26 +50,21 @@ export function initClientsModule(collectionRef) {
     if (tbody) renderSkeleton(tbody, 2, 5);
 
     try {
-        // Escuta em Tempo Real (Realtime)
-        unsubscribeClients = onSnapshot(query(collectionRef), {
-            next: (snapshot) => {
-                const clients = [];
-                snapshot.forEach(doc => clients.push({ id: doc.id, ...doc.data() }));
-                
-                // Ordena alfabeticamente
-                clients.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-                
-                // Atualiza Cache Local
-                clientCache.clear();
-                clients.forEach(c => clientCache.set(c.id, c));
-                
-                filterAndRenderClients();
-            },
-            error: (error) => {
-                console.warn("Erro ao ler clientes:", error.code);
-                const tb = document.getElementById('client-list-tbody');
-                if (tb) tb.innerHTML = '<tr><td colspan="2" class="px-6 py-12 text-center text-slate-500 italic">Lista indisponível (Permissão negada).</td></tr>';
-            }
+        // 🔥 MODO SOBREVIVÊNCIA: Lê o banco apenas UMA vez ao abrir o app
+        getDocs(query(collectionRef)).then((snapshot) => {
+            const clients = [];
+            snapshot.forEach(doc => clients.push({ id: doc.id, ...doc.data() }));
+            
+            clients.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            
+            clientCache.clear();
+            clients.forEach(c => clientCache.set(c.id, c));
+            
+            filterAndRenderClients();
+        }).catch((error) => {
+            console.warn("Erro ao ler clientes:", error.code);
+            const tb = document.getElementById('client-list-tbody');
+            if (tb) tb.innerHTML = '<tr><td colspan="2" class="px-6 py-12 text-center text-slate-500 italic">Lista indisponível (Cota Excedida ou Erro).</td></tr>';
         });
     } catch (e) { console.error(e); }
 

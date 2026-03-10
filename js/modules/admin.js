@@ -14,7 +14,6 @@ import {
     where, 
     getDoc, 
     addDoc, 
-    onSnapshot, 
     orderBy, 
     limit, 
     setDoc 
@@ -293,11 +292,13 @@ function loadInitialAuditLogs(db) {
     if (tbody) renderSkeleton(tbody, 4, 5);
 
     const q = query(collection(db, 'audit_logs'), orderBy('createdAt', 'desc'), limit(10));
-    onSnapshot(q, (snapshot) => {
+    
+    // 🔥 MODO SOBREVIVÊNCIA: Busca o log apenas 1 vez ao abrir a aba
+    getDocs(q).then((snapshot) => {
         currentAuditData = [];
         snapshot.forEach(doc => currentAuditData.push({ id: doc.id, ...doc.data() }));
         renderAuditTable(currentAuditData);
-    });
+    }).catch(err => console.error("Falha na auditoria:", err));
 }
 
 async function filterAuditLogs(db) {
@@ -495,6 +496,11 @@ function renderAdminTable() {
             openConfirmModal("Excluir Definitivamente?", "Esta ação não pode ser desfeita.", async () => { 
                 try { 
                     await deleteDoc(doc(globalDbForAdmin, currentPath, id)); 
+                    
+                    // ✅ REMOÇÃO LOCAL: Tira o item da variável de cache e redesenha a tabela na hora
+                    localAdminData = localAdminData.filter(item => item.id !== id);
+                    renderAdminTable();
+
                     showToast("Registro excluído."); 
                     closeConfirmModal(); 
                     registerLog('EXCLUIR_REG', id, 'Admin excluiu registro forçadamente');
