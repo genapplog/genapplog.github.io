@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <title>AppLog - Sistema Logístico</title>
+    <meta name="description" content="Sistema inteligente de gestão logística, auditoria e controle de divergências.">
+    <meta property="og:title" content="AppLog - Sistema Logístico">
+    <meta property="og:description" content="Plataforma de monitoramento operacional e controle de inventário.">
+    <meta property="og:type" content="website">
 
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
@@ -20,7 +24,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/style.min.css">
 </head>
 <body class="bg-slate-900 text-slate-100 h-full overflow-hidden">
     
@@ -34,7 +38,7 @@
             <div class="p-4 flex justify-between items-center border-b border-slate-800 md:border-none relative overflow-hidden flex-shrink-0 h-[72px]">
                 <div id="test-mode-bg-indicator" class="absolute inset-0 bg-amber-500/10 hidden pointer-events-none"></div>
                 
-                <button id="app-logo-btn" class="flex items-center gap-3 group/btn focus:outline-none transition-transform active:scale-95 relative z-10 w-full">
+                <button id="app-logo-btn" aria-label="Ir para a página inicial" class="flex items-center gap-3 group/btn focus:outline-none transition-transform active:scale-95 relative z-10 w-full">
                     <div class="bg-indigo-600 p-2 rounded-lg shadow-lg shadow-indigo-900/20 group-hover/btn:bg-indigo-500 transition-colors flex-shrink-0" id="logo-bg">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                     </div>
@@ -44,7 +48,7 @@
                     </div>
                 </button>
                 
-                <button id="mobile-menu-btn" class="md:hidden text-indigo-400 hover:text-white focus:outline-none p-2 rounded hover:bg-slate-800 transition relative z-10">
+                <button id="mobile-menu-btn" aria-label="Abrir menu de navegação" aria-expanded="false" class="md:hidden text-indigo-400 hover:text-white focus:outline-none p-2 rounded hover:bg-slate-800 transition relative z-10">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </button>
             </div>
@@ -164,7 +168,7 @@
         <div class="bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-md m-4 border border-slate-700 transform transition-all scale-95">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold text-white">Novo Cliente</h2>
-                <button type="button" id="client-modal-close-x" class="text-slate-400 hover:text-white">
+                <button type="button" id="client-modal-close-x" aria-label="Fechar janela" class="text-slate-400 hover:text-white">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -222,7 +226,7 @@
                 <div id="tv-date" class="text-slate-400 text-sm font-bold uppercase">...</div>
             </div>
 
-            <button id="btn-exit-tv" class="absolute top-4 right-4 text-slate-600 hover:text-white transition-colors opacity-50 hover:opacity-100">
+            <button id="btn-exit-tv" aria-label="Sair do modo de monitoramento TV" class="absolute top-4 right-4 text-slate-600 hover:text-white transition-colors opacity-50 hover:opacity-100">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>

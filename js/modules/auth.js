@@ -40,36 +40,31 @@ async function handleUserLoaded(user, db, callbackEnv) {
     const isAdminConfig = ADMIN_IDS.includes(user.uid);
     
     try {
-        if (user.email === GENERIC_EMAIL) {
-            currentUserRole = ['OPERADOR'];
-            currentUserName = 'Operador de Piso'; 
-        } else {
-            // Busca Perfil no Firestore
-            const userSnap = await getDoc(doc(db, 'users', user.uid));
+        // Busca Perfil no Firestore unificando o tratamento de todos os usuários
+        const userSnap = await getDoc(doc(db, 'users', user.uid));
+        
+        if (userSnap.exists()) {
+            const data = userSnap.data();
             
-            if (userSnap.exists()) {
-                const data = userSnap.data();
-                
-                // Normalização Robusta de Cargos (Array Maiúsculo)
-                let rawRole = data.role || 'OPERADOR';
-                const roleArray = Array.isArray(rawRole) ? rawRole : [rawRole];
-                
-                currentUserRole = roleArray.map(r => 
-                    String(r).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
-                );
+            // Normalização Robusta de Cargos (Array Maiúsculo)
+            let rawRole = data.role || 'OPERADOR';
+            const roleArray = Array.isArray(rawRole) ? rawRole : [rawRole];
+            
+            currentUserRole = roleArray.map(r => 
+                String(r).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
+            );
 
-                currentUserName = data.name || '';
-                
-                // Preenche PIN no formulário de conta (se existir)
-                const pinField = document.getElementById('perfil-input-pin');
-                if (pinField) pinField.value = data.pin || '';
-            } else {
-                // Sem cadastro no banco, define pelo config ou padrão
-                currentUserRole = isAdminConfig ? ['ADMIN'] : ['OPERADOR'];
-                currentUserName = isAdminConfig ? 'Administrador' : '';
-            }
+            currentUserName = data.name || user.email;
+            
+            // Preenche PIN no formulário de conta (se existir)
+            const pinField = document.getElementById('perfil-input-pin');
+            if (pinField) pinField.value = data.pin || '';
+        } else {
+            // Sem cadastro no banco
+            currentUserRole = isAdminConfig ? ['ADMIN'] : ['OPERADOR'];
+            currentUserName = isAdminConfig ? 'Administrador' : 'Usuário Sem Perfil';
         }
-    } catch (e) { 
+    } catch (e) {
         console.warn("⚠️ Perfil offline ou erro AppCheck. Usando padrão local.", e);
         currentUserRole = isAdminConfig ? ['ADMIN'] : ['OPERADOR']; 
     }
@@ -82,9 +77,7 @@ async function handleUserLoaded(user, db, callbackEnv) {
     // Atualiza Label Visual
     const roleLabel = document.getElementById('user-role-label');
     if(roleLabel) {
-        roleLabel.innerText = user.email === GENERIC_EMAIL 
-            ? "Operação (Genérico)" 
-            : `Logado: ${currentUserName || 'Usuário'} (${currentUserRole.join(', ')})`;
+        roleLabel.innerText = `Logado: ${currentUserName || 'Usuário'} (${currentUserRole.join(', ')})`;
     }
     
     document.getElementById('btn-logout')?.classList.remove('hidden');

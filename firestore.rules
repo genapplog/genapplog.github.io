@@ -9,10 +9,9 @@ service cloud.firestore {
     function isAuth() { return request.auth != null; }
 
     function getUserRoles() {
-      // Seus IDs de Super Admin (Adicione o seu novo UID aqui se necessário)
-      return (request.auth.uid == "lssiHZQUGEMF9E2OPnv3iqIyjRW2" || 
-              request.auth.uid == "19m1eURrgyNU0NOB4hyl70RxQbD2") ? ['ADMIN'] : 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      // Busca os papéis exclusivamente no documento do usuário no banco de dados
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc != null && userDoc.data.role != null ? userDoc.data.role : ['OPERADOR'];
     }
 
     function hasRole(allowedRoles) {

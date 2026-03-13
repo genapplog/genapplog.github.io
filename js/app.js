@@ -19,6 +19,7 @@ import { firebaseConfig, PATHS, IS_DEV } from './config.js';
 import { safeBind, showToast } from './utils.js';
 
 // Módulos
+import { loadViews } from './services/view-loader.js';
 import { initAuth } from './modules/auth.js';
 import { initLabelsModule } from './modules/labels.js';
 import { initClientsModule, refreshClientList } from './modules/clients.js';
@@ -63,67 +64,12 @@ const db = initializeFirestore(app, {
 // 2. CICLO DE VIDA DA APLICAÇÃO
 // =========================================================
 
-// Função para carregar HTMLs externos (Modularização)
-async function loadViews() {
-    const views = [
-        { file: './pages/home.html' },
-        { file: './pages/dashboard.html' },
-        { file: './pages/checklist.html' },
-        { file: './pages/labels.html' },
-        { file: './pages/rnc.html' },
-        { file: './pages/profile.html' },
-        { file: './pages/settings.html' },
-        { file: './pages/agendamento.html' }, // Nova Tela de Agendamento
-        { file: './pages/cadastros.html' } // Nova Tela de Cadastros
-    ];
-
-    try {
-        // Tenta encontrar o container interno (aquele com padding)
-        let container = document.querySelector('#main-content > div');
-
-        // ROBUSTEZ: Se o container interno não existir (foi apagado), nós o criamos agora
-        if (!container) {
-            const mainContent = document.getElementById('main-content');
-            if (!mainContent) {
-                console.error("❌ ERRO CRÍTICO: Elemento #main-content não encontrado no index.html");
-                return;
-            }
-            console.warn("⚠️ Recriando container de visualização...");
-            
-            // Cria a div com as classes de espaçamento originais
-            container = document.createElement('div');
-            container.className = "p-4 md:p-10 pb-20"; 
-            mainContent.appendChild(container);
-        }
-
-        // Carrega todos os arquivos HTML em paralelo
-        const responses = await Promise.all(views.map(v => fetch(v.file)));
-        
-        // Verifica se algum arquivo falhou (ex: 404)
-        for (const [index, response] of responses.entries()) {
-            if (!response.ok) throw new Error(`Falha ao carregar ${views[index].file} (Status: ${response.status})`);
-        }
-
-        const htmls = await Promise.all(responses.map(r => r.text()));
-
-        // Injeta o conteúdo de forma otimizada sem destruir os nós DOM existentes
-        const viewsHTML = htmls.join('');
-        container.insertAdjacentHTML('afterbegin', viewsHTML); 
-        
-        console.log("📦 Views carregadas e injetadas com sucesso.");
-        
-    } catch (error) {
-        console.error("Erro ao carregar views:", error);
-        // Mostra um erro visual na tela para facilitar o diagnóstico
-        const main = document.getElementById('main-content');
-        if (main) main.innerHTML = `<div class="p-10 text-red-500 font-bold">Erro de Carregamento: ${error.message}<br>Verifique se a pasta /pages e os arquivos existem.</div>`;
-    }
-}
+// O ViewLoader agora é importado externamente de js/services/view-loader.js
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log(`🚀 AppLog Iniciando... Ambiente: ${IS_DEV ? 'DESENVOLVIMENTO' : 'PRODUÇÃO'}`);
 
-    // 1. Carrega a interface HTML separada
+    // 1. Carrega toda a interface HTML separada ANTES de rodar os scripts
     await loadViews();
 
     // Configurações Iniciais
@@ -132,7 +78,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Inicia Módulos Independentes
     initLabelsModule();
-    initAgendamentoModule(db); // Agora passa o DB para carregar clientes
     initAuth(auth);
 
     // Inicia Módulos Conectados ao DB
@@ -155,6 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 initRncModule(db, IS_DEV);
                 initAdminModule(db, clientsCollection);
                 initCadastrosModule(db); // Inicia gestão de equipes e produtos
+                initAgendamentoModule(db); // ✅ Movido para cá (após confirmar o login)
                 
                 modulesInitialized = true;
             }
@@ -199,15 +145,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Funcionalidades Globais de Estabilidade
     blindarInputsExcetoLogin();
     
-    // Otimização: Debounce no MutationObserver para evitar travamento de CPU e lentidão
-    let blindarTimeout;
-    const observer = new MutationObserver(() => {
-        clearTimeout(blindarTimeout);
-        blindarTimeout = setTimeout(() => {
-            blindarInputsExcetoLogin();
-        }, 300); // Aguarda o DOM estabilizar (300ms) antes de varrer os inputs
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+    // A blindagem de inputs é acionada estritamente após o carregamento das views
+    document.addEventListener('views-loaded', () => blindarInputsExcetoLogin());
 
     setupConnectionMonitoring();
     setupGlobalErrorLogging(db);
@@ -254,14 +193,14 @@ function setupNavigation() {
 
 function changePage(targetId) {
     // Esconde todas as páginas
-    document.querySelectorAll('.page-content').forEach(p => { 
+    document.querySelectorAll('.page-content').forEach(p => {
         if(p.id !== 'tv-mode') { 
             p.classList.remove('active'); 
             p.classList.add('hidden'); 
         }
     });
 
-    // Mostra alvo
+    // 3. Mostra alvo
     const targetEl = document.getElementById(targetId);
     if (targetEl) { 
         targetEl.classList.remove('hidden'); 

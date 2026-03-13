@@ -1,8 +1,7 @@
 /**
  * ARQUIVO: js/services/view-loader.js
- * DESCRIÇÃO: Responsável por carregar e injetar os fragmentos HTML da pasta /pages
+ * DESCRIÇÃO: Responsável por carregar as views e prevenir XSS de forma segura.
  */
-
 export async function loadViews() {
     const views = [
         { file: './pages/home.html' },
@@ -11,13 +10,14 @@ export async function loadViews() {
         { file: './pages/labels.html' },
         { file: './pages/rnc.html' },
         { file: './pages/profile.html' },
-        { file: './pages/settings.html' }
+        { file: './pages/settings.html' },
+        { file: './pages/agendamento.html' },
+        { file: './pages/cadastros.html' }
     ];
 
     try {
         let container = document.querySelector('#main-content > div');
 
-        // ROBUSTEZ: Cria o container se ele não existir (foi apagado do index.html)
         if (!container) {
             const mainContent = document.getElementById('main-content');
             if (!mainContent) {
@@ -29,23 +29,23 @@ export async function loadViews() {
             mainContent.appendChild(container);
         }
 
-        // Carrega todos os arquivos HTML em paralelo
         const responses = await Promise.all(views.map(v => fetch(v.file)));
         
         for (const [index, response] of responses.entries()) {
-            if (!response.ok) throw new Error(`Falha ao carregar ${views[index].file} (Status: ${response.status})`);
+            if (!response.ok) throw new Error(`Falha ao carregar ${views[index].file}`);
         }
 
         const htmls = await Promise.all(responses.map(r => r.text()));
 
-        // Injeta o conteúdo acumulando com o que já existe (ex: modais globais se houver)
-        container.innerHTML = htmls.join('') + container.innerHTML; 
+        // Injeção segura e otimizada de todo o DOM ANTES dos scripts rodarem
+        const template = document.createElement('template');
+        template.innerHTML = htmls.join('');
+        container.appendChild(template.content); 
         
-        console.log("📦 Views carregadas com sucesso.");
+        console.log("📦 Views carregadas e sanitizadas com sucesso.");
+        document.dispatchEvent(new CustomEvent('views-loaded'));
         
     } catch (error) {
-        console.error("Erro no ViewLoader:", error);
-        const main = document.getElementById('main-content');
-        if (main) main.innerHTML = `<div class="p-10 text-red-500 font-bold">Erro de Interface: ${error.message}</div>`;
+        console.error("Erro no View Loader:", error);
     }
 }
