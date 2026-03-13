@@ -60,7 +60,7 @@ export async function initRncModule(db, isTest) {
 
         if (canViewList) {
             console.log("📋 Permissão confirmada. Carregando lista de RNC...");
-            setupRealtimeListener(); // <--- CHAMA A FUNÇÃO NOVA ABAIXO
+            setupRealtimeListener(); 
         } else {
             console.log("🔒 Perfil Operacional: Lista bloqueada.");
             const tbody = document.getElementById('pending-list-tbody');
@@ -72,9 +72,10 @@ export async function initRncModule(db, isTest) {
                     </div>
                 </td></tr>`;
             }
-            // Mesmo bloqueado, carrega nomes de usuários para o formulário funcionar
-            loadUserSuggestions(db);
         }
+        
+        // ✅ OTIMIZAÇÃO: Carrega sugestões para TODOS os perfis (com cache inteligente)
+        loadUserSuggestions(db);
     };
 
     // 3. Lógica de Espera (Aguarda o Auth terminar de carregar o perfil)
@@ -870,30 +871,54 @@ function resetForm() {
 
     updateFormStateUI(); 
 }
-// ✅ FUNÇÃO NOVA: Carrega lista de usuários para o campo de assinatura
+// Função auxiliar para injetar os nomes no HTML
+function popularDatalist(nomesArray, dataList) {
+    dataList.innerHTML = '';
+    nomesArray.sort().forEach(nome => {
+        const option = document.createElement('option');
+        option.value = nome;
+        dataList.appendChild(option);
+    });
+}
+
+// ✅ FUNÇÃO OTIMIZADA: Carrega usuários com CACHE LOCAL (Gasta quase zero leituras)
 async function loadUserSuggestions(db) {
+    const dataList = document.getElementById('rnc-users-list');
+    if (!dataList) return;
+
+    const cachedUsers = localStorage.getItem('appLog_usersCache');
+    const cacheTime = localStorage.getItem('appLog_usersCacheTime');
+    const now = Date.now();
+
+    // 1. Tenta carregar do Cache primeiro (Vida útil: 24 horas = 86400000ms)
+    if (cachedUsers && cacheTime && (now - parseInt(cacheTime)) < 86400000) {
+        popularDatalist(JSON.parse(cachedUsers), dataList);
+        console.log("⚡ Autocomplete: Cache Local de 24h utilizado (0 Leituras).");
+        return;
+    }
+
+    // 2. Se não tem cache válido, busca na nuvem (Custo: 1 leitura por usuário cadastrado)
     try {
         const usersRef = collection(db, 'users');
         const snapshot = await getDocs(usersRef);
-        const dataList = document.getElementById('rnc-users-list');
         
-        if (!dataList) return;
-
-        dataList.innerHTML = ''; // Limpa lista atual
-
+        const nomesArray = [];
         snapshot.forEach(docSnap => {
             const data = docSnap.data();
-            if (data.name) {
-                const option = document.createElement('option');
-                option.value = data.name.toUpperCase().trim(); // Padroniza em Maiúsculo
-                dataList.appendChild(option);
-            }
+            if (data.name) nomesArray.push(data.name.toUpperCase().trim());
         });
-        console.log("Lista de usuários carregada para sugestões.");
+
+        // Salva na memória do navegador
+        localStorage.setItem('appLog_usersCache', JSON.stringify(nomesArray));
+        localStorage.setItem('appLog_usersCacheTime', now.toString());
+
+        popularDatalist(nomesArray, dataList);
+        console.log(`📡 Autocomplete: Atualizado via Servidor (${nomesArray.length} leituras).`);
     } catch (error) {
         console.error("Erro ao carregar usuários:", error);
     }
 }
+
 // =================================================================
 // 🔥 LÓGICA DE IMPRESSÃO GLOBAL
 // =================================================================
