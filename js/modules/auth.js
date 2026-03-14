@@ -85,11 +85,6 @@ async function handleUserLoaded(user, db, callbackEnv) {
     // 🔥 APLICA AS PERMISSÕES NA TELA
     applyPermissions();
     
-    // ... (código anterior da função) ...
-
-    // 🔥 APLICA AS PERMISSÕES NA TELA
-    applyPermissions();
-    
     // Callback de Ambiente (Dev/Prod)
     const savedEnv = localStorage.getItem('appLog_env') || 'prod';
     if (callbackEnv) callbackEnv(savedEnv);

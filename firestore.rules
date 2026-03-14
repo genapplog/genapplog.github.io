@@ -28,10 +28,16 @@ service cloud.firestore {
     // ==========================================================
 
     match /users/{userId} {
-      allow read: if isAuth(); // Necessário para o autocomplete de assinaturas
-      // ✅ CORREÇÃO: Permite que a Gestão (Líder e Inventário) também cadastre/edite a equipe.
-      // (A trava que impede eles de criarem novos Admins já atua no Front-end).
-      allow write: if isAuth() && (canManage() || (request.auth.uid == userId)); 
+      allow read: if isAuth();
+      // Apenas gestores podem criar novos usuários
+      allow create: if isAuth() && canManage();
+      // O usuário pode editar o próprio doc (ex: PIN), mas é PROIBIDO alterar o próprio cargo (role)
+      allow update: if isAuth() && (
+        canManage() || 
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))
+      );
+      // Apenas admins podem excluir contas
+      allow delete: if isAuth() && hasRole(['ADMIN']);
     }
 
     match /products/{productId} {
