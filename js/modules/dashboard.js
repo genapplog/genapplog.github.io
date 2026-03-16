@@ -128,33 +128,45 @@ export function initDashboard() {
     }
 }
 
-// ✅ NOVA FUNÇÃO: Alimenta APENAS a TV com dados em tempo real
-export function updateTVRealtime(todayData) {
-    const roles = getUserRole() || [];
-    if (!roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r))) return;
-
-    // Guarda os dados de hoje globalmente para a TV não usar os dados do Dashboard
-    window.tvRealtimeData = todayData; 
-    
-    const tvEl = document.getElementById('tv-mode');
-    if (tvEl && !tvEl.classList.contains('hidden')) updateTVView();
-}
-
 // =========================================================
-// MODO TV
+// MODO TV (Com Escuta On-Demand - Zero Desperdício)
 // =========================================================
-export function startTVMode() {
+let tvUnsubscribe = null;
+
+export async function startTVMode() {
     document.getElementById('tv-mode').classList.remove('hidden');
     const elem = document.documentElement;
     if (elem.requestFullscreen) { elem.requestFullscreen().catch(console.log); }
     startClock();
-    updateTVView();
+    
+    // Liga a escuta do banco APENAS quando a TV abre
+    const db = getFirestore();
+    const { onSnapshot } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+    
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const qHoje = query(collection(db, PATHS.occurrences), where('createdAt', '>=', startOfToday));
+    
+    tvUnsubscribe = onSnapshot(qHoje, (snapshot) => {
+        const dadosHoje = [];
+        snapshot.forEach(docSnap => {
+            const d = docSnap.data(); 
+            d.id = docSnap.id; 
+            d.jsDate = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
+            dadosHoje.push(d);
+        });
+        window.tvRealtimeData = dadosHoje;
+        updateTVView();
+    });
 }
 
 function exitTVMode() {
     document.getElementById('tv-mode').classList.add('hidden');
     if (document.exitFullscreen && document.fullscreenElement) { document.exitFullscreen(); }
     if (tvClockInterval) clearInterval(tvClockInterval);
+    
+    // DESLIGA a escuta do banco assim que a TV fecha!
+    if (tvUnsubscribe) { tvUnsubscribe(); tvUnsubscribe = null; }
 }
 
 function startClock() {

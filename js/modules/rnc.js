@@ -12,7 +12,7 @@ import {
 import { safeBind, showToast, openConfirmModal, closeConfirmModal, sendDesktopNotification, requestNotificationPermission, escapeHtml, renderEmptyState } from '../utils.js';
 import { PATHS } from '../config.js';
 import { getUserRole, getCurrentUserName, isProfileLoaded } from './auth.js';
-import { initDashboard, updateTVRealtime } from './dashboard.js';
+import { initDashboard } from './dashboard.js';
 import { registerLog } from './admin.js';
 import { getClientNames } from './clients.js'; // ✅ Importando nomes dos clientes
 import { printRncById } from './reports.js';
@@ -87,24 +87,21 @@ export async function initRncModule(db, isTest) {
 }
 
 // =========================================================
-// ✅ OTIMIZAÇÃO MAXIMA: SEPARAÇÃO TOTAL (PENDENTES vs HOJE)
+// ✅ OTIMIZAÇÃO MAXIMA: APENAS PENDENTES (Zero desperdício)
 // =========================================================
 let unsubscribePendentes = null;
-let unsubscribeHoje = null;
 
 function setupRealtimeListener() {
     if (unsubscribeOccurrences) { unsubscribeOccurrences(); unsubscribeOccurrences = null; }
     if (unsubscribePendentes) unsubscribePendentes();
-    if (unsubscribeHoje) unsubscribeHoje();
 
     // -------------------------------------------------------------
-    // QUERY 1: APENAS PENDENTES (Alimenta a tela inicial e a tabela de RNC)
-    // Custo de Leitura: Quase 0 (Apenas o que falta resolver)
+    // QUERY ÚNICA: APENAS PENDENTES (Real-time estrito)
+    // Custo de Leitura: Quase 0 (Baixa apenas o que falta resolver)
     // -------------------------------------------------------------
-    const qPendentes = query(currentCollectionRef, where('status', 'in', ['draft', 'pendente_lider', 'pendente_inventario', 'pendente']));
+    const qPendentes = query(currentCollectionRef, where('status', 'in', ['draft', 'pendente_lider', 'pendente_inventario', 'pendente', 'pallet_label_request']));
     
     unsubscribePendentes = onSnapshot(qPendentes, (snapshot) => {
-        // 🔥 TRAVA ANTI-LOOP
         if (snapshot.metadata.hasPendingWrites) return;
 
         pendingOccurrencesData = [];
@@ -117,46 +114,21 @@ function setupRealtimeListener() {
         });
 
         pendingOccurrencesData.sort((a, b) => b.jsDate - a.jsDate);
-        
-        updatePendingList(); // Desenha a tabela da tela principal
-        
-        // 🛑 RETIRADO DAQUI: O loadUserSuggestions(globalDb) faz uma chamada gigante.
-        // Ele deve ser chamado APENAS QUANDO o utilizador abrir o modal de nova RNC,
-        // não em tempo real a cada piscada do firebase!
-    });
+        updatePendingList();
 
-    // -------------------------------------------------------------
-    // QUERY 2: APENAS HOJE (Alimenta APENAS a TV Wallboard em tempo real)
-    // Custo de Leitura: Baixíssimo (Zera toda meia-noite)
-    // -------------------------------------------------------------
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const qHoje = query(currentCollectionRef, where('createdAt', '>=', startOfToday));
-    
-    unsubscribeHoje = onSnapshot(qHoje, (snapshot) => {
-        const dadosHoje = [];
-        
-        snapshot.forEach(docSnap => {
-            const d = docSnap.data(); 
-            d.id = docSnap.id; 
-            d.jsDate = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
-            dadosHoje.push(d);
-        });
-
-        // Envia os dados de hoje estritamente para a TV (Ignora o Dashboard de 7 dias)
-        updateTVRealtime(dadosHoje);
-
-        // Dispara as notificações de chamados novos
+        // Notificação Inteligente (Aproveitando a mesma query)
         snapshot.docChanges().forEach(change => {
-            if (change.type === "added" || change.type === "modified") {
+            if (change.type === "added") {
                 const data = change.doc.data();
                 const isRecent = data.createdAt?.toDate ? (new Date() - data.createdAt.toDate()) < 3600000 : true;
-                if(isRecent && data.status !== 'concluido') checkAndNotify(data);
+                if(isRecent && data.status === 'pendente_lider') {
+                    showToast("Nova RNC aguardando Líder", "info");
+                }
             }
         });
     });
 
-    // Listener de notificações (Exclusivo da liderança - Mantido igual)
+    // Listener de notificações manuais (Chamados de Rádio - Mantido)
     const notificationsRef = collection(globalDb, `artifacts/${globalDb.app.options.appId}/public/data/notifications`);
     const recentTime = new Date(Date.now() - 5 * 60 * 1000); 
     onSnapshot(query(notificationsRef, where('createdAt', '>', recentTime)), {
@@ -164,8 +136,8 @@ function setupRealtimeListener() {
             snapshot.docChanges().forEach(change => { 
                 if (change.type === "added") { 
                     const n = change.doc.data(); 
-                    if (n.requesterEmail !== getAuth().currentUser?.email) { 
-                        sendDesktopNotification("📢 Chamado", `Operador ${n.requesterName} no ${n.local || 'Local'}.`); 
+                    if (n.requesterEmail !== getAuth().currentUser?.email && n.type === 'leader_call') { 
+                        sendDesktopNotification("📢 Chamado", `Operador ${n.requesterName} solicitou ajuda.`); 
                         showToast(`📢 ${n.requesterName} chamando!`, "warning"); 
                     } 
                 } 

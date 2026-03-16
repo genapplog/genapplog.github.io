@@ -92,27 +92,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             // Evita reinicializar os módulos se o auth state mudar (ex: token refresh)
             if (!modulesInitialized) {
-                console.log("🚀 Iniciando módulos de dados...");
+                console.log("🚀 Sistema Autenticado. Aguardando interação do usuário para carregar dados...");
                 
-                syncProductsCache(db); // ✅ Atualiza a base de produtos sem congelar a tela
-                
-                initClientsModule(clientsCollection);
-                initRncModule(db, IS_DEV);
-                initAdminModule(db, clientsCollection);
-                initCadastrosModule(db); // Inicia gestão de equipes e produtos
-                initAgendamentoModule(db); // ✅ Movido para cá (após confirmar o login)
+                // Módulos leves e invisíveis que podem rodar em background
+                syncProductsCache(db); 
                 
                 modulesInitialized = true;
+
+                // 🚨 OTIMIZAÇÃO CRÍTICA: Dispara o módulo apenas da página atual que foi restaurada do localStorage
+                const currentPage = localStorage.getItem('appLog_lastPage') || 'dashboard';
+                dispatchModuleInit(currentPage); 
             }
 
             // Atualização de permissões admin e Segurança de Menus
-            setTimeout(() => {
-                console.log("🔄 Atualizando interface e permissões...");
-                refreshClientList();
-                
-                import('./modules/auth.js').then(authModule => {
-                    const roles = authModule.getUserRole() || [];
-                    const isGestao = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
+                setTimeout(() => {
+                    console.log("🔄 Atualizando interface e permissões...");
+                    refreshClientList();
+                    
+                    // Como já temos acesso às funções de auth neste arquivo (importadas no topo),
+                    // não precisamos fazer um import dinâmico aqui. Basta chamá-la direto.
+                    import('./modules/auth.js').then(authModule => { // ⬅️ Manteremos o then por compatibilidade da promise, mas o Vite resolve no root
+                        const roles = authModule.getUserRole() || [];
+                        const isGestao = roles.some(r => ['ADMIN', 'LIDER', 'INVENTARIO'].includes(r));
                     const isAdmin = roles.includes('ADMIN');
                     const isLider = roles.includes('LIDER');
                     const isInventario = roles.includes('INVENTARIO');
@@ -191,7 +192,49 @@ function setupNavigation() {
     changePage(startPage);
 }
 
+// Memória dos módulos já acordados para não baixar os dados duas vezes na mesma sessão
+const activeModules = new Set();
+
+function dispatchModuleInit(pageId) {
+    if (activeModules.has(pageId)) return; // Já foi carregado
+    
+    console.log(`⚡ Despertando módulo sob demanda: ${pageId}`);
+    
+    // As coleções precisam estar acessíveis aqui (O db é global no app.js)
+    const dbRef = db; 
+    const clientsRef = collection(dbRef, PATHS.clients);
+
+    try {
+        switch (pageId) {
+            case 'clientes':
+                initClientsModule(clientsRef);
+                break;
+            case 'ocorrencias':
+                initRncModule(dbRef, IS_DEV);
+                break;
+            case 'dashboard':
+                initDashboard(dbRef); // Garanta que initDashboard esteja importado no topo do app.js
+                break;
+            case 'cadastros':
+                initCadastrosModule(dbRef);
+                break;
+            case 'agendamento':
+                initAgendamentoModule(dbRef);
+                break;
+            case 'configuracoes':
+                initAdminModule(dbRef, clientsRef);
+                break;
+        }
+        activeModules.add(pageId); // Marca como acordado
+    } catch (e) {
+        console.error(`Erro ao iniciar módulo ${pageId}:`, e);
+    }
+}
+
 function changePage(targetId) {
+    // 🚨 Acorda o banco de dados apenas da aba solicitada
+    dispatchModuleInit(targetId);
+
     // Esconde todas as páginas
     document.querySelectorAll('.page-content').forEach(p => {
         if(p.id !== 'tv-mode') { 

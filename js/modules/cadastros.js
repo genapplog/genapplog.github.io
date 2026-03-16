@@ -376,21 +376,42 @@ function listenToUsers() {
     const searchInput = document.getElementById('busca-user-input');
     if (!tbody) return;
 
-    const q = query(collection(dbInstance, 'users'));
-    
-    // 🔥 MODO SOBREVIVÊNCIA: Faz o download da equipe apenas 1 vez (getDocs)
-    getDocs(q).then((snapshot) => {
-        currentUsersList = [];
-        snapshot.forEach(doc => {
-            currentUsersList.push({ id: doc.id, ...doc.data() });
-        });
+    // 🔥 CACHE EXTREMO: Equipe
+    const cacheKey = 'appLog_usersTableData';
+    const timeKey = 'appLog_usersTableTime';
+    const cached = localStorage.getItem(cacheKey);
+    const cacheTime = localStorage.getItem(timeKey);
+    const now = Date.now();
+
+    if (cached && cacheTime && (now - parseInt(cacheTime)) < 86400000) {
+        console.log("⚡ Equipe carregada do Cache Local (0 Leituras).");
+        currentUsersList = JSON.parse(cached);
         renderUsersTable();
-    }).catch(err => console.error("Falha ao carregar equipe:", err));
+    } else {
+        const q = query(collection(dbInstance, 'users'));
+        getDocs(q).then((snapshot) => {
+            currentUsersList = [];
+            snapshot.forEach(doc => {
+                currentUsersList.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // Salva no cache
+            localStorage.setItem(cacheKey, JSON.stringify(currentUsersList));
+            localStorage.setItem(timeKey, now.toString());
+            
+            console.log(`📡 Equipe atualizada da Nuvem (${currentUsersList.length} leituras).`);
+            renderUsersTable();
+        }).catch(err => console.error("Falha ao carregar equipe:", err));
+    }
 
     if (searchInput) {
         searchInput.addEventListener('input', renderUsersTable);
     }
 }
+
+// ⚠️ NOTA: Como adicionamos Cache Extremo, precisamos atualizar a função setupUserForm para limpar o cache quando um Novo usuário for criado.
+// Adicione esta linha logo após o showToast("Usuário salvo com sucesso!", "success"); dentro do setupUserForm:
+// localStorage.removeItem('appLog_usersTableTime'); // Força a baixar a lista atualizada na próxima vez
 
 function setupUserSorting() {
     const config = [

@@ -50,22 +50,39 @@ export function initClientsModule(collectionRef) {
     if (tbody) renderSkeleton(tbody, 2, 5);
 
     try {
-        // 🔥 MODO SOBREVIVÊNCIA: Lê o banco apenas UMA vez ao abrir o app
-        getDocs(query(collectionRef)).then((snapshot) => {
-            const clients = [];
-            snapshot.forEach(doc => clients.push({ id: doc.id, ...doc.data() }));
-            
-            clients.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-            
+        // 🔥 CACHE EXTREMO: Tenta carregar do localStorage primeiro (Válido por 24h)
+        const cacheKey = 'appLog_clientsCacheData';
+        const timeKey = 'appLog_clientsCacheTime';
+        const cached = localStorage.getItem(cacheKey);
+        const cacheTime = localStorage.getItem(timeKey);
+        const now = Date.now();
+
+        if (cached && cacheTime && (now - parseInt(cacheTime)) < 86400000) {
+            console.log("⚡ Clientes carregados do Cache Local (0 Leituras).");
+            const clients = JSON.parse(cached);
             clientCache.clear();
             clients.forEach(c => clientCache.set(c.id, c));
-            
             filterAndRenderClients();
-        }).catch((error) => {
-            console.warn("Erro ao ler clientes:", error.code);
-            const tb = document.getElementById('client-list-tbody');
-            if (tb) tb.innerHTML = '<tr><td colspan="2" class="px-6 py-12 text-center text-slate-500 italic">Lista indisponível (Cota Excedida ou Erro).</td></tr>';
-        });
+        } else {
+            // Se não tem cache ou expirou, vai no banco
+            getDocs(query(collectionRef)).then((snapshot) => {
+                const clients = [];
+                snapshot.forEach(doc => clients.push({ id: doc.id, ...doc.data() }));
+                clients.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                
+                clientCache.clear();
+                clients.forEach(c => clientCache.set(c.id, c));
+                
+                // Salva no Cache para as próximas 24 horas
+                localStorage.setItem(cacheKey, JSON.stringify(clients));
+                localStorage.setItem(timeKey, now.toString());
+                
+                console.log(`📡 Clientes atualizados da Nuvem (${clients.length} leituras).`);
+                filterAndRenderClients();
+            }).catch((error) => {
+                console.warn("Erro ao ler clientes:", error.code);
+            });
+        }
     } catch (e) { console.error(e); }
 
     // Liga os botões apenas uma vez
