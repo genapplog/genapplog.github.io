@@ -94,8 +94,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!modulesInitialized) {
                 console.log("🚀 Sistema Autenticado. Aguardando interação do usuário para carregar dados...");
                 
-                // Módulos leves e invisíveis que podem rodar em background
-                syncProductsCache(db); 
+                // ⚠️ ECONOMIA DE LEITURA:
+                // Não sincroniza produtos no login global.
+                // A sincronização será disparada sob demanda pelos módulos que realmente usam bipagem.
                 
                 modulesInitialized = true;
 
@@ -230,12 +231,14 @@ function dispatchModuleInit(pageId) {
                 initClientsModule(clientsRef);
                 break;
             case 'ocorrencias':
+                syncProductsCache(dbRef);
                 initRncModule(dbRef, IS_DEV);
                 break;
             case 'dashboard':
                 initDashboard(dbRef); // Garanta que initDashboard esteja importado no topo do app.js
                 break;
             case 'cadastros':
+                syncProductsCache(dbRef);
                 initCadastrosModule(dbRef);
                 break;
             case 'agendamento':

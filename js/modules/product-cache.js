@@ -30,8 +30,11 @@ export async function syncProductsCache(db) {
 
     let q;
     if (lastSync === 0) {
-        // Primeira vez abrindo o sistema: Baixa a lista completa (Gasta leituras apenas 1 vez na vida)
-        q = collection(db, 'products');
+        // Primeira execução: evita baixar TODOS os produtos de uma vez.
+        // Estratégia: carregar apenas alterações recentes e deixar o restante para fallback sob demanda.
+        const bootstrapDate = new Date();
+        bootstrapDate.setDate(bootstrapDate.getDate() - 30);
+        q = query(collection(db, 'products'), where('updatedAt', '>=', bootstrapDate));
     } else {
         // Próximas vezes: Baixa APENAS os produtos criados/editados desde o último acesso (Quase zero leituras)
         q = query(collection(db, 'products'), where('updatedAt', '>', lastSyncDate));
