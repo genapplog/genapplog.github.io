@@ -21,8 +21,13 @@ export function initAuth(auth, initialToken, callbackEnv) {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             document.getElementById('login-modal')?.classList.add('hidden');
+            
+            // ✅ CORREÇÃO: Trava de renovação. Impede que o refresh silencioso de token dispare leituras
+            if (currentUser && currentUser.uid === user.uid) return;
+            
             await handleUserLoaded(user, db, callbackEnv);
         } else {
+            currentUser = null;
             showLoginModal(true);
         }
     });

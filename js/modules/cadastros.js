@@ -354,6 +354,10 @@ function setupUserForm() {
             } else {
                 currentUsersList.push(newUser); // Adiciona novo
             }
+            
+            // ✅ CORREÇÃO: Salva no LocalStorage para o cache não trazer o usuário antigo se der F5
+            localStorage.setItem('appLog_usersTableData', JSON.stringify(currentUsersList));
+            
             renderUsersTable();
 
             showToast("Usuário salvo com sucesso!", "success");
@@ -523,6 +527,10 @@ function renderUsersTable() {
                         
                         // ✅ REMOÇÃO LOCAL: Tira da lista e recarrega a tabela na hora
                         currentUsersList = currentUsersList.filter(u => u.id !== user.id);
+                        
+                        // ✅ CORREÇÃO: Salva no LocalStorage para o usuário excluído não voltar como zumbi no F5
+                        localStorage.setItem('appLog_usersTableData', JSON.stringify(currentUsersList));
+                        
                         renderUsersTable();
 
                         showToast("Usuário removido.");

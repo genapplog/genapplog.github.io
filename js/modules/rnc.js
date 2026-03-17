@@ -90,6 +90,7 @@ export async function initRncModule(db, isTest) {
 // ✅ OTIMIZAÇÃO MAXIMA: APENAS PENDENTES (Zero desperdício)
 // =========================================================
 let unsubscribePendentes = null;
+let unsubscribeNotifications = null; // ✅ CORREÇÃO: Variável para segurar o listener de notificações
 
 function setupRealtimeListener() {
     if (unsubscribeOccurrences) { unsubscribeOccurrences(); unsubscribeOccurrences = null; }
@@ -132,11 +133,13 @@ function setupRealtimeListener() {
     });
 
     // Listener de notificações manuais (Chamados de Rádio - Mantido)
+    if (unsubscribeNotifications) unsubscribeNotifications(); // ✅ CORREÇÃO: Mata o fantasma anterior antes de criar novo
+    
     const notificationsRef = collection(globalDb, `artifacts/${globalDb.app.options.appId}/public/data/notifications`);
     const recentTime = new Date(Date.now() - 5 * 60 * 1000); 
     // 🛑 LIMITE RIGOROSO: Garante que apenas os últimos 10 chamados trafeguem na rede
-    onSnapshot(query(notificationsRef, where('createdAt', '>', recentTime), limit(10)), {
-        next: (snapshot) => { 
+    unsubscribeNotifications = onSnapshot(query(notificationsRef, where('createdAt', '>', recentTime), limit(10)), {
+        next: (snapshot) => {
             snapshot.docChanges().forEach(change => { 
                 if (change.type === "added") { 
                     const n = change.doc.data(); 

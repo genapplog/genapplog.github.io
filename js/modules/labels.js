@@ -188,13 +188,22 @@ async function handleGenerateManual() {
 // =========================================================
 // SERVIÇOS DE API
 // =========================================================
+let currentPreviewUrl = null; // ✅ Variável para rastrear a imagem e evitar vazamento de memória
+
 async function fetchPreview(sizeKey, zpl, btn, btnPrint, previewContainer, btnText, mode = 'normal') {
     if(btn) { btn.disabled = true; btn.innerText = 'Gerando...'; }
     if(previewContainer) previewContainer.innerHTML = '<div class="flex items-center justify-center h-full w-full"><span class="animate-spin h-8 w-8 border-4 border-indigo-500 rounded-full border-t-transparent"></span></div>';
     
     try {
+        // ✅ Limpa a memória da imagem anterior antes de gerar uma nova
+        if (currentPreviewUrl) {
+            URL.revokeObjectURL(currentPreviewUrl);
+            currentPreviewUrl = null;
+        }
+
         const blob = await fetchLabelPreview(zpl, sizeKey);
-        const imageUrl = URL.createObjectURL(blob);
+        currentPreviewUrl = URL.createObjectURL(blob);
+        const imageUrl = currentPreviewUrl;
         
         if(previewContainer) {
             previewContainer.innerHTML = '';
@@ -271,6 +280,7 @@ async function handlePrintPDF(zplId, sizeId, btnId, fixedSize) {
             const blob = await fetchLabelPdf(batches[0], sizeKey);
             const pdfUrl = URL.createObjectURL(blob);
             window.open(pdfUrl, '_blank');
+            setTimeout(() => URL.revokeObjectURL(pdfUrl), 60000); // ✅ Libera a memória RAM após 1 minuto
         }
         // 4. Se tiver mais de um lote, chama a API várias vezes e costura o PDF
         else {
@@ -312,8 +322,9 @@ async function handlePrintPDF(zplId, sizeId, btnId, fixedSize) {
             const finalBlob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
             const pdfUrl = URL.createObjectURL(finalBlob);
             window.open(pdfUrl, '_blank');
+            setTimeout(() => URL.revokeObjectURL(pdfUrl), 60000); // ✅ Libera a memória RAM pesada do PDF costurado após 1 minuto
         }
-    } catch (e) { 
+    } catch (e) {
         console.error(e);
         showToast("Erro na API de PDF.", 'error'); 
     } finally { 

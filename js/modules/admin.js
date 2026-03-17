@@ -549,14 +549,14 @@ function setupProductSearch(db) {
                 if (docSnap.exists()) results.push({ id: docSnap.id, ...docSnap.data() });
             }
             
-            // 2. Se não achou por ID, faz busca por texto (Usa Cache de Sessão)
+            // 2. Se não achou por ID, faz busca por texto (Usa Cache Local em vez da Nuvem)
             if (results.length === 0) {
                 if (!adminProductCache) {
-                    console.log("Baixando catálogo de produtos para o cache do Admin...");
-                    adminProductCache = [];
-                    const q = query(productsRef); 
-                    const querySnapshot = await getDocs(q);
-                    querySnapshot.forEach(doc => adminProductCache.push({ id: doc.id, ...doc.data() }));
+                    console.log("Carregando catálogo do Cache Local para a busca do Admin (0 Leituras)...");
+                    // ✅ CORREÇÃO: Consome o cache já alimentado no login em vez de varrer o Firebase
+                    const cached = localStorage.getItem('appLog_productsData');
+                    const prodMap = cached ? JSON.parse(cached) : {};
+                    adminProductCache = Object.values(prodMap);
                 }
 
                 // Filtra na memória (Custo: 0 Leituras no Firebase)

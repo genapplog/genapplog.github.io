@@ -128,7 +128,13 @@ function setupClientBindings() {
         if(btn) btn.disabled = true;
         
         try {
-            await addDoc(currentCollectionRef, { name: n, checklist: defaultChecklistData });
+            const docRef = await addDoc(currentCollectionRef, { name: n, checklist: defaultChecklistData });
+            
+            // ✅ CORREÇÃO: Salva no cache local para não sumir no F5
+            clientCache.set(docRef.id, { id: docRef.id, name: n, checklist: defaultChecklistData });
+            localStorage.setItem('appLog_clientsCacheData', JSON.stringify(Array.from(clientCache.values())));
+            filterAndRenderClients(); // Atualiza a tela imediatamente
+            
             registerLog('CRIAR_CLIENTE', n, 'Novo cliente criado');
             showToast("Cliente criado com sucesso!");
             
@@ -165,6 +171,14 @@ function setupClientBindings() {
 
         try {
             await setDoc(doc(currentCollectionRef, currentEditingClientId), { checklist: n }, { merge: true });
+            
+            // ✅ CORREÇÃO: Atualiza o checklist editado no cache local
+            const c = clientCache.get(currentEditingClientId);
+            if (c) {
+                c.checklist = n;
+                clientCache.set(currentEditingClientId, c);
+                localStorage.setItem('appLog_clientsCacheData', JSON.stringify(Array.from(clientCache.values())));
+            }
             
             const cName = document.getElementById('edit-client-name').innerText;
             registerLog('EDITAR_CLIENTE', cName, 'Checklist alterado');
@@ -322,6 +336,12 @@ function filterAndRenderClients() {
                 if(!currentCollectionRef) return;
                 try {
                     await deleteDoc(doc(currentCollectionRef, id));
+                    
+                    // ✅ CORREÇÃO: Exclui da memória local e redesenha a tabela
+                    clientCache.delete(id);
+                    localStorage.setItem('appLog_clientsCacheData', JSON.stringify(Array.from(clientCache.values())));
+                    filterAndRenderClients();
+                    
                     registerLog('EXCLUIR_CLIENTE', name, 'Cliente removido');
                     showToast("Cliente removido.");
                     closeConfirmModal();
