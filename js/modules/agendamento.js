@@ -367,15 +367,40 @@ function listenToFilters(db) {
     
     let clientesCadastrados = [];
 
-    // 🔥 MODO SOBREVIVÊNCIA: Busca clientes apenas 1 vez ao iniciar o Agendamento
-    getDocs(collection(db, PATHS.clients)).then((snapshot) => {
-        clientesCadastrados = [];
-        snapshot.forEach(doc => {
-            if (doc.data().name) clientesCadastrados.push(doc.data().name.toUpperCase().trim());
-        });
-        clientesCadastrados.sort();
+    // 🔥 CACHE EXTREMO: Tenta carregar os clientes da memória local (0 Leituras)
+    const cacheKey = 'appLog_clientsCacheData';
+    const timeKey = 'appLog_clientsCacheTime';
+    const cached = localStorage.getItem(cacheKey);
+    const cacheTime = localStorage.getItem(timeKey);
+    const now = Date.now();
+
+    if (cached && cacheTime && (now - parseInt(cacheTime)) < 86400000) {
+        console.log("⚡ Agendamento: Clientes carregados do Cache Local (0 Leituras).");
+        const clients = JSON.parse(cached);
+        clientesCadastrados = clients.map(c => (c.name || '').toUpperCase().trim()).filter(Boolean).sort();
         renderizarListaClientes(clientesCadastrados);
-    }).catch(err => console.error("Falha ao carregar clientes do agendamento", err));
+    } else {
+        // Se o cache não existir, busca na nuvem e salva para todos os outros módulos
+        console.log("📡 Agendamento: Baixando clientes da Nuvem...");
+        getDocs(collection(db, PATHS.clients)).then((snapshot) => {
+            clientesCadastrados = [];
+            const rawClientsForCache = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.name) {
+                    clientesCadastrados.push(data.name.toUpperCase().trim());
+                    rawClientsForCache.push({ id: doc.id, ...data });
+                }
+            });
+            
+            // Salva no cache
+            localStorage.setItem(cacheKey, JSON.stringify(rawClientsForCache));
+            localStorage.setItem(timeKey, now.toString());
+            
+            clientesCadastrados.sort();
+            renderizarListaClientes(clientesCadastrados);
+        }).catch(err => console.error("Falha ao carregar clientes do agendamento", err));
+    }
 
     if (searchInput) {
         // Mostra a lista completa ao clicar na caixa

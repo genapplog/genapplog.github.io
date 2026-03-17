@@ -6,7 +6,7 @@
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
     onSnapshot, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, 
-    query, where, orderBy, writeBatch 
+    query, where, orderBy, writeBatch, limit 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { safeBind, showToast, openConfirmModal, closeConfirmModal, sendDesktopNotification, requestNotificationPermission, escapeHtml, renderEmptyState } from '../utils.js';
@@ -44,10 +44,10 @@ export async function initRncModule(db, isTest) {
     globalDb = db; 
     currentCollectionRef = collection(db, PATHS.occurrences);
 
-    // 1. Configurações que não dependem de dados (Botões, Dashboard, Notificações)
+    // 1. Configurações que não dependem de dados (Botões, Notificações)
     if (!bindingsInitialized) { 
         setupRncBindings(); 
-        initDashboard(db); 
+        // 🛑 REMOVIDO o initDashboard(db) para impedir que o RNC baixe o gráfico sem querer.
         requestNotificationPermission(); 
         bindingsInitialized = true; 
     }
@@ -96,10 +96,13 @@ function setupRealtimeListener() {
     if (unsubscribePendentes) unsubscribePendentes();
 
     // -------------------------------------------------------------
-    // QUERY ÚNICA: APENAS PENDENTES (Real-time estrito)
-    // Custo de Leitura: Quase 0 (Baixa apenas o que falta resolver)
+    // QUERY ÚNICA: APENAS PENDENTES COM LIMITE RIGOROSO
     // -------------------------------------------------------------
-    const qPendentes = query(currentCollectionRef, where('status', 'in', ['draft', 'pendente_lider', 'pendente_inventario', 'pendente', 'pallet_label_request']));
+    const qPendentes = query(
+        currentCollectionRef, 
+        where('status', 'in', ['draft', 'pendente_lider', 'pendente_inventario', 'pendente', 'pallet_label_request']),
+        limit(150) // 🛑 TRAVA DE SANGRIA: Impede que rascunhos antigos esquecidos causem explosão de leitura no login
+    );
     
     unsubscribePendentes = onSnapshot(qPendentes, (snapshot) => {
         if (snapshot.metadata.hasPendingWrites) return;
@@ -131,7 +134,8 @@ function setupRealtimeListener() {
     // Listener de notificações manuais (Chamados de Rádio - Mantido)
     const notificationsRef = collection(globalDb, `artifacts/${globalDb.app.options.appId}/public/data/notifications`);
     const recentTime = new Date(Date.now() - 5 * 60 * 1000); 
-    onSnapshot(query(notificationsRef, where('createdAt', '>', recentTime)), {
+    // 🛑 LIMITE RIGOROSO: Garante que apenas os últimos 10 chamados trafeguem na rede
+    onSnapshot(query(notificationsRef, where('createdAt', '>', recentTime), limit(10)), {
         next: (snapshot) => { 
             snapshot.docChanges().forEach(change => { 
                 if (change.type === "added") { 

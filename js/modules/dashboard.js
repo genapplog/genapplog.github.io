@@ -303,6 +303,18 @@ async function applyDashboardFilters() {
     const iEnd = document.getElementById('dash-filter-end');
     if(!iStart || !iEnd) return;
 
+    // 🔥 OTIMIZAÇÃO: Trava de Cache de Memória
+    window.lastDashboardQuery = window.lastDashboardQuery || "";
+    const currentQueryKey = iStart.value + "_" + iEnd.value;
+    
+    // Se a data for a mesma e já temos dados, renderiza da memória (0 Leituras)
+    if (window.lastDashboardQuery === currentQueryKey && localAllData.length > 0) {
+        console.log("⚡ Dashboard carregado do Cache de Sessão (0 Leituras).");
+        updateChartsAndStats(localAllData);
+        renderHistoryTable(localAllData);
+        return;
+    }
+
     const btn = document.getElementById('btn-dash-filter-apply');
     if (btn && btn.disabled) return;
     
@@ -313,6 +325,7 @@ async function applyDashboardFilters() {
     }
 
     try {
+        window.lastDashboardQuery = currentQueryKey; // Registra a última busca
         const db = getFirestore();
         let startDate = iStart.value ? new Date(iStart.value + 'T00:00:00') : new Date();
         let endDate = iEnd.value ? new Date(iEnd.value + 'T23:59:59') : new Date();

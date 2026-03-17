@@ -151,7 +151,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupConnectionMonitoring();
     setupGlobalErrorLogging(db);
+    setupZombieKiller(); // 🛑 TRAVA DE FINAL DE SEMANA
 });
+
+// 🛑 THE ZOMBIE KILLER (Reinício de Madrugada)
+function setupZombieKiller() {
+    const now = new Date();
+    const resetTime = new Date();
+    resetTime.setHours(1, 0, 0, 0); // 1 da manhã
+    
+    // Se já passou da 1h de hoje, agenda para a 1h de amanhã
+    if (now.getTime() > resetTime.getTime()) {
+        resetTime.setDate(resetTime.getDate() + 1);
+    }
+    
+    const timeUntilReset = resetTime.getTime() - now.getTime();
+    
+    setTimeout(() => {
+        console.log("🧹 Limpeza de Madrugada: Reiniciando para limpar cache e WebSockets inativos.");
+        window.location.reload(true); // Força um reload limpo limpando a memória do Firebase
+    }, timeUntilReset);
+}
 
 // =========================================================
 // 3. NAVEGAÇÃO E UI

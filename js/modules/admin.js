@@ -521,6 +521,9 @@ function renderAdminTable() {
 // =========================================================
 // BUSCA E GESTÃO DE PRODUTOS
 // =========================================================
+// Variável de Cache Global para a Busca do Admin (Evita baixar tudo várias vezes)
+let adminProductCache = null;
+
 function setupProductSearch(db) {
     const btnSearch = document.getElementById('cfg-btn-search-product');
     const inputSearch = document.getElementById('cfg-input-search-product');
@@ -540,18 +543,26 @@ function setupProductSearch(db) {
             const productsRef = collection(db, 'products');
             let results = [];
             
+            // 1. Tenta buscar direto por ID (Cód Barras) - Custo: 1 Leitura
             if (/^\d+$/.test(term)) {
                 const docSnap = await getDoc(doc(db, 'products', term));
                 if (docSnap.exists()) results.push({ id: docSnap.id, ...docSnap.data() });
             }
             
+            // 2. Se não achou por ID, faz busca por texto (Usa Cache de Sessão)
             if (results.length === 0) {
-                const q = query(productsRef); 
-                const querySnapshot = await getDocs(q);
-                querySnapshot.forEach((doc) => {
-                    const d = doc.data();
-                    if (doc.id.includes(term) || d.descricao.includes(term) || d.codigo.includes(term)) {
-                        results.push({ id: doc.id, ...d });
+                if (!adminProductCache) {
+                    console.log("Baixando catálogo de produtos para o cache do Admin...");
+                    adminProductCache = [];
+                    const q = query(productsRef); 
+                    const querySnapshot = await getDocs(q);
+                    querySnapshot.forEach(doc => adminProductCache.push({ id: doc.id, ...doc.data() }));
+                }
+
+                // Filtra na memória (Custo: 0 Leituras no Firebase)
+                adminProductCache.forEach(d => {
+                    if (d.id.includes(term) || (d.descricao && d.descricao.includes(term)) || (d.codigo && d.codigo.includes(term))) {
+                        results.push(d);
                     }
                 });
             }
@@ -606,6 +617,9 @@ function setupProductSearch(db) {
                     await deleteDoc(doc(db, 'products', id));
                     showToast("Produto excluído.");
                     closeConfirmModal();
+                    
+                    // Limpa o cache para obrigar a baixar a lista atualizada na próxima busca
+                    adminProductCache = null; 
                     doSearch(); 
                 });
             });
